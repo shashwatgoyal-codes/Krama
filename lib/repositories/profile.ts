@@ -30,6 +30,125 @@ export async function getSettings(userId: string): Promise<ProfileSettings> {
   return p;
 }
 
+export type ProfileOverview = {
+  name: string;
+  email: string;
+  memberSince: Date;
+  timezone: string;
+  dayEndsAtHour: number;
+  dailyFloor: number;
+  dailyCap: number;
+  scoringVisibility: string;
+  restDays: number[];
+  totalPoints: number;
+  streakDays: number;
+  level: number;
+  into: number;
+  needed: number;
+  tasksDone: number;
+  notesKept: number;
+  otherSessions: number;
+};
+
+/** Everything the profile page shows, in one pass. */
+export async function getProfileOverview(
+  userId: string,
+): Promise<ProfileOverview> {
+  const [user, tasksDone, notesKept, sessions] = await Promise.all([
+    db.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        email: true,
+        createdAt: true,
+        profile: {
+          select: {
+            timezone: true,
+            dayEndsAtHour: true,
+            dailyFloor: true,
+            dailyCap: true,
+            scoringVisibility: true,
+            restDays: true,
+            totalPoints: true,
+            streakDays: true,
+          },
+        },
+      },
+    }),
+    db.task.count({ where: { userId, status: "done" } }),
+    db.note.count({ where: { userId, archivedAt: null } }),
+    db.session.count({ where: { userId } }),
+  ]);
+
+  if (!user?.profile) throw new Error("Profile missing for this account.");
+
+  const progress = levelProgress(user.profile.totalPoints);
+
+  return {
+    name: user.name,
+    email: user.email,
+    memberSince: user.createdAt,
+    ...user.profile,
+    level: progress.level,
+    into: progress.into,
+    needed: progress.needed,
+    tasksDone,
+    notesKept,
+    // "Other" as in other than the one reading this page.
+    otherSessions: Math.max(0, sessions - 1),
+  };
+}
+
+/** Only ever touches the row belonging to the session's user. */
+export async function updateProfileSettings(
+  userId: string,
+  patch: {
+    timezone?: string;
+    dayEndsAtHour?: number;
+    dailyFloor?: number;
+    dailyCap?: number;
+    scoringVisibility?: string;
+    restDays?: number[];
+  },
+): Promise<void> {
+  await db.profile.update({ where: { userId }, data: patch });
+}
+
+export async function updateName(userId: string, name: string): Promise<void> {
+  await db.user.update({ where: { id: userId }, data: { name } });
+}
+
+export async function updatePasswordHash(
+  userId: string,
+  passwordHash: string,
+): Promise<void> {
+  await db.user.update({ where: { id: userId }, data: { passwordHash } });
+}
+
+export async function getPasswordHash(userId: string): Promise<string | null> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true },
+  });
+  return user?.passwordHash ?? null;
+}
+
+/**
+ * Deleting the user cascades to everything they own — including the
+ * ledger, which a trigger otherwise protects from DELETE. The flag that
+ * opens that door is transaction-local, so it must be set in the same
+ * transaction as the delete and can never leak onto a pooled connection
+ * afterwards. The array form of $transaction is used deliberately: it is
+ * one round trip, which the Neon pooler handles where an interactive
+ * transaction would not.
+ */
+export async function deleteAccount(userId: string): Promise<void> {
+  await db.$transaction([
+    db.$executeRaw`SELECT set_config('krama.allow_ledger_delete', 'on', true)`,
+    db.$executeRaw`DELETE FROM users WHERE id = ${userId}`,
+  ]);
+}
+
 export type TodayStats = {
   pace: number;
   level: number;

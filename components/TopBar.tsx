@@ -18,7 +18,7 @@ const NAV = [
   { href: "/app/explore", label: "Explore" },
 ];
 
-export default function TopBar({ env }: { env: AppEnv }) {
+export default function TopBar({ env, name }: { env: AppEnv; name: string }) {
   const pathname = usePathname();
 
   return (
@@ -62,12 +62,22 @@ export default function TopBar({ env }: { env: AppEnv }) {
           ⌘K
         </span>
         <ThemeToggle />
-        <span
-          className="grid size-[26px] flex-none place-items-center rounded-full bg-acc text-[11px] font-bold text-on-acc"
-          title="Shashwat"
+        <Link
+          href="/app/profile"
+          aria-label={`Profile — signed in as ${name}`}
+          aria-current={pathname === "/app/profile" ? "page" : undefined}
+          title={name}
+          className={
+            "grid size-[26px] flex-none place-items-center rounded-full bg-acc " +
+            "text-[11px] font-bold text-on-acc transition-shadow hover:ring-2 " +
+            "hover:ring-acc-soft " +
+            (pathname === "/app/profile"
+              ? "ring-2 ring-acc ring-offset-2 ring-offset-surf"
+              : "")
+          }
         >
-          S
-        </span>
+          {name.charAt(0).toUpperCase()}
+        </Link>
       </div>
     </header>
   );

@@ -55,6 +55,70 @@ export const createTaskSchema = z.object({
 
 export const taskIdSchema = z.object({ id: z.string().cuid() });
 
+/** Rejects anything the platform doesn't recognise as an IANA zone. */
+export function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const nameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "What should we call you?")
+    .max(80, "That name is a bit long."),
+});
+
+export const dayScheduleSchema = z.object({
+  timezone: z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+  // Capped at noon: a "day" that ends in the evening isn't a late night,
+  // it's a different day, and allowing it would quietly corrupt every
+  // date the scoring engine derives.
+  dayEndsAtHour: z.coerce
+    .number()
+    .int()
+    .min(0, "Pick an hour between midnight and noon.")
+    .max(12, "Pick an hour between midnight and noon."),
+});
+
+export const scoringSchema = z.object({
+  dailyFloor: z.coerce
+    .number()
+    .int()
+    .min(1, "The floor needs to be at least one action.")
+    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+  dailyCap: z.coerce
+    .number()
+    .int()
+    .min(20, "A cap under 20 would slow you down almost immediately.")
+    .max(1000, "Keep the cap under 1000."),
+  scoringVisibility: z.enum(["hidden", "normal", "everywhere"]),
+  restDays: z
+    .array(z.coerce.number().int().min(0).max(6))
+    .max(6, "Leave at least one day that counts — otherwise nothing does.")
+    // A duplicate day in the form post shouldn't become a duplicate row.
+    .transform((days) => [...new Set(days)].sort((a, b) => a - b)),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password."),
+  newPassword: passwordSchema,
+});
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Enter your password to confirm."),
+  confirm: z.literal("DELETE", {
+    error: "Type DELETE exactly to confirm.",
+  }),
+});
+
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
