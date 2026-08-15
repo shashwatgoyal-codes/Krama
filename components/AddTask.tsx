@@ -3,13 +3,30 @@
 import { useRef, useState, useTransition } from "react";
 import { createTask } from "@/app/app/actions";
 
+const REPEATS = [
+  { value: "none", label: "Once" },
+  { value: "daily", label: "Daily" },
+  { value: "weekdays", label: "Weekdays" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+] as const;
+
 export default function AddTask({ autoFocus = false }: { autoFocus?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [repeat, setRepeat] = useState<string>("none");
   const inputRef = useRef<HTMLInputElement>(null);
 
   function submit(formData: FormData) {
     setError(null);
+    // Weekly and monthly need a value; default to today's day so adding
+    // a routine is one click rather than a configuration exercise.
+    if (repeat === "weekly") {
+      formData.set("recurrenceValue", String(new Date().getDay()));
+    } else if (repeat === "monthly") {
+      formData.set("recurrenceValue", String(new Date().getDate()));
+    }
+
     startTransition(async () => {
       const result = await createTask(formData);
       if (!result.ok) {
@@ -22,11 +39,14 @@ export default function AddTask({ autoFocus = false }: { autoFocus?: boolean }) 
         inputRef.current.value = "";
         inputRef.current.focus();
       }
+      setRepeat("none");
     });
   }
 
   return (
     <form action={submit}>
+      <input type="hidden" name="recurrence" value={repeat} />
+
       <div className="flex gap-2">
         <input
           ref={inputRef}
@@ -42,11 +62,42 @@ export default function AddTask({ autoFocus = false }: { autoFocus?: boolean }) 
         <button
           type="submit"
           disabled={pending}
-          className="cursor-pointer rounded-[9px] border border-ink bg-ink px-3.5 py-2 text-[12.5px] font-semibold text-paper transition-colors hover:bg-ink2 hover:border-ink2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="cursor-pointer rounded-[9px] border border-ink bg-ink px-3.5 py-2 text-[12.5px] font-semibold text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Adding…" : "Add"}
         </button>
       </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="label-xs mr-0.5">Repeats</span>
+        {REPEATS.map((r) => (
+          <button
+            key={r.value}
+            type="button"
+            onClick={() => setRepeat(r.value)}
+            aria-pressed={repeat === r.value}
+            className={
+              "rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors " +
+              (repeat === r.value
+                ? "border-acc bg-acc-soft text-acc"
+                : "border-ln2 text-mut hover:border-acc hover:text-acc")
+            }
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
+      {repeat !== "none" && (
+        <p className="mt-1.5 text-[11.5px] text-fai">
+          {repeat === "weekly"
+            ? "Repeats every week on today's weekday."
+            : repeat === "monthly"
+              ? "Repeats monthly on today's date. On short months it lands on the last day."
+              : "It will appear on its own — you won't need to add it again."}
+        </p>
+      )}
+
       {error && (
         <p role="alert" className="mt-1.5 text-[11.5px] text-bad">
           {error}

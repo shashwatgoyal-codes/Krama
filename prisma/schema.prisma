@@ -28,6 +28,7 @@ model User {
   sessions Session[]
   areas    Area[]
   tasks    Task[]
+  notes    Note[]
   ledger   PointEntry[]
 
   @@map("users")
@@ -176,4 +177,35 @@ model PointEntry {
 
   @@index([userId, countedFor])
   @@map("point_ledger")
+}
+
+// ---------------------------------------------------------------- notes
+
+/// A sticky note on a board. Position is stored so the board looks the
+/// same when you come back — where you put something is part of what it
+/// means.
+model Note {
+  id     String @id @default(cuid())
+  userId String
+
+  body   String
+  /// One of five tints, desaturated to sit inside the palette.
+  colour String @default("n1")
+
+  x Int @default(0)
+  y Int @default(0)
+  /// Stacking order, so the note you last touched sits on top.
+  z Int @default(0)
+
+  /// Set when this note has been turned into a task.
+  taskId String?
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, archivedAt])
+  @@map("notes")
 }

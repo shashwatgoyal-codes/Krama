@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/guard";
-import NotBuiltYet from "@/components/NotBuiltYet";
+import { listNotes } from "@/lib/repositories/notes";
+import NoteBoard from "@/components/notes/NoteBoard";
 
 export const metadata: Metadata = {
   title: "Notes · Krama",
   robots: { index: false, follow: false },
 };
 
-export default async function Page() {
-  // Gated like every other page, even though there's nothing here yet.
-  await requireUser();
+export default async function NotesPage() {
+  const user = await requireUser();
+  const notes = await listNotes(user.id);
 
-  return (
-    <NotBuiltYet
-      title="Notes"
-      what="A board of colour-coded sticky notes you can drag anywhere. Each one can become a task, so a thought turns into something scheduled without retyping it."
-      next="The board, drag positions and the five note colours."
-    />
-  );
+  return <NoteBoard notes={notes} />;
 }
