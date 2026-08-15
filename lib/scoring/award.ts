@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { dayKeyFor, dayKeyToDate, isBackdated } from "@/lib/day";
+import { getStreak } from "@/lib/repositories/profile";
 import type { PointSource } from "@prisma/client";
 
 /**
@@ -19,9 +20,21 @@ export async function awardPoints(params: {
   countedForDay?: string;
   timezone: string;
   dayEndsAtHour: number;
+  dailyFloor: number;
+  restDays: number[];
 }): Promise<AwardResult> {
   const today = dayKeyFor(new Date(), params.timezone, params.dayEndsAtHour);
   const countedFor = params.countedForDay ?? today;
+
+  // Derived here rather than inside the function so there is one
+  // definition of the streak rule instead of two that can drift. It is
+  // read from the same ledger the function writes to, never from input.
+  const streak = await getStreak(params.userId, {
+    timezone: params.timezone,
+    dayEndsAtHour: params.dayEndsAtHour,
+    dailyFloor: params.dailyFloor,
+    restDays: params.restDays,
+  });
 
   const rows = await db.$queryRaw<{ awarded: number; multiplier: string }[]>`
     SELECT * FROM krama_award_points(
@@ -30,7 +43,8 @@ export async function awardPoints(params: {
       ${params.sourceId ?? null},
       ${params.basePoints}::int,
       ${dayKeyToDate(countedFor)}::timestamp,
-      ${isBackdated(countedFor, today)}::boolean
+      ${isBackdated(countedFor, today)}::boolean,
+      ${streak.days}::int
     )
   `;
 

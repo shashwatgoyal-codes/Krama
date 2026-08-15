@@ -60,6 +60,13 @@ export function weekdayOf(key: string): number {
   return dayKeyToDate(key).getUTCDay();
 }
 
+/** The day key `delta` days away. Negative goes backwards. */
+export function shiftDayKey(key: string, delta: number): string {
+  const d = dayKeyToDate(key);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * Logging something for an earlier day still works — but pays half, so
  * a month of work can't be entered on the 31st and counted in full.

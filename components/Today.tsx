@@ -92,7 +92,22 @@ export default function Today({
                 : `${stats.actionsToday} of ${stats.dailyFloor} today`}
             </span>
             {stats.streakDays > 0 && (
-              <span className="label-xs tabular">
+              // Understated on purpose. A streak that's still open today
+              // is a fact worth showing, not a countdown to shame you
+              // with — there is no "you broke your streak" state
+              // anywhere in this app, and this isn't the start of one.
+              <span
+                className={
+                  "label-xs tabular " + (stats.streakAtRisk ? "text-warn" : "")
+                }
+                title={
+                  stats.streakAtRisk
+                    ? `${stats.dailyFloor} ${
+                        stats.dailyFloor === 1 ? "thing keeps" : "things keep"
+                      } it going — today still counts.`
+                    : "Days you've cleared the floor. Rest days don't break it."
+                }
+              >
                 {stats.streakDays}-day streak
               </span>
             )}

@@ -79,6 +79,8 @@ export async function toggleTask(formData: FormData): Promise<ActionResult> {
       countedForDay,
       timezone: settings.timezone,
       dayEndsAtHour: settings.dayEndsAtHour,
+      dailyFloor: settings.dailyFloor,
+      restDays: settings.restDays,
     });
   } else {
     await reverseAward({

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
-import { dayKeyFor, dayKeyToDate } from "@/lib/day";
+import { dayKeyFor, dayKeyToDate, shiftDayKey } from "@/lib/day";
 import { computePace, levelProgress } from "@/lib/points";
+import { computeStreak, type StreakResult } from "@/lib/streak";
 
 export type ProfileSettings = {
   timezone: string;
@@ -8,11 +9,17 @@ export type ProfileSettings = {
   dailyFloor: number;
   dailyCap: number;
   scoringVisibility: string;
-  streakDays: number;
+  restDays: number[];
   totalPoints: number;
 };
 
-/** Settings every action needs before it can decide which day it's on. */
+/**
+ * Settings every action needs before it can decide which day it's on.
+ *
+ * Deliberately does not return streakDays. That column is a cache for
+ * the award function to read under its lock; anything user-facing asks
+ * getStreak() instead, which derives the answer from the ledger.
+ */
 export async function getSettings(userId: string): Promise<ProfileSettings> {
   const p = await db.profile.findUnique({
     where: { userId },
@@ -22,12 +29,63 @@ export async function getSettings(userId: string): Promise<ProfileSettings> {
       dailyFloor: true,
       dailyCap: true,
       scoringVisibility: true,
-      streakDays: true,
+      restDays: true,
       totalPoints: true,
     },
   });
   if (!p) throw new Error("Profile missing for this account.");
   return p;
+}
+
+/**
+ * Things finished per day, as day key → count.
+ *
+ * Reversals are subtracted rather than ignored. Unticking a task appends
+ * a negative ledger row, so counting rows alone would let undoing work
+ * push you *over* the daily floor — the opposite of what happened.
+ */
+export async function actionsByDay(
+  userId: string,
+  since: Date,
+): Promise<Record<string, number>> {
+  const rows = await db.$queryRaw<{ day: string; actions: bigint }[]>`
+    SELECT to_char("countedFor", 'YYYY-MM-DD') AS day,
+           COUNT(*) FILTER (WHERE "points" > 0)
+         - COUNT(*) FILTER (WHERE "points" < 0) AS actions
+      FROM "point_ledger"
+     WHERE "userId" = ${userId}
+       AND "countedFor" >= ${since}
+     GROUP BY 1
+  `;
+
+  const out: Record<string, number> = {};
+  for (const r of rows) out[r.day] = Number(r.actions);
+  return out;
+}
+
+/** How far back a streak is worth reconstructing. */
+const STREAK_WINDOW_DAYS = 400;
+
+/** The streak as the ledger currently implies it. Never read from a column. */
+export async function getStreak(
+  userId: string,
+  settings: {
+    timezone: string;
+    dayEndsAtHour: number;
+    dailyFloor: number;
+    restDays: number[];
+  },
+): Promise<StreakResult> {
+  const today = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
+  const since = dayKeyToDate(shiftDayKey(today, -STREAK_WINDOW_DAYS));
+
+  return computeStreak({
+    today,
+    actionsByDay: await actionsByDay(userId, since),
+    dailyFloor: settings.dailyFloor,
+    restDays: settings.restDays,
+    maxLookback: STREAK_WINDOW_DAYS,
+  });
 }
 
 export type ProfileOverview = {
@@ -70,7 +128,6 @@ export async function getProfileOverview(
             scoringVisibility: true,
             restDays: true,
             totalPoints: true,
-            streakDays: true,
           },
         },
       },
@@ -83,12 +140,15 @@ export async function getProfileOverview(
   if (!user?.profile) throw new Error("Profile missing for this account.");
 
   const progress = levelProgress(user.profile.totalPoints);
+  // Derived, not read from the column — see getStreak.
+  const streak = await getStreak(userId, user.profile);
 
   return {
     name: user.name,
     email: user.email,
     memberSince: user.createdAt,
     ...user.profile,
+    streakDays: streak.days,
     level: progress.level,
     into: progress.into,
     needed: progress.needed,
@@ -155,6 +215,7 @@ export type TodayStats = {
   into: number;
   needed: number;
   streakDays: number;
+  streakAtRisk: boolean;
   pointsToday: number;
   actionsToday: number;
   dailyFloor: number;
@@ -162,38 +223,42 @@ export type TodayStats = {
 };
 
 /**
- * Pace is computed from the ledger rather than stored, so it can never
- * drift from the record. Seven days is a small enough read to do on
- * every load.
+ * Pace and streak are both computed from the ledger rather than stored,
+ * so neither can drift from the record.
  */
 export async function getTodayStats(userId: string): Promise<TodayStats> {
   const settings = await getSettings(userId);
   const today = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
 
   const days: string[] = [];
-  const cursor = dayKeyToDate(today);
-  for (let i = 0; i < 7; i++) {
-    days.push(cursor.toISOString().slice(0, 10));
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
+  for (let i = 0; i < 7; i++) days.push(shiftDayKey(today, -i));
 
-  const rows = await db.pointEntry.groupBy({
-    by: ["countedFor"],
-    where: { userId, countedFor: { gte: dayKeyToDate(days[6]) } },
-    _sum: { points: true },
-    _count: { _all: true },
-  });
+  const [pointRows, actions] = await Promise.all([
+    db.pointEntry.groupBy({
+      by: ["countedFor"],
+      where: { userId, countedFor: { gte: dayKeyToDate(days[6]) } },
+      _sum: { points: true },
+    }),
+    actionsByDay(userId, dayKeyToDate(shiftDayKey(today, -STREAK_WINDOW_DAYS))),
+  ]);
 
-  const byDay = new Map(
-    rows.map((r) => [
+  const pointsByDay = new Map(
+    pointRows.map((r) => [
       r.countedFor.toISOString().slice(0, 10),
-      { points: r._sum.points ?? 0, count: r._count._all },
+      r._sum.points ?? 0,
     ]),
   );
 
+  const streak = computeStreak({
+    today,
+    actionsByDay: actions,
+    dailyFloor: settings.dailyFloor,
+    restDays: settings.restDays,
+    maxLookback: STREAK_WINDOW_DAYS,
+  });
+
   // Most recent day first, which is what computePace expects.
-  const dailyPoints = days.map((d) => byDay.get(d)?.points ?? 0);
-  const todayEntry = byDay.get(today) ?? { points: 0, count: 0 };
+  const dailyPoints = days.map((d) => pointsByDay.get(d) ?? 0);
 
   // A day's worth of work, used as the yardstick for pace.
   const dailyTarget = settings.dailyFloor * 20;
@@ -204,10 +269,11 @@ export async function getTodayStats(userId: string): Promise<TodayStats> {
     level: progress.level,
     into: progress.into,
     needed: progress.needed,
-    streakDays: settings.streakDays,
-    pointsToday: todayEntry.points,
-    actionsToday: todayEntry.count,
+    streakDays: streak.days,
+    streakAtRisk: streak.atRisk,
+    pointsToday: pointsByDay.get(today) ?? 0,
+    actionsToday: Math.max(0, actions[today] ?? 0),
     dailyFloor: settings.dailyFloor,
-    floorCleared: todayEntry.count >= settings.dailyFloor,
+    floorCleared: streak.clearedToday,
   };
 }
