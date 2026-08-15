@@ -11,14 +11,22 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
  * is inspected.
  */
 
-type Call = { model: string; method: string; args: Record<string, any> };
+type QueryArgs = {
+  where?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+  select?: unknown;
+  orderBy?: unknown;
+  take?: number;
+};
+
+type Call = { model: string; method: string; args: QueryArgs };
 const calls: Call[] = [];
 
 function recorder(model: string) {
   return new Proxy(
     {},
     {
-      get: (_t, method: string) => (args: Record<string, any>) => {
+      get: (_t, method: string) => (args: QueryArgs) => {
         calls.push({ model, method, args });
         if (method === "findMany") return Promise.resolve([]);
         if (method === "aggregate")
@@ -49,8 +57,8 @@ const USER = "usr_owner";
 const OTHER = "usr_someone_else";
 
 /** Pulls the userId out of whatever shape the call used. */
-function userIdIn(args: Record<string, any>): unknown {
-  return args?.where?.userId ?? args?.data?.userId;
+function userIdIn(args: QueryArgs): unknown {
+  return args.where?.userId ?? args.data?.userId;
 }
 
 beforeEach(() => {
@@ -91,7 +99,7 @@ describe("every write is scoped to the signed-in user", () => {
       timezone: "Asia/Kolkata",
       dayEndsAtHour: 4,
     });
-    expect(calls[0].args.data.userId).toBe(USER);
+    expect(calls[0].args.data?.userId).toBe(USER);
   });
 
   it("setTaskStatus filters on userId as well as id", async () => {
@@ -136,13 +144,13 @@ describe("task completion records when it happened", () => {
   it("sets completedAt when marking done", async () => {
     await setTaskStatus(USER, "tsk_1", "done");
     const update = calls.find((c) => c.method === "updateMany");
-    expect(update?.args.data.completedAt).toBeInstanceOf(Date);
+    expect(update?.args.data?.completedAt).toBeInstanceOf(Date);
   });
 
   it("clears completedAt when reopening", async () => {
     await setTaskStatus(USER, "tsk_1", "open");
     const update = calls.find((c) => c.method === "updateMany");
-    expect(update?.args.data.completedAt).toBeNull();
+    expect(update?.args.data?.completedAt).toBeNull();
   });
 });
 
@@ -155,7 +163,7 @@ describe("createTask files work under the right day", () => {
       timezone: "Asia/Kolkata",
       dayEndsAtHour: 4,
     });
-    const created = calls[0].args.data.createdForDate as Date;
+    const created = calls[0].args.data?.createdForDate as Date;
     expect(created.toISOString().slice(0, 10)).toBe("2026-08-15");
     vi.useRealTimers();
   });
