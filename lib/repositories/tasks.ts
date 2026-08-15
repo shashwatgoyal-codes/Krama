@@ -14,7 +14,14 @@ import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 
 export type TaskSummary = Pick<
   Task,
-  "id" | "title" | "status" | "points" | "areaId" | "dueOn" | "recurrence"
+  | "id"
+  | "title"
+  | "status"
+  | "points"
+  | "areaId"
+  | "dueOn"
+  | "recurrence"
+  | "recurrenceValue"
 >;
 
 const SUMMARY = {
@@ -25,6 +32,9 @@ const SUMMARY = {
   areaId: true,
   dueOn: true,
   recurrence: true,
+  // Needed to describe a routine as "weekly, Sunday" rather than just
+  // "weekly" wherever a summary is shown.
+  recurrenceValue: true,
 } as const;
 
 export async function listTasksForDay(

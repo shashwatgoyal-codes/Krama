@@ -80,7 +80,12 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
 
   const h = await headers();
   await createSession(user.id, h.get("user-agent") ?? undefined);
-  redirect("/app");
+
+  // Straight to confirmation rather than into the app. Without a
+  // confirmed address there is no way back into this account, and the
+  // moment someone has just typed the address is the moment they are
+  // most able to check it.
+  redirect("/app/verify-email?sent=1");
 }
 
 export async function signIn(formData: FormData): Promise<ActionResult> {

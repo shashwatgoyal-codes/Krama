@@ -1,38 +1,49 @@
-import TaskRow, { type TaskItem } from "./TaskRow";
 import AddTask from "./AddTask";
+import Plan, { type PlanBlockView } from "./plan/Plan";
+import WaitingItem from "./plan/WaitingItem";
+import type { TaskItem } from "./TaskRow";
 import type { TodayStats } from "@/lib/repositories/profile";
+import { NOTE_TINT, type NoteColour } from "@/lib/notes";
+import Link from "next/link";
 
+export type NotePreview = { id: string; body: string; colour: NoteColour };
+
+/**
+ * The plan on the left with real times; everything uncommitted on the
+ * right. Drag right to left to schedule.
+ */
 export default function Today({
   name,
   day,
-  today,
-  unscheduled,
+  blocks,
+  committed,
+  waiting,
+  notes,
   stats,
   showScoring,
 }: {
   name: string;
   day: string;
-  today: TaskItem[];
-  unscheduled: TaskItem[];
+  blocks: PlanBlockView[];
+  committed: string;
+  waiting: (TaskItem & { chip?: string })[];
+  notes: NotePreview[];
   stats: TodayStats;
   showScoring: boolean;
 }) {
-  const doneCount = today.filter((t) => t.done).length;
   const firstName = name.split(" ")[0];
-  const nothingAtAll = today.length === 0 && unscheduled.length === 0;
+  const nothingAtAll = blocks.length === 0 && waiting.length === 0;
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[1.45fr_1fr]">
       {/* ---------------- the plan ---------------- */}
-      <section className="min-w-0 border-r border-ln bg-surf px-5 py-[18px]">
-        <div className="mb-4 flex items-baseline justify-between gap-2.5">
-          <span className="font-display text-base font-semibold tracking-[-0.02em]">
-            Today
+      <section className="min-w-0 border-r border-ln bg-surf px-[18px] py-4">
+        <div className="mb-3 flex items-baseline justify-between gap-2.5">
+          <span className="font-display text-[15px] font-semibold tracking-[-0.015em]">
+            The plan
           </span>
           <span className="label-xs tabular">
-            {today.length > 0
-              ? `${doneCount} of ${today.length} done`
-              : day}
+            {blocks.length > 0 ? `${committed} committed` : day}
           </span>
         </div>
 
@@ -54,105 +65,106 @@ export default function Today({
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-1.5">
-              {today.length === 0 ? (
-                <p className="rounded-[9px] border border-dashed border-ln2 px-4 py-5 text-center text-[12.5px] text-mut">
-                  Nothing on today yet. Add something, or pull one across from
-                  the right.
-                </p>
-              ) : (
-                today.map((t) => (
-                  <TaskRow key={t.id} task={t} showPoints={showScoring} />
-                ))
-              )}
-            </div>
-
-            <div className="mt-3">
-              <AddTask />
-            </div>
-          </>
-        )}
-
-        {showScoring && !nothingAtAll && (
-          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-ln pt-3.5">
-            <span className="label-xs">Pace</span>
-            <div className="h-[3px] w-[110px] overflow-hidden rounded-sm bg-ln">
-              <div
-                className="h-full rounded-sm bg-acc transition-[width] duration-500"
-                style={{ width: `${stats.pace}%` }}
-              />
-            </div>
-            <span className="tabular text-[13px] font-semibold">
-              {stats.pace}
-            </span>
-
-            <span className="label-xs ml-auto tabular">
-              {stats.floorCleared
-                ? "floor cleared"
-                : `${stats.actionsToday} of ${stats.dailyFloor} today`}
-            </span>
-            {stats.streakDays > 0 && (
-              // Understated on purpose. A streak that's still open today
-              // is a fact worth showing, not a countdown to shame you
-              // with — there is no "you broke your streak" state
-              // anywhere in this app, and this isn't the start of one.
-              <span
-                className={
-                  "label-xs tabular " + (stats.streakAtRisk ? "text-warn" : "")
-                }
-                title={
-                  stats.streakAtRisk
-                    ? `${stats.dailyFloor} ${
-                        stats.dailyFloor === 1 ? "thing keeps" : "things keep"
-                      } it going — today still counts.`
-                    : "Days you've cleared the floor. Rest days don't break it."
-                }
-              >
-                {stats.streakDays}-day streak
-              </span>
+            {blocks.length === 0 && (
+              <p className="rounded-[9px] border border-dashed border-ln2 px-4 py-5 text-center text-[12.5px] leading-relaxed text-mut">
+                Nothing has a time yet. Drag something across from the right,
+                or press <span className="font-semibold text-ink">Plan</span> on
+                it — deciding when is most of the work.
+              </p>
             )}
-          </div>
+
+            <Plan blocks={blocks} />
+
+            {showScoring && (
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-ln pt-3.5">
+                <span className="label-xs">Pace</span>
+                <div className="h-[3px] w-[110px] overflow-hidden rounded-sm bg-ln">
+                  <div
+                    className="h-full rounded-sm bg-acc transition-[width] duration-500"
+                    style={{ width: `${stats.pace}%` }}
+                  />
+                </div>
+                <span className="tabular text-[13px] font-semibold">
+                  {stats.pace}
+                </span>
+
+                <span className="label-xs ml-auto tabular">
+                  {stats.floorCleared
+                    ? "floor cleared"
+                    : `${stats.actionsToday} of ${stats.dailyFloor} today`}
+                </span>
+                {stats.streakDays > 0 && (
+                  // Understated on purpose. A streak that's still open
+                  // today is a fact worth showing, not a countdown to
+                  // shame you with — there is no "you broke your streak"
+                  // state anywhere in this app, and this isn't one.
+                  <span
+                    className={
+                      "label-xs tabular " +
+                      (stats.streakAtRisk ? "text-warn" : "")
+                    }
+                    title={
+                      stats.streakAtRisk
+                        ? `${stats.dailyFloor} ${
+                            stats.dailyFloor === 1 ? "thing keeps" : "things keep"
+                          } it going — today still counts.`
+                        : "Days you've cleared the floor. Rest days don't break it."
+                    }
+                  >
+                    {stats.streakDays}-day streak
+                  </span>
+                )}
+              </div>
+            )}
+          </>
         )}
       </section>
 
       {/* ---------------- unscheduled ---------------- */}
-      <aside className="min-w-0 bg-surf2 p-[18px]">
-        <div className="mb-4 flex items-baseline justify-between gap-2.5">
-          <span className="font-display text-[13.5px] font-semibold tracking-[-0.02em]">
-            Waiting
+      <aside className="min-w-0 bg-surf2 p-4">
+        <div className="mb-3 flex items-baseline justify-between gap-2.5">
+          <span className="font-display text-[13px] font-semibold tracking-[-0.02em]">
+            Unscheduled
           </span>
-          <span className="label-xs tabular">{unscheduled.length}</span>
+          <span className="label-xs tabular">{waiting.length}</span>
         </div>
 
-        {unscheduled.length === 0 ? (
-          <p className="rounded-[9px] border border-dashed border-ln2 px-4 py-5 text-center text-[12.5px] leading-relaxed text-mut">
-            Anything you add that isn&rsquo;t for today waits here.
+        {waiting.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-ln2 px-3 py-4 text-center text-[11.5px] leading-relaxed text-mut">
+            Nothing waiting. Everything you&rsquo;ve got has a time.
           </p>
         ) : (
-          <div className="flex flex-col gap-1.5">
-            {unscheduled.map((t) => (
-              <TaskRow key={t.id} task={t} showPoints={showScoring} />
-            ))}
-          </div>
+          waiting.map((t) => (
+            <WaitingItem key={t.id} task={t} showPoints={showScoring} />
+          ))
         )}
 
-        {showScoring && (
-          <div className="mt-5 border-t border-ln pt-3.5">
-            <div className="flex items-baseline justify-between">
-              <span className="label-xs">Level {stats.level}</span>
-              <span className="label-xs tabular">
-                {stats.into} / {stats.needed}
+        <div className="mt-3">
+          <AddTask />
+        </div>
+
+        {notes.length > 0 && (
+          <>
+            <div className="mb-2.5 mt-5 flex items-baseline justify-between gap-2.5">
+              <span className="font-display text-[13px] font-semibold tracking-[-0.02em]">
+                Notes
               </span>
+              <Link href="/app/notes" className="label-xs hover:text-acc">
+                Board
+              </Link>
             </div>
-            <div className="mt-2 h-[3px] overflow-hidden rounded-sm bg-ln">
-              <div
-                className="h-full rounded-sm bg-acc"
-                style={{
-                  width: `${stats.needed ? (stats.into / stats.needed) * 100 : 0}%`,
-                }}
-              />
-            </div>
-          </div>
+            {notes.map((note) => (
+              <Link
+                key={note.id}
+                href="/app/notes"
+                className={`mb-1.5 block rounded-[3px] border px-3 py-2.5 text-[12.5px] leading-[1.42] ${NOTE_TINT[note.colour]}`}
+              >
+                {note.body.length > 120
+                  ? `${note.body.slice(0, 120)}…`
+                  : note.body}
+              </Link>
+            ))}
+          </>
         )}
       </aside>
     </div>

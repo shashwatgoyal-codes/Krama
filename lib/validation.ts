@@ -55,6 +55,27 @@ export const createTaskSchema = z.object({
 
 export const taskIdSchema = z.object({ id: z.string().cuid() });
 
+/** Spaces and dashes are forgiven — people copy codes untidily. */
+const otpSchema = z
+  .string()
+  .transform((v) => v.replace(/\D/g, ""))
+  .pipe(
+    z
+      .string()
+      .length(6, "The code is six digits.")
+      .regex(/^\d+$/, "The code is six digits."),
+  );
+
+export const requestResetSchema = z.object({ email: emailSchema });
+
+export const resetPasswordSchema = z.object({
+  email: emailSchema,
+  code: otpSchema,
+  password: passwordSchema,
+});
+
+export const verifyEmailSchema = z.object({ code: otpSchema });
+
 /** Rejects anything the platform doesn't recognise as an IANA zone. */
 export function isValidTimeZone(tz: string): boolean {
   try {

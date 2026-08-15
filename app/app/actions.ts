@@ -11,6 +11,16 @@ import {
 } from "@/lib/repositories/tasks";
 import { awardPoints, reverseAward } from "@/lib/scoring/award";
 import { dayKeyFor } from "@/lib/day";
+import { z } from "zod";
+import { POINTS } from "@/lib/points";
+import { nextFreeSlot, zonedTimeToInstant } from "@/lib/time";
+import {
+  listDayBlocks,
+  createBlock,
+  deleteBlock,
+  moveBlock,
+  getBlock,
+} from "@/lib/repositories/events";
 import {
   createTaskSchema,
   taskIdSchema,
@@ -108,6 +118,116 @@ export async function deleteTask(formData: FormData): Promise<ActionResult> {
 }
 
 /** The day key for the signed-in user, respecting their day boundary. */
+/**
+ * How long to block out for a task, from what it's worth.
+ *
+ * A guess, but a defensible one: the point tiers already encode rough
+ * effort, so a deep block gets two hours and upkeep gets half of one.
+ * The time is editable afterwards, so being slightly wrong costs a drag.
+ */
+function defaultMinutes(points: number): number {
+  if (points >= POINTS.deepBlock) return 120;
+  if (points >= POINTS.studySession) return 60;
+  if (points >= POINTS.quickTask) return 45;
+  return 30;
+}
+
+export async function scheduleTask(formData: FormData): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = taskIdSchema.safeParse({ id: formData.get("id") });
+  if (!parsed.success) return { ok: false, error: "Unknown task." };
+
+  const task = await getTask(user.id, parsed.data.id);
+  if (!task) return { ok: false, error: "That task no longer exists." };
+
+  const settings = await getSettings(user.id);
+  const dayKey = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
+  const blocks = await listDayBlocks(
+    user.id,
+    dayKey,
+    settings.timezone,
+    settings.dayEndsAtHour,
+  );
+
+  if (blocks.some((b) => b.taskId === task.id)) {
+    return { ok: false, error: "That's already on the plan." };
+  }
+
+  const slot = nextFreeSlot(blocks, {
+    now: new Date(),
+    dayKey,
+    timeZone: settings.timezone,
+    durationMinutes: defaultMinutes(task.points),
+  });
+
+  await createBlock(user.id, {
+    title: task.title,
+    startsAt: slot.start,
+    endsAt: slot.end,
+    taskId: task.id,
+    areaId: task.areaId ?? undefined,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/calendar");
+  return { ok: true };
+}
+
+/** Takes it off the plan and puts it back on the waiting list. */
+export async function unscheduleBlock(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = z
+    .object({ id: z.string().cuid() })
+    .safeParse({ id: formData.get("id") });
+  if (!parsed.success) return { ok: false, error: "Unknown block." };
+
+  const removed = await deleteBlock(user.id, parsed.data.id);
+  if (!removed) return { ok: false, error: "That block no longer exists." };
+
+  revalidatePath("/app");
+  revalidatePath("/app/calendar");
+  return { ok: true };
+}
+
+/** Drag a block to a different hour. Duration is preserved. */
+export async function moveBlockToHour(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = z
+    .object({
+      id: z.string().cuid(),
+      dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      hour: z.coerce.number().int().min(0).max(23),
+    })
+    .safeParse({
+      id: formData.get("id"),
+      dayKey: formData.get("dayKey"),
+      hour: formData.get("hour"),
+    });
+  if (!parsed.success) return { ok: false, error: "Couldn't move that block." };
+
+  const settings = await getSettings(user.id);
+  const block = await getBlock(user.id, parsed.data.id);
+  if (!block) return { ok: false, error: "That block no longer exists." };
+
+  const length = block.endsAt.getTime() - block.startsAt.getTime();
+  const start = zonedTimeToInstant(
+    parsed.data.dayKey,
+    parsed.data.hour,
+    0,
+    settings.timezone,
+  );
+
+  await moveBlock(user.id, block.id, start, new Date(start.getTime() + length));
+
+  revalidatePath("/app");
+  revalidatePath("/app/calendar");
+  return { ok: true };
+}
+
 export async function currentDayKey(): Promise<string> {
   const user = await requireUserOrThrow();
   const settings = await getSettings(user.id);

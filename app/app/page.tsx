@@ -1,10 +1,17 @@
 import { requireUser } from "@/lib/auth/guard";
 import { getSettings, getTodayStats } from "@/lib/repositories/profile";
-import { listOpenTasks, listTasksForDay } from "@/lib/repositories/tasks";
+import { listOpenTasks } from "@/lib/repositories/tasks";
+import { listDayBlocks, scheduledTaskIds } from "@/lib/repositories/events";
+import { listNotes } from "@/lib/repositories/notes";
 import { dayKeyFor } from "@/lib/day";
 import { materialiseRecurring } from "@/lib/repositories/recurring";
 import { formatDay } from "@/lib/format";
+import { formatClock, formatDuration, minutesBetween, totalCommitted } from "@/lib/time";
+import { describeRecurrence } from "@/lib/recurrence";
+import { POINTS } from "@/lib/points";
 import Today from "@/components/Today";
+import type { PlanBlockView } from "@/components/plan/Plan";
+import type { NoteColour } from "@/lib/notes";
 
 export default async function TodayPage() {
   const user = await requireUser();
@@ -17,34 +24,74 @@ export default async function TodayPage() {
   // doesn't produce two standups.
   await materialiseRecurring(user.id, dayKey);
 
-  const [stats, todays, open] = await Promise.all([
+  const [stats, blocks, open, scheduled, notes] = await Promise.all([
     getTodayStats(user.id),
-    listTasksForDay(user.id, dayKey),
+    listDayBlocks(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
     listOpenTasks(user.id),
+    scheduledTaskIds(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
+    listNotes(user.id),
   ]);
 
-  // Today's list is what was filed for today; the right pane is anything
-  // still open that isn't already on it.
-  const todayIds = new Set(todays.map((t) => t.id));
-  const unscheduled = open.filter((t) => !todayIds.has(t.id));
+  // Only one block is "next": the first unfinished one. Everything after
+  // it is still ahead, and saying so about all of them at once would
+  // just be a wall of accent colour.
+  const firstOpen = blocks.find((b) => !b.taskDone)?.id;
+
+  const view: PlanBlockView[] = blocks.map((b) => {
+    const parts = [
+      b.areaName,
+      // "recurring, weekdays" reads as one fact; the cadence alone
+      // wouldn't say that the block returns on its own.
+      b.recurring && b.recurrence
+        ? `recurring, ${describeRecurrence(b.recurrence, b.recurrenceValue).toLowerCase()}`
+        : null,
+      // Only the heaviest tier is worth naming. Labelling every block
+      // with its size turns the plan into a scoreboard.
+      !b.taskDone && b.points && b.points >= POINTS.deepBlock
+        ? "deep block"
+        : null,
+      b.taskDone ? "done" : null,
+      b.taskDone && b.points ? `+${b.points}` : null,
+    ].filter(Boolean);
+
+    return {
+      id: b.id,
+      title: b.title,
+      clock: formatClock(b.startsAt, settings.timezone),
+      duration: formatDuration(minutesBetween(b.startsAt, b.endsAt)),
+      meta: parts.join(" · ") || "No area",
+      tone: b.taskDone ? "done" : b.id === firstOpen ? "next" : "later",
+      taskId: b.taskId,
+    };
+  });
+
+  // The right pane is what has no time yet — anything already on the
+  // plan would be listed twice.
+  const waiting = open
+    .filter((t) => !scheduled.has(t.id))
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      points: t.points,
+      done: false,
+      recurring: t.recurrence !== "none",
+      chip:
+        t.recurrence !== "none"
+          ? describeRecurrence(t.recurrence, t.recurrenceValue).toLowerCase()
+          : undefined,
+    }));
 
   return (
     <Today
       name={user.name}
       day={formatDay(new Date())}
-      today={todays.map((t) => ({
-        id: t.id,
-        title: t.title,
-        points: t.points,
-        done: t.status === "done",
-        recurring: t.recurrence !== "none",
-      }))}
-      unscheduled={unscheduled.map((t) => ({
-        id: t.id,
-        title: t.title,
-        points: t.points,
-        done: false,
-        recurring: t.recurrence !== "none",
+      blocks={view}
+      committed={totalCommitted(blocks)}
+      waiting={waiting}
+      notes={notes.slice(0, 2).map((n) => ({
+        id: n.id,
+        body: n.body,
+        colour: n.colour as NoteColour,
       }))}
       stats={stats}
       showScoring={settings.scoringVisibility !== "hidden"}
