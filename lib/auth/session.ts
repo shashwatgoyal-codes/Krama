@@ -66,15 +66,28 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   }
 
   // Sliding expiry — an active user is never logged out mid-use.
+  //
+  // The database row is the authority on whether a session is still valid,
+  // so extending it here is what actually keeps the user signed in. The
+  // cookie only needs its browser-side expiry nudged to match, and that
+  // write is not always legal: this function runs during page renders too,
+  // where Next forbids modifying cookies. Letting that throw would turn
+  // every page load after the refresh threshold into a 500, so the write
+  // is best-effort here and done properly in proxy.ts, which is allowed to
+  // set cookies on every /app request.
   if (shouldRefresh(session.expiresAt)) {
     const expiresAt = sessionExpiry();
     await db.session
       .update({ where: { id: session.id }, data: { expiresAt } })
       .catch(() => {});
-    jar.set(SESSION_COOKIE, token, {
-      ...sessionCookieOptions,
-      expires: expiresAt,
-    });
+    try {
+      jar.set(SESSION_COOKIE, token, {
+        ...sessionCookieOptions,
+        expires: expiresAt,
+      });
+    } catch {
+      // Read-only render context. The proxy re-stamps it instead.
+    }
   }
 
   return session.user;

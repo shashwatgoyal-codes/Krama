@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import TopBar from "@/components/TopBar";
+import { appEnv } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: "Krama",
@@ -14,7 +15,9 @@ export default function AppLayout({
     // min-h-screen + flex-col so the two panes below can fill the
     // remaining height rather than collapsing to their content.
     <div className="flex min-h-screen flex-col">
-      <TopBar />
+      {/* Read on the server: APP_ENV isn't NEXT_PUBLIC_, so it never
+          reaches the browser except as this one resolved value. */}
+      <TopBar env={appEnv()} />
       {children}
     </div>
   );

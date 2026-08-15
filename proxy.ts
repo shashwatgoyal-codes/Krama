@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 // Import from ./constants, never ./token — token pulls in node:crypto,
 // which doesn't exist on the Edge runtime this file runs on.
-import { SESSION_COOKIE } from "@/lib/auth/constants";
+import {
+  SESSION_COOKIE,
+  SESSION_TTL_DAYS,
+  sessionCookieOptions,
+} from "@/lib/auth/constants";
 
 /**
  * A cheap first gate: bounce anyone with no session cookie away from
@@ -20,16 +24,32 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasCookie = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
 
-  if (pathname.startsWith("/app") && !hasCookie) {
+  if (pathname.startsWith("/app") && !token) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+
+  // Slide the cookie's browser-side expiry on every visit. This belongs
+  // here rather than in getSessionUser() because a page render may not
+  // modify cookies, but a proxy always may.
+  //
+  // Re-stamping without checking validity is safe: the cookie value is
+  // unchanged, so a dead token stays dead and requireUser() still
+  // rejects it. All this extends is how long the browser keeps sending it.
+  if (token) {
+    response.cookies.set(SESSION_COOKIE, token, {
+      ...sessionCookieOptions,
+      maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
+    });
+  }
+
+  return response;
 }
 
 export const config = {

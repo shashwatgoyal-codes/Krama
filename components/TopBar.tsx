@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import {
+  ENV_LABEL,
+  ENV_STYLE,
+  shouldShowEnvBadge,
+  type AppEnv,
+} from "@/lib/env";
 
 const NAV = [
   { href: "/app", label: "Today" },
@@ -12,7 +18,7 @@ const NAV = [
   { href: "/app/explore", label: "Explore" },
 ];
 
-export default function TopBar() {
+export default function TopBar({ env }: { env: AppEnv }) {
   const pathname = usePathname();
 
   return (
@@ -20,6 +26,15 @@ export default function TopBar() {
       <span className="font-display text-[14.5px] font-semibold tracking-[-0.015em]">
         Krama
       </span>
+
+      {shouldShowEnvBadge(env) && (
+        <span
+          title={`You are looking at the ${ENV_LABEL[env]} environment`}
+          className={`label-xs -ml-1.5 rounded border px-[5px] py-0.5 ${ENV_STYLE[env]}`}
+        >
+          {ENV_LABEL[env]}
+        </span>
+      )}
 
       <nav className="flex gap-[3px]">
         {NAV.map((item) => {

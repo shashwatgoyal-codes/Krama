@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, qa, stage, prod, main]
+  pull_request:
+    branches: [dev, qa, stage, prod]
+
+# A second push to the same branch cancels the first — no point finishing
+# a run for code that's already been replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Generates types from the schema. Deliberately needs no database:
+      # the Prisma client is created lazily, so nothing here connects.
+      - run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Test
+        run: npx vitest run
+
+      # Proves the app compiles without any secrets. If this ever starts
+      # needing DATABASE_URL, something is reaching the database at build
+      # time that shouldn't be.
+      - name: Build
+        run: npm run build
