@@ -7,12 +7,12 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
  * A cheap first gate: bounce anyone without a session cookie away from
  * /app before a page ever renders.
  *
- * This deliberately does NOT verify the session — middleware runs on
+ * This deliberately does NOT verify the session — the proxy runs on
  * every request and a database round trip here would tax every
  * navigation. Presence of a cookie proves nothing, so every page and
  * action still calls requireUser(). This only saves a wasted render.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasCookie = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
 
