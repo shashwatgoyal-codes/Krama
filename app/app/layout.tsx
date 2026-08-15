@@ -11,7 +11,9 @@ export default function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="shell">
+    // min-h-screen + flex-col so the two panes below can fill the
+    // remaining height rather than collapsing to their content.
+    <div className="flex min-h-screen flex-col">
       <TopBar />
       {children}
     </div>

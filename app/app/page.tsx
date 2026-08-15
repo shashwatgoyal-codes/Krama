@@ -1,31 +1,46 @@
-import Today from "@/components/Today";
+import { requireUser } from "@/lib/auth/guard";
+import { getSettings, getTodayStats } from "@/lib/repositories/profile";
+import { listOpenTasks, listTasksForDay } from "@/lib/repositories/tasks";
+import { dayKeyFor } from "@/lib/day";
 import { formatDay } from "@/lib/format";
+import Today from "@/components/Today";
 
-// Placeholder data until the database is wired up. Shape matches the
-// Prisma models so swapping the source is a one-line change.
-const PLAN = [
-  { id: "b1", time: "10:00", minutes: 30, title: "Sprint standup", meta: "Office · recurring, weekdays", state: "done" as const },
-  { id: "b2", time: "11:00", minutes: 60, title: "Review the integration PR", meta: "Office · done · +25", state: "done" as const },
-  { id: "b3", time: "14:00", minutes: 120, title: "Draft the API migration notes", meta: "Office · deep block", state: "now" as const },
-  { id: "b4", time: "20:00", minutes: 45, title: "Study block — distributed systems", meta: "Research", state: "idle" as const },
-];
+export default async function TodayPage() {
+  const user = await requireUser();
+  const settings = await getSettings(user.id);
+  const dayKey = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
 
-const UNSCHEDULED = [
-  { id: "t1", title: "Summarise three papers", points: 30, done: false },
-  { id: "t2", title: "Call home", points: 12, done: false },
-  { id: "t3", title: "Update the CV summary", points: 20, done: false },
-  { id: "t4", title: "Reply to the recruiter note", points: 15, done: false },
-];
+  const [stats, todays, open] = await Promise.all([
+    getTodayStats(user.id),
+    listTasksForDay(user.id, dayKey),
+    listOpenTasks(user.id),
+  ]);
 
-export default function TodayPage() {
+  // Today's list is what was filed for today; the right pane is anything
+  // still open that isn't already on it.
+  const todayIds = new Set(todays.map((t) => t.id));
+  const unscheduled = open.filter((t) => !todayIds.has(t.id));
+
   return (
     <Today
+      name={user.name}
       day={formatDay(new Date())}
-      plan={PLAN}
-      unscheduled={UNSCHEDULED}
-      pace={68}
-      streakDays={18}
-      committedMinutes={255}
+      today={todays.map((t) => ({
+        id: t.id,
+        title: t.title,
+        points: t.points,
+        done: t.status === "done",
+        recurring: t.recurrence !== "none",
+      }))}
+      unscheduled={unscheduled.map((t) => ({
+        id: t.id,
+        title: t.title,
+        points: t.points,
+        done: false,
+        recurring: t.recurrence !== "none",
+      }))}
+      stats={stats}
+      showScoring={settings.scoringVisibility !== "hidden"}
     />
   );
 }
