@@ -19,6 +19,36 @@ export function startOfWeek(dayKey: string): string {
   return weekDays(dayKey)[0];
 }
 
+/**
+ * The grid a month is drawn on: whole weeks, Monday first, padded at
+ * both ends so every row has seven days. Always six rows, so the grid
+ * doesn't change height as you page through the year.
+ */
+export function monthGridDays(dayKey: string): string[] {
+  const first = `${dayKey.slice(0, 7)}-01`;
+  const start = startOfWeek(first);
+  return Array.from({ length: 42 }, (_, i) => shiftDayKey(start, i));
+}
+
+export function isInMonth(dayKey: string, monthOf: string): boolean {
+  return dayKey.slice(0, 7) === monthOf.slice(0, 7);
+}
+
+export function describeMonth(dayKey: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${dayKey.slice(0, 7)}-01T00:00:00.000Z`));
+}
+
+/** The first of the month `delta` months away. */
+export function shiftMonth(dayKey: string, delta: number): string {
+  const [y, m] = dayKey.split("-").map(Number);
+  const at = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return at.toISOString().slice(0, 10);
+}
+
 /** "11 – 17 August", or "29 June – 5 July" when it straddles two months. */
 export function describeWeek(days: string[]): string {
   const first = new Date(`${days[0]}T00:00:00.000Z`);

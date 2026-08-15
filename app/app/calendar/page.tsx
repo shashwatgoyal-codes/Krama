@@ -2,10 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
-import { listBlocksBetween, scheduledTaskIds } from "@/lib/repositories/events";
+import {
+  listBlocksBetween,
+  scheduledTaskIdsBetween,
+} from "@/lib/repositories/events";
 import { listOpenTasks } from "@/lib/repositories/tasks";
 import { dayKeyFor, shiftDayKey } from "@/lib/day";
-import { weekDays, describeWeek } from "@/lib/week";
+import {
+  weekDays,
+  describeWeek,
+  monthGridDays,
+  isInMonth,
+  describeMonth,
+  shiftMonth,
+} from "@/lib/week";
 import {
   dayWindow,
   formatClock,
@@ -18,6 +28,7 @@ import WeekGrid, {
   type WeekBlock,
   type WeekColumn,
 } from "@/components/calendar/WeekGrid";
+import MonthGrid, { type MonthCell } from "@/components/calendar/MonthGrid";
 import WaitingItem from "@/components/plan/WaitingItem";
 
 export const metadata: Metadata = {
@@ -25,41 +36,69 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** The window the grid draws. Early enough for a morning routine,
- *  late enough for an evening study block. */
+/** Early enough for a morning routine, late enough for an evening block. */
 const START_HOUR = 7;
 const END_HOUR = 23;
+
+type View = "day" | "week" | "month";
 
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ w?: string }>;
+  searchParams: Promise<{ view?: string; w?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
   const settings = await getSettings(user.id);
+
+  const view: View = (["day", "week", "month"] as const).includes(
+    params.view as View,
+  )
+    ? (params.view as View)
+    : "week";
 
   const todayKey = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
   const anchor = /^\d{4}-\d{2}-\d{2}$/.test(params.w ?? "")
     ? (params.w as string)
     : todayKey;
 
-  const days = weekDays(anchor);
-  const from = zonedTimeToInstant(days[0], 0, 0, settings.timezone);
-  const to = zonedTimeToInstant(shiftDayKey(days[6], 1), 0, 0, settings.timezone);
+  const days =
+    view === "day"
+      ? [anchor]
+      : view === "week"
+        ? weekDays(anchor)
+        : monthGridDays(anchor);
 
-  const [blocks, open, scheduledToday] = await Promise.all([
+  const from = zonedTimeToInstant(days[0], 0, 0, settings.timezone);
+  const to = zonedTimeToInstant(
+    shiftDayKey(days[days.length - 1], 1),
+    0,
+    0,
+    settings.timezone,
+  );
+
+  const [blocks, open, scheduledHere] = await Promise.all([
     listBlocksBetween(user.id, from, to),
     listOpenTasks(user.id),
-    scheduledTaskIds(user.id, todayKey, settings.timezone, settings.dayEndsAtHour),
+    // Scoped to what's on screen. Anything visible in the grid must not
+    // also be sitting in the "unscheduled" list next to it.
+    scheduledTaskIdsBetween(user.id, from, to),
   ]);
+
+  /** Which of `days` a block sits on, by calendar date in the user's zone. */
+  function columnOf(startsAt: Date): number {
+    return days.findIndex((d) => {
+      const { start, end } = dayWindow(d, settings.timezone, 0);
+      return startsAt >= start && startsAt < end;
+    });
+  }
 
   const columns: WeekColumn[] = days.map((dayKey) => {
     const at = new Date(`${dayKey}T00:00:00.000Z`);
     return {
       dayKey,
       weekday: new Intl.DateTimeFormat("en-GB", {
-        weekday: "short",
+        weekday: view === "day" ? "long" : "short",
         timeZone: "UTC",
       })
         .format(at)
@@ -69,19 +108,13 @@ export default async function CalendarPage({
     };
   });
 
-  const view: WeekBlock[] = blocks.flatMap((b) => {
-    // Which column a block belongs to is decided by the day whose window
-    // contains it — not by its UTC date, which drifts across midnight.
-    const dayIndex = days.findIndex((d) => {
-      const { start, end } = dayWindow(d, settings.timezone, 0);
-      return b.startsAt >= start && b.startsAt < end;
-    });
+  const gridBlocks: WeekBlock[] = blocks.flatMap((b) => {
+    const dayIndex = columnOf(b.startsAt);
     if (dayIndex === -1) return [];
 
     const clock = formatClock(b.startsAt, settings.timezone);
-    const hour = Number(clock.slice(0, 2));
-    const minute = Number(clock.slice(3, 5));
-    const offsetMinutes = (hour - START_HOUR) * 60 + minute;
+    const offsetMinutes =
+      (Number(clock.slice(0, 2)) - START_HOUR) * 60 + Number(clock.slice(3, 5));
     if (offsetMinutes < 0) return [];
 
     const durationMinutes = minutesBetween(b.startsAt, b.endsAt);
@@ -99,8 +132,23 @@ export default async function CalendarPage({
     ];
   });
 
+  const monthCells: MonthCell[] = days.map((dayKey, index) => ({
+    dayKey,
+    dayNumber: String(new Date(`${dayKey}T00:00:00.000Z`).getUTCDate()),
+    inMonth: isInMonth(dayKey, anchor),
+    isToday: dayKey === todayKey,
+    blocks: blocks
+      .filter((b) => columnOf(b.startsAt) === index)
+      .map((b) => ({
+        id: b.id,
+        title: b.title,
+        clock: formatClock(b.startsAt, settings.timezone),
+        done: b.taskDone,
+      })),
+  }));
+
   const waiting = open
-    .filter((t) => !scheduledToday.has(t.id))
+    .filter((t) => !scheduledHere.has(t.id))
     .map((t) => ({
       id: t.id,
       title: t.title,
@@ -118,31 +166,67 @@ export default async function CalendarPage({
     return b.startsAt >= start && b.startsAt < end;
   });
 
+  // Stepping back and forward means something different in each view.
+  const step = (delta: number) =>
+    view === "month"
+      ? shiftMonth(anchor, delta)
+      : shiftDayKey(anchor, delta * (view === "day" ? 1 : 7));
+
+  const heading =
+    view === "day"
+      ? new Intl.DateTimeFormat("en-GB", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          timeZone: "UTC",
+        }).format(new Date(`${anchor}T00:00:00.000Z`))
+      : view === "week"
+        ? describeWeek(days)
+        : describeMonth(anchor);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-2.5 border-b border-ln bg-surf px-4 py-2.5">
         <Link
-          href={`/app/calendar?w=${shiftDayKey(days[0], -7)}`}
-          aria-label="Previous week"
+          href={`/app/calendar?view=${view}&w=${step(-1)}`}
+          aria-label="Previous"
           className="rounded-[7px] border border-ln2 px-2 py-1 text-[12.5px] font-semibold text-ink2 hover:border-acc hover:text-acc"
         >
           ‹
         </Link>
-        <span className="text-[13.5px] font-semibold">{describeWeek(days)}</span>
+        <span className="text-[13.5px] font-semibold">{heading}</span>
         <Link
-          href={`/app/calendar?w=${shiftDayKey(days[0], 7)}`}
-          aria-label="Next week"
+          href={`/app/calendar?view=${view}&w=${step(1)}`}
+          aria-label="Next"
           className="rounded-[7px] border border-ln2 px-2 py-1 text-[12.5px] font-semibold text-ink2 hover:border-acc hover:text-acc"
         >
           ›
         </Link>
 
+        <div className="ml-2 inline-flex overflow-hidden rounded-[7px] border border-ln2">
+          {(["day", "week", "month"] as const).map((option) => (
+            <Link
+              key={option}
+              href={`/app/calendar?view=${option}&w=${anchor}`}
+              aria-current={option === view ? "page" : undefined}
+              className={
+                "px-2.5 py-[5px] text-[11.5px] font-semibold capitalize " +
+                (option === view
+                  ? "bg-acc text-on-acc"
+                  : "text-mut hover:text-acc")
+              }
+            >
+              {option}
+            </Link>
+          ))}
+        </div>
+
         {anchor !== todayKey && (
           <Link
-            href="/app/calendar"
+            href={`/app/calendar?view=${view}`}
             className="rounded-[7px] border border-ln2 px-2.5 py-1 text-[12px] font-semibold text-mut hover:border-acc hover:text-acc"
           >
-            This week
+            Today
           </Link>
         )}
 
@@ -153,12 +237,16 @@ export default async function CalendarPage({
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[1.9fr_1fr]">
         <div className="min-w-0 overflow-x-auto border-r border-ln bg-surf">
-          <WeekGrid
-            columns={columns}
-            blocks={view}
-            startHour={START_HOUR}
-            endHour={END_HOUR}
-          />
+          {view === "month" ? (
+            <MonthGrid cells={monthCells} />
+          ) : (
+            <WeekGrid
+              columns={columns}
+              blocks={gridBlocks}
+              startHour={START_HOUR}
+              endHour={END_HOUR}
+            />
+          )}
         </div>
 
         <aside className="min-w-0 bg-surf2 p-4">
@@ -184,8 +272,9 @@ export default async function CalendarPage({
           )}
 
           <p className="mt-4 text-[11px] leading-relaxed text-fai">
-            Pressing <span className="font-semibold text-mut">Plan</span> puts a
-            task on today. Dragging onto another day isn&rsquo;t wired up yet.
+            {view === "month"
+              ? "Pick a day to place something on it — a month cell has no room to show a time honestly."
+              : "Drag a task onto any slot to schedule it, or drag a block to move it."}
           </p>
         </aside>
       </div>

@@ -144,7 +144,26 @@ export async function deleteBlock(userId: string, id: string): Promise<boolean> 
   return count > 0;
 }
 
-/** Task ids already on the plan, so they aren't offered twice. */
+/** Task ids with a block somewhere in the window, so none is offered twice. */
+export async function scheduledTaskIdsBetween(
+  userId: string,
+  start: Date,
+  end: Date,
+): Promise<Set<string>> {
+  const rows = await db.event.findMany({
+    where: { userId, taskId: { not: null }, startsAt: { gte: start, lt: end } },
+    select: { taskId: true },
+  });
+  return new Set(rows.map((r) => r.taskId).filter((id): id is string => !!id));
+}
+
+/**
+ * Task ids already on today's plan.
+ *
+ * Deliberately scoped to one day rather than to all time: a task you
+ * blocked out last Tuesday and never finished is genuinely unscheduled
+ * *today*, and hiding it would leave it stranded.
+ */
 export async function scheduledTaskIds(
   userId: string,
   dayKey: string,
@@ -152,9 +171,5 @@ export async function scheduledTaskIds(
   dayEndsAtHour: number,
 ): Promise<Set<string>> {
   const { start, end } = dayWindow(dayKey, timeZone, dayEndsAtHour);
-  const rows = await db.event.findMany({
-    where: { userId, taskId: { not: null }, startsAt: { gte: start, lt: end } },
-    select: { taskId: true },
-  });
-  return new Set(rows.map((r) => r.taskId).filter((id): id is string => !!id));
+  return scheduledTaskIdsBetween(userId, start, end);
 }

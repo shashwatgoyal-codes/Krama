@@ -1,18 +1,21 @@
-import Link from "next/link";
+"use client";
+
+import { useState, useTransition } from "react";
+import { scheduleTaskAt, moveBlockToHour } from "@/app/app/actions";
 
 /**
- * The week as a grid. Times down the side, days across the top, blocks
- * positioned inside their day column.
+ * The week (or a single day) as a grid. Times down the side, days
+ * across the top, blocks positioned inside their column.
  *
- * Every value here is pre-resolved on the server — the grid does no date
- * maths of its own, because a component that computes hours from an
- * instant will disagree with the server about the zone.
+ * Every value here is pre-resolved on the server — a component that
+ * computes hours from an instant will disagree with the server about
+ * the zone the moment the two differ.
  */
 
 export type WeekBlock = {
   id: string;
   title: string;
-  /** 0-based column, Monday = 0. */
+  /** 0-based column. */
   dayIndex: number;
   /** Offset from the top of the grid, in minutes. */
   offsetMinutes: number;
@@ -42,13 +45,39 @@ export default function WeekGrid({
   startHour: number;
   endHour: number;
 }) {
+  const [target, setTarget] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
   const hours = Array.from(
     { length: endHour - startHour },
     (_, i) => startHour + i,
   );
 
+  function drop(event: React.DragEvent, dayKey: string, hour: number) {
+    event.preventDefault();
+    setTarget(null);
+    setError(null);
+
+    const taskId = event.dataTransfer.getData("text/krama-task");
+    const blockId = event.dataTransfer.getData("text/krama-block");
+    if (!taskId && !blockId) return;
+
+    const data = new FormData();
+    data.set("id", taskId || blockId);
+    data.set("dayKey", dayKey);
+    data.set("hour", String(hour));
+
+    startTransition(async () => {
+      const result = taskId
+        ? await scheduleTaskAt(data)
+        : await moveBlockToHour(data);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   return (
-    <div className="min-w-[720px]">
+    <div className={columns.length > 1 ? "min-w-[720px]" : ""}>
       {/* header */}
       <div
         className="grid border-b border-ln"
@@ -80,7 +109,6 @@ export default function WeekGrid({
         className="relative grid"
         style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}
       >
-        {/* time gutter */}
         <div className="border-r border-ln">
           {hours.map((h) => (
             <div
@@ -95,26 +123,46 @@ export default function WeekGrid({
 
         {columns.map((col, index) => (
           <div key={col.dayKey} className="relative border-r border-ln">
-            {hours.map((h) => (
-              <div
-                key={h}
-                className="border-b border-ln"
-                style={{ height: ROW_HEIGHT }}
-              />
-            ))}
+            {hours.map((h) => {
+              const slot = `${col.dayKey}:${h}`;
+              return (
+                <div
+                  key={h}
+                  data-slot={slot}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setTarget(slot);
+                  }}
+                  onDragLeave={() => setTarget((t) => (t === slot ? null : t))}
+                  onDrop={(e) => drop(e, col.dayKey, h)}
+                  className={
+                    "border-b border-ln transition-colors " +
+                    (target === slot ? "bg-acc-soft" : "")
+                  }
+                  style={{ height: ROW_HEIGHT }}
+                />
+              );
+            })}
 
             {blocks
               .filter((b) => b.dayIndex === index)
               .map((b) => (
-                <Link
+                <div
                   key={b.id}
-                  href="/app"
+                  draggable
+                  data-block-id={b.id}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/krama-block", b.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
                   title={`${b.clock} · ${b.duration} · ${b.title}`}
                   className={
-                    "absolute left-[3px] right-[3px] overflow-hidden rounded-[5px] border-l-2 px-[7px] py-[5px] text-[11px] leading-[1.3] " +
+                    "absolute left-[3px] right-[3px] cursor-grab overflow-hidden rounded-[5px] " +
+                    "border-l-2 px-[7px] py-[5px] text-[11px] leading-[1.3] active:cursor-grabbing " +
                     (b.done
                       ? "border-l-ok bg-ok-soft"
-                      : "border-l-acc bg-acc-soft")
+                      : "border-l-acc bg-acc-soft") +
+                    (pending ? " opacity-60" : "")
                   }
                   style={{
                     top: (b.offsetMinutes / 60) * ROW_HEIGHT + 2,
@@ -125,15 +173,23 @@ export default function WeekGrid({
                     ),
                   }}
                 >
-                  <div className="truncate font-semibold text-ink">{b.title}</div>
+                  <div className="truncate font-semibold text-ink">
+                    {b.title}
+                  </div>
                   <div className="font-mono text-[9px] text-mut opacity-80">
                     {b.duration}
                   </div>
-                </Link>
+                </div>
               ))}
           </div>
         ))}
       </div>
+
+      {error && (
+        <p role="alert" className="px-3 py-2 text-[11.5px] text-bad">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

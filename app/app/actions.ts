@@ -173,6 +173,51 @@ export async function scheduleTask(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
+/**
+ * Schedule a task at a time the user actually picked, rather than the
+ * next gap. Used when something is dropped onto a specific slot.
+ */
+export async function scheduleTaskAt(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = z
+    .object({
+      id: z.string().cuid(),
+      dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      hour: z.coerce.number().int().min(0).max(23),
+    })
+    .safeParse({
+      id: formData.get("id"),
+      dayKey: formData.get("dayKey"),
+      hour: formData.get("hour"),
+    });
+  if (!parsed.success) return { ok: false, error: "Couldn't schedule that." };
+
+  const task = await getTask(user.id, parsed.data.id);
+  if (!task) return { ok: false, error: "That task no longer exists." };
+
+  const settings = await getSettings(user.id);
+  const start = zonedTimeToInstant(
+    parsed.data.dayKey,
+    parsed.data.hour,
+    0,
+    settings.timezone,
+  );
+
+  await createBlock(user.id, {
+    title: task.title,
+    startsAt: start,
+    endsAt: new Date(start.getTime() + defaultMinutes(task.points) * 60_000),
+    taskId: task.id,
+    areaId: task.areaId ?? undefined,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/calendar");
+  return { ok: true };
+}
+
 /** Takes it off the plan and puts it back on the waiting list. */
 export async function unscheduleBlock(
   formData: FormData,
