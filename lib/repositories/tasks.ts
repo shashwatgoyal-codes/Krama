@@ -132,3 +132,62 @@ export async function pointsOnDay(
   });
   return result._sum.points ?? 0;
 }
+
+export type TaskFilter = "all" | "today" | "upcoming" | "recurring" | "done";
+
+export type TaskDetail = TaskSummary & {
+  recurrenceValue: number | null;
+  recurrenceParentId: string | null;
+  createdForDate: Date;
+};
+
+const DETAIL = {
+  ...SUMMARY,
+  recurrenceValue: true,
+  recurrenceParentId: true,
+  createdForDate: true,
+} as const;
+
+/** Backs the Tasks page. Every branch still filters on userId. */
+export async function listTasks(
+  userId: string,
+  filter: TaskFilter,
+  todayKey: string,
+): Promise<TaskDetail[]> {
+  const today = dayKeyToDate(todayKey);
+
+  const where = {
+    all: { userId, status: { not: "dropped" as const } },
+    today: { userId, createdForDate: today },
+    upcoming: { userId, status: "open" as const, createdForDate: { gt: today } },
+    // Templates only — instances are ordinary tasks.
+    recurring: { userId, recurrence: { not: "none" as const }, recurrenceParentId: null },
+    done: { userId, status: "done" as const },
+  }[filter];
+
+  return db.task.findMany({
+    where,
+    select: DETAIL,
+    orderBy:
+      filter === "done"
+        ? [{ completedAt: "desc" as const }]
+        : [{ status: "asc" as const }, { createdForDate: "desc" as const }],
+    take: 200,
+  });
+}
+
+/** Counts for the filter chips, so the page doesn't lie about what's there. */
+export async function countTasks(
+  userId: string,
+  todayKey: string,
+): Promise<Record<TaskFilter, number>> {
+  const today = dayKeyToDate(todayKey);
+  const [all, todayCount, upcoming, recurring, done] = await Promise.all([
+    db.task.count({ where: { userId, status: { not: "dropped" } } }),
+    db.task.count({ where: { userId, createdForDate: today } }),
+    db.task.count({ where: { userId, status: "open", createdForDate: { gt: today } } }),
+    db.task.count({ where: { userId, recurrence: { not: "none" }, recurrenceParentId: null } }),
+    db.task.count({ where: { userId, status: "done" } }),
+  ]);
+  return { all, today: todayCount, upcoming, recurring, done };
+}
