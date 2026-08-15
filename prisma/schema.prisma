@@ -28,12 +28,44 @@ model User {
   sessions Session[]
   codes    VerificationCode[]
   events   Event[]
+  links    Link[]
   areas    Area[]
   tasks    Task[]
   notes    Note[]
   ledger   PointEntry[]
 
   @@map("users")
+}
+
+/// Something worth coming back to. The point of Explore is that a link
+/// you saved is a thing you decided to do something about — so `why`
+/// matters more than the title, and `taskId` is where it stops being a
+/// bookmark you never revisit.
+model Link {
+  id     String @id @default(cuid())
+  userId String
+  taskId String?
+
+  url         String
+  title       String
+  description String?
+  imageUrl    String?
+  /// Host it came from, e.g. "linkedin.com". Drives the filters.
+  source      String
+  /// The user's own note: why this was worth keeping.
+  why         String?
+  tags        String[] @default([])
+
+  savedAt    DateTime  @default(now())
+  readAt     DateTime?
+  archivedAt DateTime?
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, archivedAt])
+  @@index([userId, savedAt])
+  @@map("links")
 }
 
 /// A block of time. Created either directly, or by dragging a task onto
@@ -200,6 +232,7 @@ model Task {
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   area   Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
   events Event[]
+  links  Link[]
 
   @@index([userId, status])
   @@index([userId, createdForDate])

@@ -7,6 +7,7 @@ import { NOTE_TINT, type NoteColour } from "@/lib/notes";
 import Link from "next/link";
 
 export type NotePreview = { id: string; body: string; colour: NoteColour };
+export type SavedPreview = { id: string; title: string; unread: boolean };
 
 /**
  * The plan on the left with real times; everything uncommitted on the
@@ -19,6 +20,7 @@ export default function Today({
   committed,
   waiting,
   notes,
+  saved,
   stats,
   showScoring,
 }: {
@@ -28,6 +30,7 @@ export default function Today({
   committed: string;
   waiting: (TaskItem & { chip?: string })[];
   notes: NotePreview[];
+  saved: SavedPreview[];
   stats: TodayStats;
   showScoring: boolean;
 }) {
@@ -162,6 +165,37 @@ export default function Today({
                 {note.body.length > 120
                   ? `${note.body.slice(0, 120)}…`
                   : note.body}
+              </Link>
+            ))}
+          </>
+        )}
+
+        {saved.length > 0 && (
+          <>
+            <div className="mb-2.5 mt-5 flex items-baseline justify-between gap-2.5">
+              <span className="font-display text-[13px] font-semibold tracking-[-0.02em]">
+                Saved
+              </span>
+              <Link href="/app/explore" className="label-xs hover:text-acc">
+                Explore
+              </Link>
+            </div>
+            {saved.map((item) => (
+              <Link
+                key={item.id}
+                href={`/app/explore?id=${item.id}`}
+                className="mb-1.5 flex items-center gap-2.5 rounded-[7px] border border-ln bg-surf px-2.5 py-2 transition-colors hover:border-ln2"
+              >
+                <span
+                  aria-hidden
+                  className={
+                    "size-[5px] flex-none rounded-full " +
+                    (item.unread ? "bg-acc" : "bg-ok")
+                  }
+                />
+                <span className="min-w-0 flex-1 truncate text-[12.5px]">
+                  {item.title}
+                </span>
               </Link>
             ))}
           </>

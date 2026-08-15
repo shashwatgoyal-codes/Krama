@@ -3,6 +3,7 @@ import { getSettings, getTodayStats } from "@/lib/repositories/profile";
 import { listOpenTasks } from "@/lib/repositories/tasks";
 import { listDayBlocks, scheduledTaskIds } from "@/lib/repositories/events";
 import { listNotes } from "@/lib/repositories/notes";
+import { recentLinks } from "@/lib/repositories/links";
 import { dayKeyFor } from "@/lib/day";
 import { materialiseRecurring } from "@/lib/repositories/recurring";
 import { formatDay } from "@/lib/format";
@@ -24,12 +25,13 @@ export default async function TodayPage() {
   // doesn't produce two standups.
   await materialiseRecurring(user.id, dayKey);
 
-  const [stats, blocks, open, scheduled, notes] = await Promise.all([
+  const [stats, blocks, open, scheduled, notes, saved] = await Promise.all([
     getTodayStats(user.id),
     listDayBlocks(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
     listOpenTasks(user.id),
     scheduledTaskIds(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
     listNotes(user.id),
+    recentLinks(user.id, 2),
   ]);
 
   // Only one block is "next": the first unfinished one. Everything after
@@ -92,6 +94,11 @@ export default async function TodayPage() {
         id: n.id,
         body: n.body,
         colour: n.colour as NoteColour,
+      }))}
+      saved={saved.map((l) => ({
+        id: l.id,
+        title: l.title,
+        unread: !l.readAt,
       }))}
       stats={stats}
       showScoring={settings.scoringVisibility !== "hidden"}
