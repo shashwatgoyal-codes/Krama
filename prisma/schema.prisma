@@ -1,15 +1,17 @@
 // Krama schema.
-// Two connection strings on purpose: the app talks to Neon's pooled
-// endpoint, migrations use the direct one. See .env.example.
+//
+// Prisma 7 no longer takes connection URLs here. The app connects through
+// a driver adapter (see lib/db.ts) pointed at Neon's *pooled* endpoint;
+// migrations use the *direct* endpoint, configured in prisma.config.ts.
+// That split matters: the pooled endpoint runs transaction pooling, which
+// migrations can't work through.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 // ---------------------------------------------------------------- identity

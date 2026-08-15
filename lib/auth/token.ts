@@ -1,7 +1,13 @@
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
+import { SESSION_TTL_DAYS } from "./constants";
 
-export const SESSION_COOKIE = "krama_session";
-export const SESSION_TTL_DAYS = 30;
+// Re-exported so callers have one obvious import for session concerns.
+// Middleware must import from ./constants directly — see the note there.
+export {
+  SESSION_COOKIE,
+  SESSION_TTL_DAYS,
+  sessionCookieOptions,
+} from "./constants";
 
 /**
  * The session token given to the browser. 32 random bytes, base64url,
@@ -12,8 +18,8 @@ export function createSessionToken(): string {
 }
 
 /**
- * Only this ever reaches the database. If the sessions table leaks,
- * the hashes in it can't be replayed as cookies.
+ * Only this ever reaches the database. If the sessions table leaks, the
+ * hashes in it can't be replayed as cookies.
  */
 export function hashSessionToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -38,10 +44,3 @@ export function shouldRefresh(expiresAt: Date, now: Date = new Date()): boolean 
   const halfLife = (SESSION_TTL_DAYS / 2) * 24 * 60 * 60 * 1000;
   return expiresAt.getTime() - now.getTime() < halfLife;
 }
-
-export const sessionCookieOptions = {
-  httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-} as const;
