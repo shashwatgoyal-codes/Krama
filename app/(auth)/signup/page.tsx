@@ -5,6 +5,7 @@ import AuthForm from "@/components/auth/AuthForm";
 import Field from "@/components/auth/Field";
 import { signUp } from "../actions";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
+import { redirectIfSignedIn } from "@/lib/auth/redirect-if-signed-in";
 
 export const metadata: Metadata = {
   title: "Create an account · Krama",
@@ -18,7 +19,9 @@ const PROMISES = [
   "Export everything, any time, in one click",
 ];
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  await redirectIfSignedIn();
+
   return (
     <AuthShell
       title="Create your account"

@@ -4,13 +4,19 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/auth/constants";
 
 /**
- * A cheap first gate: bounce anyone without a session cookie away from
- * /app before a page ever renders.
+ * A cheap first gate: bounce anyone with no session cookie away from
+ * /app before a page renders.
  *
- * This deliberately does NOT verify the session — the proxy runs on
- * every request and a database round trip here would tax every
- * navigation. Presence of a cookie proves nothing, so every page and
- * action still calls requireUser(). This only saves a wasted render.
+ * It deliberately does NOT verify the session — this runs on every
+ * request and a database round trip here would tax every navigation.
+ * Presence of a cookie proves nothing, so every page and action still
+ * calls requireUser().
+ *
+ * It also deliberately does NOT redirect signed-in-looking visitors away
+ * from /login. That seems helpful and causes an infinite loop: a cookie
+ * whose session has expired or been deleted sends /login to /app, whose
+ * requireUser() sends it back to /login, forever. Only one side of this
+ * can judge a session, so the pages themselves do it with the real check.
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,16 +25,7 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/app") && !hasCookie) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    // So we can send them back where they were headed.
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  // Already signed in? Skip the sign-in screen.
-  if ((pathname === "/login" || pathname === "/signup") && hasCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/app";
-    url.search = "";
     return NextResponse.redirect(url);
   }
 
@@ -36,5 +33,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/login", "/signup"],
+  matcher: ["/app/:path*"],
 };

@@ -4,13 +4,16 @@ import AuthShell from "@/components/auth/AuthShell";
 import AuthForm from "@/components/auth/AuthForm";
 import Field from "@/components/auth/Field";
 import { signIn } from "../actions";
+import { redirectIfSignedIn } from "@/lib/auth/redirect-if-signed-in";
 
 export const metadata: Metadata = {
   title: "Sign in · Krama",
   robots: { index: false, follow: false },
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  await redirectIfSignedIn();
+
   return (
     <AuthShell
       title="Welcome back"
