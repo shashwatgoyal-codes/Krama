@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Task, TaskStatus } from "@prisma/client";
+import type { Task, TaskStatus, Recurrence } from "@prisma/client";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 
 /**
@@ -200,4 +200,92 @@ export async function countTasks(
     db.task.count({ where: { userId, status: "done" } }),
   ]);
   return { all, today: todayCount, upcoming, recurring, done };
+}
+
+export type TaskPanel = {
+  id: string;
+  title: string;
+  notes: string | null;
+  status: string;
+  points: number;
+  dueOn: Date | null;
+  areaName: string | null;
+  areaColour: string | null;
+  recurrence: string;
+  recurrenceValue: number | null;
+  /** The block this task sits in, if it has been given a time. */
+  block: { id: string; startsAt: Date; endsAt: Date } | null;
+  /** The note it was captured from, if any. */
+  fromNote: string | null;
+};
+
+/**
+ * Everything the detail panel shows, in one read.
+ *
+ * findFirst with userId rather than findUnique on the id — the id alone
+ * must never be enough to open somebody else's task.
+ */
+export async function getTaskPanel(
+  userId: string,
+  taskId: string,
+): Promise<TaskPanel | null> {
+  const task = await db.task.findFirst({
+    where: { id: taskId, userId },
+    select: {
+      id: true,
+      title: true,
+      notes: true,
+      status: true,
+      points: true,
+      dueOn: true,
+      recurrence: true,
+      recurrenceValue: true,
+      area: { select: { name: true, colour: true } },
+      events: {
+        orderBy: { startsAt: "asc" },
+        take: 1,
+        select: { id: true, startsAt: true, endsAt: true },
+      },
+    },
+  });
+  if (!task) return null;
+
+  const note = await db.note.findFirst({
+    where: { userId, taskId },
+    select: { body: true },
+  });
+
+  return {
+    id: task.id,
+    title: task.title,
+    notes: task.notes,
+    status: task.status,
+    points: task.points,
+    dueOn: task.dueOn,
+    areaName: task.area?.name ?? null,
+    areaColour: task.area?.colour ?? null,
+    recurrence: task.recurrence,
+    recurrenceValue: task.recurrenceValue,
+    block: task.events[0] ?? null,
+    fromNote: note?.body ?? null,
+  };
+}
+
+/** Partial edits from the detail panel. Never touches userId or points. */
+export async function updateTaskFields(
+  userId: string,
+  taskId: string,
+  data: {
+    title?: string;
+    notes?: string | null;
+    dueOn?: Date | null;
+    recurrence?: Recurrence;
+    recurrenceValue?: number | null;
+  },
+): Promise<boolean> {
+  const { count } = await db.task.updateMany({
+    where: { id: taskId, userId },
+    data,
+  });
+  return count > 0;
 }

@@ -7,6 +7,20 @@
  * once, rather than being sprinkled through components.
  */
 
+/**
+ * Block lengths offered when scheduling.
+ *
+ * A closed list rather than a free number: an arbitrary minute count
+ * invites 7-minute blocks that make the grid unreadable, and every value
+ * here is one a person would actually choose.
+ *
+ * It lives here rather than in lib/validation.ts because the scheduling
+ * form is a client component, and validation.ts reaches the password
+ * rules, which reach argon2 — a native module that cannot be bundled for
+ * the browser. Neither tsc nor eslint catches that; the build does.
+ */
+export const BLOCK_MINUTES = [15, 30, 45, 60, 90, 120, 180, 240] as const;
+
 /** How far the zone is from UTC at a given instant, in milliseconds. */
 export function zoneOffsetMs(at: Date, timeZone: string): number {
   const fmt = new Intl.DateTimeFormat("en-CA", {

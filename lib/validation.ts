@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth/password";
+import { BLOCK_MINUTES } from "./time";
 
 /**
  * Every server action validates its input through one of these before
@@ -75,6 +76,20 @@ export const resetPasswordSchema = z.object({
 });
 
 export const verifyEmailSchema = z.object({ code: otpSchema });
+
+export const scheduleAtSchema = z.object({
+  id: z.string().cuid(),
+  dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
+  hour: z.coerce.number().int().min(0).max(23),
+  minute: z.coerce.number().int().min(0).max(59),
+  durationMinutes: z.coerce
+    .number()
+    .int()
+    .refine(
+      (m) => (BLOCK_MINUTES as readonly number[]).includes(m),
+      "Pick one of the offered lengths.",
+    ),
+});
 
 /** Rejects anything the platform doesn't recognise as an IANA zone. */
 export function isValidTimeZone(tz: string): boolean {
