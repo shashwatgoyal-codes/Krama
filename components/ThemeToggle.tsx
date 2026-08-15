@@ -28,11 +28,12 @@ export default function ThemeToggle() {
 
   return (
     <button
-      className="iconbtn"
       type="button"
       onClick={toggle}
-      aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-      suppressHydrationWarning
+      aria-label={
+        theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+      }
+      className="grid size-[30px] cursor-pointer place-items-center rounded-md border border-ln2 text-mut transition-colors hover:border-acc hover:text-acc"
     >
       {theme === "dark" ? (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">

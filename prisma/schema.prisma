@@ -1,0 +1,177 @@
+// Krama schema.
+// Two connection strings on purpose: the app talks to Neon's pooled
+// endpoint, migrations use the direct one. See .env.example.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------- identity
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  profile  Profile?
+  sessions Session[]
+  areas    Area[]
+  tasks    Task[]
+  ledger   PointEntry[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  // Only ever the SHA-256 of the token. The token itself lives in the
+  // user's cookie and is never stored anywhere.
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------- profile
+
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  totalPoints Int    @default(0)
+  level       Int    @default(1)
+  streakDays  Int    @default(0)
+  pace        Int    @default(0)
+  timezone    String @default("Asia/Kolkata")
+
+  // When the day rolls over. Work finished before this hour counts
+  // toward the previous day.
+  dayEndsAtHour Int @default(4)
+
+  dailyFloor Int @default(3)
+  dailyCap   Int @default(150)
+
+  // "hidden" | "normal" | "everywhere"
+  scoringVisibility String @default("normal")
+  // Days that never break a streak. 0 = Sunday.
+  restDays          Int[]  @default([0, 6])
+
+  lastActiveOn DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// ---------------------------------------------------------------- content
+
+model Area {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  colour String @default("acc")
+  points Int    @default(0)
+  order  Int    @default(0)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("areas")
+}
+
+enum TaskStatus {
+  open
+  done
+  dropped
+}
+
+enum Recurrence {
+  none
+  daily
+  weekdays
+  weekly
+  monthly
+}
+
+model Task {
+  id     String @id @default(cuid())
+  userId String
+  areaId String?
+
+  title  String
+  notes  String?
+  status TaskStatus @default(open)
+
+  // Points the task is worth. Kept narrow on purpose — see AGENTS.md.
+  points Int @default(20)
+
+  dueOn       DateTime?
+  completedAt DateTime?
+  // The day this task belongs to, in the user's timezone. Drives the
+  // backdating rule; not the same as createdAt.
+  createdForDate DateTime
+
+  recurrence       Recurrence @default(none)
+  // For weekly: 0-6. For monthly: day of month.
+  recurrenceValue  Int?
+  // Instances point back at the template they came from.
+  recurrenceParentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([userId, createdForDate])
+  @@index([recurrenceParentId])
+  @@map("tasks")
+}
+
+// ---------------------------------------------------------------- scoring
+
+enum PointSource {
+  task
+  habit
+  manual
+}
+
+/// Append-only. A database trigger rejects UPDATE and DELETE — every
+/// score in the app is recomputed from these rows, never edited.
+model PointEntry {
+  id         String      @id @default(cuid())
+  userId     String
+  sourceType PointSource
+  sourceId   String?
+
+  points     Int
+  multiplier Float @default(1)
+  // The day it counted toward, after the day-boundary rule is applied.
+  countedFor DateTime
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, countedFor])
+  @@map("point_ledger")
+}
