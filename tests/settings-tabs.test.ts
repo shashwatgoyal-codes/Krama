@@ -57,6 +57,7 @@ describe("rhythmSchema", () => {
 describe("appearanceSchema", () => {
   const base = {
     accent: "amber",
+    interfaceFont: "krama",
     density: "comfortable",
     reduceMotion: false,
     showPointsOnTasks: true,
@@ -79,6 +80,23 @@ describe("appearanceSchema", () => {
   it("rejects a density the layout doesn't implement", () => {
     expect(appearanceSchema.safeParse({ ...base, density: "tiny" }).success)
       .toBe(false);
+  });
+
+  it("accepts both interface fonts and nothing else", () => {
+    for (const f of ["krama", "system"]) {
+      expect(appearanceSchema.safeParse({ ...base, interfaceFont: f }).success)
+        .toBe(true);
+    }
+    expect(appearanceSchema.safeParse({ ...base, interfaceFont: "comic" })
+      .success).toBe(false);
+  });
+
+  it("requires the font rather than defaulting it", () => {
+    // A form that forgets the field would otherwise silently reset
+    // someone back to the app's own pairing.
+    const without: Record<string, unknown> = { ...base };
+    delete without.interfaceFont;
+    expect(appearanceSchema.safeParse(without).success).toBe(false);
   });
 });
 
