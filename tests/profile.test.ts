@@ -48,8 +48,13 @@ describe("dayScheduleSchema", () => {
     const r = dayScheduleSchema.parse({
       timezone: "Asia/Kolkata",
       dayEndsAtHour: "4",
+      restDays: ["0", "6"],
     });
-    expect(r).toEqual({ timezone: "Asia/Kolkata", dayEndsAtHour: 4 });
+    expect(r).toEqual({
+      timezone: "Asia/Kolkata",
+      dayEndsAtHour: 4,
+      restDays: [0, 6],
+    });
   });
 
   it("rejects a bogus time zone rather than storing it", () => {
@@ -58,6 +63,7 @@ describe("dayScheduleSchema", () => {
     const r = dayScheduleSchema.safeParse({
       timezone: "Nowhere/Nothing",
       dayEndsAtHour: "4",
+      restDays: [],
     });
     expect(r.success).toBe(false);
   });
@@ -65,24 +71,78 @@ describe("dayScheduleSchema", () => {
   it("allows midnight and noon at the edges", () => {
     for (const h of [0, 12]) {
       expect(
-        dayScheduleSchema.safeParse({ timezone: "UTC", dayEndsAtHour: h })
-          .success,
+        dayScheduleSchema.safeParse({
+          timezone: "UTC",
+          dayEndsAtHour: h,
+          restDays: [],
+        }).success,
       ).toBe(true);
     }
   });
 
   it("rejects an evening 'day end', which would mean a different day", () => {
     expect(
-      dayScheduleSchema.safeParse({ timezone: "UTC", dayEndsAtHour: 20 })
-        .success,
+      dayScheduleSchema.safeParse({
+        timezone: "UTC",
+        dayEndsAtHour: 20,
+        restDays: [],
+      }).success,
     ).toBe(false);
   });
 
   it("rejects a negative hour", () => {
     expect(
-      dayScheduleSchema.safeParse({ timezone: "UTC", dayEndsAtHour: -1 })
-        .success,
+      dayScheduleSchema.safeParse({
+        timezone: "UTC",
+        dayEndsAtHour: -1,
+        restDays: [],
+      }).success,
     ).toBe(false);
+  });
+});
+
+describe("rest days, which live with the rhythm", () => {
+  const base = { timezone: "UTC", dayEndsAtHour: "4" };
+
+  it("coerces the form's strings to numbers", () => {
+    expect(dayScheduleSchema.parse({ ...base, restDays: ["0", "6"] }).restDays)
+      .toEqual([0, 6]);
+  });
+
+  it("treats no rest days as a real answer, not a missing field", () => {
+    // This is why rest days moved off the scoring form: an empty list is
+    // valid, so a form that didn't include the field would have wiped it.
+    expect(dayScheduleSchema.parse({ ...base, restDays: [] }).restDays)
+      .toEqual([]);
+  });
+
+  it("de-duplicates and sorts them", () => {
+    expect(
+      dayScheduleSchema.parse({ ...base, restDays: ["6", "0", "6"] }).restDays,
+    ).toEqual([0, 6]);
+  });
+
+  it("refuses to make every day a rest day", () => {
+    // Seven rest days would mean nothing ever counts, which silently
+    // turns the whole scoring system off rather than configuring it.
+    expect(
+      dayScheduleSchema.safeParse({
+        ...base,
+        restDays: ["0", "1", "2", "3", "4", "5", "6"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a day outside the week", () => {
+    expect(
+      dayScheduleSchema.safeParse({ ...base, restDays: ["7"] }).success,
+    ).toBe(false);
+  });
+
+  it("requires the field rather than defaulting it", () => {
+    // A missing restDays means the form forgot to send it, which must
+    // fail loudly rather than quietly clearing every rest day.
+    expect(dayScheduleSchema.safeParse(base).success).toBe(false);
   });
 });
 
@@ -91,40 +151,12 @@ describe("scoringSchema", () => {
     dailyFloor: "3",
     dailyCap: "150",
     scoringVisibility: "normal",
-    restDays: ["0", "6"],
   };
 
   it("coerces the form's strings to numbers", () => {
     const r = scoringSchema.parse(base);
     expect(r.dailyFloor).toBe(3);
     expect(r.dailyCap).toBe(150);
-    expect(r.restDays).toEqual([0, 6]);
-  });
-
-  it("treats no rest days as a real answer, not a missing field", () => {
-    const r = scoringSchema.parse({ ...base, restDays: [] });
-    expect(r.restDays).toEqual([]);
-  });
-
-  it("de-duplicates and sorts rest days", () => {
-    const r = scoringSchema.parse({ ...base, restDays: ["6", "0", "6"] });
-    expect(r.restDays).toEqual([0, 6]);
-  });
-
-  it("refuses to make every day a rest day", () => {
-    // Seven rest days would mean nothing ever counts, which silently
-    // turns the whole scoring system off rather than configuring it.
-    const r = scoringSchema.safeParse({
-      ...base,
-      restDays: ["0", "1", "2", "3", "4", "5", "6"],
-    });
-    expect(r.success).toBe(false);
-  });
-
-  it("rejects a day outside the week", () => {
-    expect(scoringSchema.safeParse({ ...base, restDays: ["7"] }).success).toBe(
-      false,
-    );
   });
 
   it("rejects a floor of zero", () => {

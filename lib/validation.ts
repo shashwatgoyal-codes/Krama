@@ -109,11 +109,18 @@ export const nameSchema = z.object({
     .max(80, "That name is a bit long."),
 });
 
+const restDaysSchema = z
+  .array(z.coerce.number().int().min(0).max(6))
+  .max(6, "Leave at least one day that counts — otherwise nothing does.")
+  // A duplicate day in the form post shouldn't become a duplicate row.
+  .transform((days) => [...new Set(days)].sort((a, b) => a - b));
+
 export const dayScheduleSchema = z.object({
   timezone: z
     .string()
     .trim()
     .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+  restDays: restDaysSchema,
   // Capped at noon: a "day" that ends in the evening isn't a late night,
   // it's a different day, and allowing it would quietly corrupt every
   // date the scoring engine derives.
@@ -136,11 +143,6 @@ export const scoringSchema = z.object({
     .min(20, "A cap under 20 would slow you down almost immediately.")
     .max(1000, "Keep the cap under 1000."),
   scoringVisibility: z.enum(["hidden", "normal", "everywhere"]),
-  restDays: z
-    .array(z.coerce.number().int().min(0).max(6))
-    .max(6, "Leave at least one day that counts — otherwise nothing does.")
-    // A duplicate day in the form post shouldn't become a duplicate row.
-    .transform((days) => [...new Set(days)].sort((a, b) => a - b)),
 });
 
 export const changePasswordSchema = z.object({

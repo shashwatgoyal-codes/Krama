@@ -54,6 +54,9 @@ export async function saveDaySchedule(
   const parsed = dayScheduleSchema.safeParse({
     timezone: formData.get("timezone"),
     dayEndsAtHour: formData.get("dayEndsAtHour"),
+    // Unchecked boxes send nothing, so an empty list is a real answer:
+    // "no rest days", not "field missing".
+    restDays: formData.getAll("restDays"),
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
@@ -73,9 +76,6 @@ export async function saveScoring(formData: FormData): Promise<ActionResult> {
     dailyFloor: formData.get("dailyFloor"),
     dailyCap: formData.get("dailyCap"),
     scoringVisibility: formData.get("scoringVisibility"),
-    // Unchecked boxes send nothing, so an empty list is a real answer:
-    // "no rest days", not "field missing".
-    restDays: formData.getAll("restDays"),
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
