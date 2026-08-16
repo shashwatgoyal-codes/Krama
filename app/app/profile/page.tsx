@@ -21,6 +21,7 @@ import SectionNav, {
 } from "@/components/profile/SectionNav";
 import { listAreasWithCounts } from "@/lib/repositories/areas";
 import Row, { inputClass } from "@/components/profile/Row";
+import SettingRow from "@/components/profile/SettingRow";
 import SaveForm from "@/components/profile/SaveForm";
 import DangerZone from "@/components/profile/DangerZone";
 import ThemePicker from "@/components/profile/ThemePicker";
@@ -129,15 +130,33 @@ export default async function ProfilePage({
         <div className="flex min-w-0 flex-col gap-4">
           {section === "profile" && (
             <>
-              <Section
-                title="Profile"
-                description="Who you are, and the time settings everything else depends on."
-              >
+              <Section title="Profile">
+                {/* The identity block sits inside the panel, as drawn —
+                    not in the page header, where it belonged to no
+                    section in particular. */}
+                <div className="mb-1 flex items-center gap-3 border-b border-ln pb-4">
+                  <span className="grid size-10 flex-none place-items-center rounded-full bg-acc text-[15px] font-bold text-on-acc">
+                    {p.name.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold text-ink">
+                      {p.name}
+                    </p>
+                    <p className="truncate text-[11.5px] text-mut">{p.email}</p>
+                  </div>
+                  <span
+                    title="Photo upload isn't built — nothing in the app takes a file yet."
+                    className="flex-none cursor-not-allowed rounded-[7px] border border-ln2 px-2.5 py-1 text-[11.5px] font-semibold text-fai"
+                  >
+                    Change photo
+                  </span>
+                </div>
+
                 <SaveForm action={saveProfileTab}>
-                  <Row
+                  <SettingRow
                     label="Display name"
+                    description="Shown in the greeting on Today."
                     htmlFor="name"
-                    hint="Shown in the greeting on Today."
                   >
                     <input
                       id="name"
@@ -146,20 +165,20 @@ export default async function ProfilePage({
                       maxLength={80}
                       defaultValue={p.name}
                       autoComplete="name"
-                      className={`max-w-[320px] ${inputClass}`}
+                      className={`w-[220px] ${inputClass}`}
                     />
-                  </Row>
+                  </SettingRow>
 
-                  <Row
+                  <SettingRow
                     label="Time zone"
+                    description={`All your dates and times use this. Currently ${describeZone(p.timezone)}.`}
                     htmlFor="timezone"
-                    hint={`All your dates and times use this. Currently ${describeZone(p.timezone)}.`}
                   >
                     <select
                       id="timezone"
                       name="timezone"
                       defaultValue={p.timezone}
-                      className={`max-w-[320px] ${inputClass}`}
+                      className={`w-[220px] ${inputClass}`}
                     >
                       {zones.map((z) => (
                         <option key={z} value={z}>
@@ -167,9 +186,9 @@ export default async function ProfilePage({
                         </option>
                       ))}
                     </select>
-                  </Row>
+                  </SettingRow>
 
-                  <Row
+                  <SettingRow
                     label="When your day ends"
                     help="Anything you finish before this time still counts as yesterday. Set it to when you actually go to sleep."
                   >
@@ -180,9 +199,9 @@ export default async function ProfilePage({
                       max={12}
                       format="hour"
                     />
-                  </Row>
+                  </SettingRow>
 
-                  <Row label="Week starts on">
+                  <SettingRow label="Week starts on">
                     <Segmented
                       name="weekStartsOn"
                       value={String(p.weekStartsOn)}
@@ -191,9 +210,9 @@ export default async function ProfilePage({
                         { value: "0", label: "Sunday" },
                       ]}
                     />
-                  </Row>
+                  </SettingRow>
 
-                  <Row label="Time format">
+                  <SettingRow label="Time format">
                     <Segmented
                       name="timeFormat"
                       value={p.timeFormat}
@@ -202,31 +221,34 @@ export default async function ProfilePage({
                         { value: "12", label: "12-hour" },
                       ]}
                     />
-                  </Row>
+                  </SettingRow>
                 </SaveForm>
               </Section>
 
               <Section title="Password">
-                <p className="mb-3 text-[12px] text-mut">
-                  {p.passwordChangedAt
-                    ? `Last changed ${relativeSince(p.passwordChangedAt)}.`
-                    : "Never changed since you signed up."}
-                </p>
                 <SaveForm action={changePassword} label="Change password">
-                  <Row label="Current password" htmlFor="currentPassword">
+                  <SettingRow
+                    label="Current password"
+                    description={
+                      p.passwordChangedAt
+                        ? `Last changed ${relativeSince(p.passwordChangedAt)}.`
+                        : "Never changed since you signed up."
+                    }
+                    htmlFor="currentPassword"
+                  >
                     <input
                       id="currentPassword"
                       name="currentPassword"
                       type="password"
                       required
                       autoComplete="current-password"
-                      className={`max-w-[320px] ${inputClass}`}
+                      className={`w-[220px] ${inputClass}`}
                     />
-                  </Row>
-                  <Row
+                  </SettingRow>
+                  <SettingRow
                     label="New password"
+                    description="At least 10 characters. Length matters more than symbols."
                     htmlFor="newPassword"
-                    hint="At least 10 characters. Length matters more than symbols."
                   >
                     <input
                       id="newPassword"
@@ -235,19 +257,21 @@ export default async function ProfilePage({
                       required
                       minLength={10}
                       autoComplete="new-password"
-                      className={`max-w-[320px] ${inputClass}`}
+                      className={`w-[220px] ${inputClass}`}
                     />
-                  </Row>
+                  </SettingRow>
                 </SaveForm>
               </Section>
 
               <Section title="Signed-in devices">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="max-w-[46ch] text-[12px] leading-relaxed text-mut">
-                    {p.otherSessions === 0
+                <SettingRow
+                  label="This account"
+                  description={
+                    p.otherSessions === 0
                       ? "This is the only device signed in."
-                      : `You're signed in on ${p.otherSessions + 1} devices.`}
-                  </p>
+                      : `You're signed in on ${p.otherSessions + 1} devices.`
+                  }
+                >
                   <form action={signOutEverywhere}>
                     <button
                       type="submit"
@@ -256,7 +280,7 @@ export default async function ProfilePage({
                       Sign out everywhere
                     </button>
                   </form>
-                </div>
+                </SettingRow>
               </Section>
             </>
           )}
