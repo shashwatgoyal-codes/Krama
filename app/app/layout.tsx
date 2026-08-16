@@ -3,6 +3,7 @@ import TopBar from "@/components/TopBar";
 import { appEnv } from "@/lib/env";
 import { getSessionUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { ACCENT_TOKENS, isAccent } from "@/lib/appearance";
 import VerifyBanner from "@/components/VerifyBanner";
 
 export const metadata: Metadata = {
@@ -22,14 +23,48 @@ export default async function AppLayout({
   const account = user
     ? await db.user.findUnique({
         where: { id: user.id },
-        select: { emailVerified: true },
+        select: {
+          emailVerified: true,
+          profile: {
+            select: { accent: true, density: true, reduceMotion: true },
+          },
+        },
       })
     : null;
+
+  const settings = account?.profile;
+  const accent = isAccent(settings?.accent ?? "") ? settings!.accent : "amber";
+  const tokens = ACCENT_TOKENS[accent as keyof typeof ACCENT_TOKENS];
+
+  // The accent is two custom properties, so changing it is an override
+  // rather than a parallel set of Tailwind classes per colour. Written
+  // as a <style> because the dark value has to live behind a media query
+  // and a [data-theme] rule, which an inline style attribute cannot do.
+  const accentCss = `
+    [data-accent] { --acc: ${tokens.light[0]}; --acc-soft: ${tokens.light[1]}; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) [data-accent] {
+        --acc: ${tokens.dark[0]}; --acc-soft: ${tokens.dark[1]};
+      }
+    }
+    :root[data-theme="dark"] [data-accent] {
+      --acc: ${tokens.dark[0]}; --acc-soft: ${tokens.dark[1]};
+    }
+    :root[data-theme="light"] [data-accent] {
+      --acc: ${tokens.light[0]}; --acc-soft: ${tokens.light[1]};
+    }
+  `;
 
   return (
     // min-h-screen + flex-col so the two panes below can fill the
     // remaining height rather than collapsing to their content.
-    <div className="flex min-h-screen flex-col">
+    <div
+      data-accent={accent}
+      data-density={settings?.density ?? "comfortable"}
+      data-motion={settings?.reduceMotion ? "reduced" : "full"}
+      className="flex min-h-screen flex-col"
+    >
+      <style dangerouslySetInnerHTML={{ __html: accentCss }} />
       {/* Read on the server: APP_ENV isn't NEXT_PUBLIC_, so it never
           reaches the browser except as this one resolved value. */}
       <TopBar env={appEnv()} name={user?.name ?? "You"} />

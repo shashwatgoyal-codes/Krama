@@ -88,13 +88,22 @@ export function dayWindow(
   return { start, end: zonedTimeToInstant(next, dayEndsAtHour, 0, timeZone) };
 }
 
-/** "10:00" in the user's zone, 24-hour, which is what the design shows. */
-export function formatClock(at: Date, timeZone: string): string {
+/**
+ * "10:00" in the user's zone.
+ *
+ * The 24-hour form is the default because it is what the grid is drawn
+ * against and what hourIn() parses. Passing "12" is for display only.
+ */
+export function formatClock(
+  at: Date,
+  timeZone: string,
+  format: "12" | "24" = "24",
+): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hour12: format === "12",
   }).format(at);
 }
 

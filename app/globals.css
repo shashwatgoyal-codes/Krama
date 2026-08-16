@@ -218,3 +218,28 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------- density
+   Compact tightens every list row. Applied from a data attribute on the
+   app shell rather than by swapping class names in each component, so a
+   setting nobody remembers can't leave half the app on the old spacing. */
+[data-density="compact"] .row-pad { padding-block: 0.3rem; }
+[data-density="compact"] .row-gap { gap: 0.25rem; }
+
+/* ------------------------------------------------------------ reduced motion
+   Honours the user's own choice as well as the OS one. Both are stated
+   here so neither can be forgotten at a call site. */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

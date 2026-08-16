@@ -90,3 +90,37 @@ describe("isBackdated", () => {
     expect(isBackdated("2026-07-01", "2026-08-15")).toBe(true);
   });
 });
+
+describe("the backdate grace period", () => {
+  it("treats today as never backdated", () => {
+    expect(isBackdated("2026-08-15", "2026-08-15", 2)).toBe(false);
+  });
+
+  it("keeps yesterday at full rate inside a 2-day grace", () => {
+    // Logging last night's work this morning is ordinary life, not
+    // gaming the score.
+    expect(isBackdated("2026-08-14", "2026-08-15", 2)).toBe(false);
+    expect(isBackdated("2026-08-13", "2026-08-15", 2)).toBe(false);
+  });
+
+  it("drops to half once past the grace", () => {
+    expect(isBackdated("2026-08-12", "2026-08-15", 2)).toBe(true);
+  });
+
+  it("with no grace, anything before today pays half", () => {
+    expect(isBackdated("2026-08-14", "2026-08-15", 0)).toBe(true);
+    expect(isBackdated("2026-08-15", "2026-08-15", 0)).toBe(false);
+  });
+
+  it("defaults to no grace, which is the old behaviour", () => {
+    expect(isBackdated("2026-08-14", "2026-08-15")).toBe(true);
+  });
+
+  it("never treats a future day as backdated", () => {
+    expect(isBackdated("2026-08-20", "2026-08-15", 2)).toBe(false);
+  });
+
+  it("ignores a negative limit rather than inverting the rule", () => {
+    expect(isBackdated("2026-08-14", "2026-08-15", -5)).toBe(true);
+  });
+});

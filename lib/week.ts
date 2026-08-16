@@ -8,15 +8,15 @@ import { shiftDayKey, weekdayOf } from "./day";
  * Saturday or Sunday, and a calendar that doesn't show you a block you
  * created is worse than one that looks slightly busier.
  */
-export function weekDays(dayKey: string): string[] {
-  // getUTCDay is 0=Sunday; shift so Monday is the start.
-  const offset = (weekdayOf(dayKey) + 6) % 7;
-  const monday = shiftDayKey(dayKey, -offset);
-  return Array.from({ length: 7 }, (_, i) => shiftDayKey(monday, i));
+export function weekDays(dayKey: string, startsOn: number = 1): string[] {
+  // getUTCDay is 0=Sunday. Rotate so the user's chosen day leads.
+  const offset = (weekdayOf(dayKey) - startsOn + 7) % 7;
+  const first = shiftDayKey(dayKey, -offset);
+  return Array.from({ length: 7 }, (_, i) => shiftDayKey(first, i));
 }
 
-export function startOfWeek(dayKey: string): string {
-  return weekDays(dayKey)[0];
+export function startOfWeek(dayKey: string, startsOn: number = 1): string {
+  return weekDays(dayKey, startsOn)[0];
 }
 
 /**
@@ -24,9 +24,9 @@ export function startOfWeek(dayKey: string): string {
  * both ends so every row has seven days. Always six rows, so the grid
  * doesn't change height as you page through the year.
  */
-export function monthGridDays(dayKey: string): string[] {
+export function monthGridDays(dayKey: string, startsOn: number = 1): string[] {
   const first = `${dayKey.slice(0, 7)}-01`;
-  const start = startOfWeek(first);
+  const start = startOfWeek(first, startsOn);
   return Array.from({ length: 42 }, (_, i) => shiftDayKey(start, i));
 }
 

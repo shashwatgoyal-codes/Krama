@@ -14,9 +14,21 @@ export type MonthCell = {
   blocks: { id: string; title: string; clock: string; done: boolean }[];
 };
 
-const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const NAMES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-export default function MonthGrid({ cells }: { cells: MonthCell[] }) {
+/** Rotated so the header matches whichever day the user starts on. */
+function weekdayHeader(startsOn: number): string[] {
+  return Array.from({ length: 7 }, (_, i) => NAMES[(startsOn + i) % 7]);
+}
+
+export default function MonthGrid({
+  cells,
+  startsOn = 1,
+}: {
+  cells: MonthCell[];
+  startsOn?: number;
+}) {
+  const WEEKDAYS = weekdayHeader(startsOn);
   return (
     <div className="min-w-[680px]">
       <div className="grid grid-cols-7 border-b border-ln">

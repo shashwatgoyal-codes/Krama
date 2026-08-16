@@ -10,6 +10,10 @@ export type ProfileSettings = {
   dailyCap: number;
   scoringVisibility: string;
   restDays: number[];
+  weekStartsOn: number;
+  timeFormat: string;
+  backdateLimitDays: number;
+  defaultAreaId: string | null;
   totalPoints: number;
 };
 
@@ -30,6 +34,10 @@ export async function getSettings(userId: string): Promise<ProfileSettings> {
       dailyCap: true,
       scoringVisibility: true,
       restDays: true,
+      weekStartsOn: true,
+      timeFormat: true,
+      backdateLimitDays: true,
+      defaultAreaId: true,
       totalPoints: true,
     },
   });

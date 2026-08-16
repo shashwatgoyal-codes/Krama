@@ -203,3 +203,23 @@ describe("nextFreeSlot", () => {
     expect(minutesBetween(slot.start, slot.end)).toBe(120);
   });
 });
+
+describe("formatClock honours the user's time format", () => {
+  const at = zonedTimeToInstant("2026-08-15", 14, 30, IST);
+
+  it("defaults to 24-hour, which the grid is drawn against", () => {
+    expect(formatClock(at, IST)).toBe("14:30");
+    expect(formatClock(at, IST, "24")).toBe("14:30");
+  });
+
+  it("renders 12-hour when asked", () => {
+    expect(formatClock(at, IST, "12")).toMatch(/^02:30\s?pm$/i);
+  });
+
+  it("keeps midnight and noon unambiguous in 12-hour", () => {
+    const midnight = zonedTimeToInstant("2026-08-15", 0, 0, IST);
+    const noon = zonedTimeToInstant("2026-08-15", 12, 0, IST);
+    expect(formatClock(midnight, IST, "12")).toMatch(/12:00\s?am/i);
+    expect(formatClock(noon, IST, "12")).toMatch(/12:00\s?pm/i);
+  });
+});

@@ -131,3 +131,40 @@ describe("describeMonth", () => {
     expect(describeMonth("2026-08-15")).toBe("August 2026");
   });
 });
+
+describe("a week that starts on Sunday", () => {
+  it("leads with Sunday when asked to", () => {
+    // 2026-08-15 is a Saturday; its Sunday-led week opens on the 9th.
+    expect(weekDays("2026-08-15", 0)[0]).toBe("2026-08-09");
+    expect(weekDays("2026-08-15", 0)[6]).toBe("2026-08-15");
+  });
+
+  it("puts Sunday first in the weekday order", () => {
+    expect(weekDays("2026-08-15", 0).map(weekdayOf)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it("still contains the given day", () => {
+    for (const day of ["2026-08-09", "2026-08-12", "2026-08-15"]) {
+      expect(weekDays(day, 0)).toContain(day);
+    }
+  });
+
+  it("defaults to Monday when not told otherwise", () => {
+    expect(weekDays("2026-08-15")).toEqual(weekDays("2026-08-15", 1));
+  });
+
+  it("shifts the month grid's first cell as well", () => {
+    // 1 August 2026 is a Saturday. Monday-led opens 27 Jul; Sunday-led
+    // opens 26 Jul — one day earlier, not the same grid.
+    expect(monthGridDays("2026-08-15", 1)[0]).toBe("2026-07-27");
+    expect(monthGridDays("2026-08-15", 0)[0]).toBe("2026-07-26");
+  });
+
+  it("still covers every day of the month either way", () => {
+    for (const startsOn of [0, 1]) {
+      const grid = monthGridDays("2026-08-15", startsOn);
+      expect(grid).toHaveLength(42);
+      for (const d of ["2026-08-01", "2026-08-31"]) expect(grid).toContain(d);
+    }
+  });
+});

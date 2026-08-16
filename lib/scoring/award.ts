@@ -22,6 +22,8 @@ export async function awardPoints(params: {
   dayEndsAtHour: number;
   dailyFloor: number;
   restDays: number[];
+  /** Grace period before an entry drops to half. */
+  backdateLimitDays?: number;
 }): Promise<AwardResult> {
   const today = dayKeyFor(new Date(), params.timezone, params.dayEndsAtHour);
   const countedFor = params.countedForDay ?? today;
@@ -43,7 +45,7 @@ export async function awardPoints(params: {
       ${params.sourceId ?? null},
       ${params.basePoints}::int,
       ${dayKeyToDate(countedFor)}::timestamp,
-      ${isBackdated(countedFor, today)}::boolean,
+      ${isBackdated(countedFor, today, params.backdateLimitDays ?? 0)}::boolean,
       ${streak.days}::int
     )
   `;
