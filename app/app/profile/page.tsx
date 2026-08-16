@@ -4,6 +4,8 @@ import { getProfileOverview } from "@/lib/repositories/profile";
 import { POINTS } from "@/lib/points";
 import { timeZoneOptions, formatZone } from "@/lib/timezones";
 import Section from "@/components/profile/Section";
+import Areas from "@/components/profile/Areas";
+import { listAreasWithCounts } from "@/lib/repositories/areas";
 import Row, { inputClass } from "@/components/profile/Row";
 import SaveForm from "@/components/profile/SaveForm";
 import DangerZone from "@/components/profile/DangerZone";
@@ -57,7 +59,10 @@ function hourLabel(h: number): string {
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  const p = await getProfileOverview(user.id);
+  const [p, areas] = await Promise.all([
+    getProfileOverview(user.id),
+    listAreasWithCounts(user.id),
+  ]);
 
   const zones = timeZoneOptions(p.timezone);
   const memberSince = p.memberSince.toLocaleDateString("en-GB", {
@@ -278,6 +283,21 @@ export default async function ProfilePage() {
               </div>
             </Row>
           </SaveForm>
+        </Section>
+
+        <Section
+          title="Areas"
+          description="How work is grouped — on the Tasks list, in the detail panel, and on each block in the plan. Deleting one never deletes its tasks; they just become unfiled."
+        >
+          <Areas
+            areas={areas.map((a) => ({
+              id: a.id,
+              name: a.name,
+              colour: a.colour,
+              openTasks: a.openTasks,
+              totalTasks: a.totalTasks,
+            }))}
+          />
         </Section>
 
         <Section title="Appearance">

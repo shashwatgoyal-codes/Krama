@@ -21,7 +21,7 @@ export type TaskPanelView = {
   notes: string;
   done: boolean;
   points: number;
-  areaName: string | null;
+  areaId: string | null;
   /** "2026-08-15" or "" */
   dueOn: string;
   recurrence: string;
@@ -67,7 +67,13 @@ const FIELD =
   "w-full rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink " +
   "focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft";
 
-export default function TaskDetail({ task }: { task: TaskPanelView }) {
+export default function TaskDetail({
+  task,
+  areas,
+}: {
+  task: TaskPanelView;
+  areas: { id: string; name: string }[];
+}) {
   const [scheduling, setScheduling] = useState(false);
   const [recurrence, setRecurrence] = useState(task.recurrence);
   const [error, setError] = useState<string | null>(null);
@@ -121,16 +127,18 @@ export default function TaskDetail({ task }: { task: TaskPanelView }) {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Area">
-            <span
-              className={
-                "inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold " +
-                (task.areaName
-                  ? "border border-acc bg-acc-soft text-acc"
-                  : "border border-ln2 text-fai")
-              }
+            <select
+              name="areaId"
+              defaultValue={task.areaId ?? ""}
+              className={FIELD}
             >
-              {task.areaName ?? "None"}
-            </span>
+              <option value="">Unfiled</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Points">
