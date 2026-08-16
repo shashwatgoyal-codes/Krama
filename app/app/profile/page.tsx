@@ -22,7 +22,7 @@ import SectionNav, {
   type SectionKey,
 } from "@/components/profile/SectionNav";
 import { listAreasWithCounts } from "@/lib/repositories/areas";
-import Row, { inputClass } from "@/components/profile/Row";
+import { inputClass } from "@/components/profile/Row";
 import SettingRow from "@/components/profile/SettingRow";
 import TimeZoneField from "@/components/profile/TimeZoneField";
 import ChangePasswordRow from "@/components/profile/ChangePasswordRow";
@@ -209,12 +209,13 @@ export default async function ProfilePage({
           {section === "scoring" && (
             <Section
               title="Scoring"
-              description="Tuned so the score never becomes the goal."
+              meta="tuned so the score never becomes the goal"
             >
-              <SaveForm action={saveScoring}>
-                <Row
+              <SaveForm action={saveScoring} layout="rows">
+                <SettingRow
                   label="How much scoring you see"
-                  help="Hidden removes points and levels from the whole app except this page."
+                  description="Hidden removes points and levels from the whole app except this page."
+                  help="Nothing stops being tracked either way — the score is still kept, you just stop being shown it. Everywhere puts points on every task row as well."
                 >
                   <Segmented
                     name="scoringVisibility"
@@ -225,11 +226,11 @@ export default async function ProfilePage({
                       { value: "everywhere", label: "Everywhere" },
                     ]}
                   />
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="Daily minimum"
-                  hint="How many things count as showing up. Also on the Rhythm page."
+                  description="How many things count as showing up. Also on the Rhythm page."
                 >
                   <Stepper
                     name="dailyFloor"
@@ -237,11 +238,12 @@ export default async function ProfilePage({
                     min={1}
                     max={20}
                   />
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="Daily point limit"
-                  help="After this many points in a day, extra work counts for less. Nothing is ever blocked."
+                  description="After this many points in a day, extra work counts for less. Nothing is ever blocked."
+                  help="Past the limit an award pays half, then a quarter. It exists so a long day doesn't turn into chasing the number."
                 >
                   <Stepper
                     name="dailyCap"
@@ -250,7 +252,7 @@ export default async function ProfilePage({
                     max={1000}
                     step={10}
                   />
-                </Row>
+                </SettingRow>
               </SaveForm>
 
               <div className="mt-5 border-t border-ln pt-4">
@@ -259,10 +261,7 @@ export default async function ProfilePage({
             </Section>
           )}
           {section === "rhythm" && (
-            <Section
-              title="Rhythm"
-              description="When the app expects you, and when it leaves you alone."
-            >
+            <Section title="Rhythm">
               {/* Only worth saying once there is a streak to describe.
                   "0-day streak" is a fact nobody needs. */}
               {p.streakDays > 0 && (

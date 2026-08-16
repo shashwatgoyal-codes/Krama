@@ -64,12 +64,13 @@ export default function PointsTable() {
         </table>
       </div>
 
-      <p className="mt-3 text-[12px] leading-relaxed text-mut">
-        <b className="font-semibold text-ink">
-          Spread is {spread}×, not 50×.
-        </b>{" "}
-        When one action pays far more than the rest, you optimise for the score
-        instead of the work.
+      {/* A callout, as drawn. This is the one sentence explaining why
+          every number above is close together, and as grey footnote text
+          it read as something you could skip. */}
+      <p className="mt-4 rounded-lg border border-acc bg-acc-soft px-3 py-2.5 text-[12px] leading-relaxed text-ink">
+        <b className="font-semibold">Spread is {spread}×, not 50×.</b> When one
+        action pays far more than the rest, you optimise for the score instead
+        of the work.
       </p>
     </div>
   );
