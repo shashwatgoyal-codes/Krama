@@ -27,7 +27,12 @@ export default async function AppLayout({
           emailVerified: true,
           avatarAt: true,
           profile: {
-            select: { accent: true, density: true, reduceMotion: true },
+            select: {
+              accent: true,
+              density: true,
+              reduceMotion: true,
+              interfaceFont: true,
+            },
           },
         },
       })
@@ -63,6 +68,7 @@ export default async function AppLayout({
       data-accent={accent}
       data-density={settings?.density ?? "comfortable"}
       data-motion={settings?.reduceMotion ? "reduced" : "full"}
+      data-font={settings?.interfaceFont ?? "krama"}
       className="flex min-h-screen flex-col"
     >
       <style dangerouslySetInnerHTML={{ __html: accentCss }} />

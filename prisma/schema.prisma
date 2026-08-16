@@ -198,6 +198,8 @@ model Profile {
   /// "comfortable" | "compact"
   density      String  @default("comfortable")
   reduceMotion Boolean @default(false)
+  /// "krama" = Cal Sans + Inter, "system" = the OS stack.
+  interfaceFont String @default("krama")
   /// Palette token for the single accent hue. See lib/appearance.ts.
   accent       String  @default("amber")
 

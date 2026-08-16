@@ -126,6 +126,7 @@ export type ProfileOverview = {
   catchUpRoutines: boolean;
   density: string;
   reduceMotion: boolean;
+  interfaceFont: string;
   accent: string;
   defaultAreaId: string | null;
   totalPoints: number;
@@ -168,6 +169,7 @@ export async function getProfileOverview(
             catchUpRoutines: true,
             density: true,
             reduceMotion: true,
+            interfaceFont: true,
             accent: true,
             defaultAreaId: true,
             totalPoints: true,
@@ -224,6 +226,7 @@ export async function updateProfileSettings(
     catchUpRoutines?: boolean;
     density?: string;
     reduceMotion?: boolean;
+    interfaceFont?: string;
     accent?: string;
     defaultAreaId?: string | null;
   },

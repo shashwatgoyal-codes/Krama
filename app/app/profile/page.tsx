@@ -15,6 +15,7 @@ import { weekDays } from "@/lib/week";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 import { getContentCounts } from "@/lib/repositories/profile";
 import { ACCENTS, DENSITIES } from "@/lib/appearance";
+import { NOTE_COLOURS, NOTE_TINT } from "@/lib/notes";
 import PointsTable from "@/components/profile/PointsTable";
 import SectionNav, {
   isSectionKey,
@@ -396,80 +397,104 @@ export default async function ProfilePage({
             </Section>
           )}
           {section === "appearance" && (
-            <Section
-              title="Appearance"
-              description="Deliberately small. The accent is one hue with one job."
-            >
-              <Row label="Theme" hint="System follows your OS setting.">
+            <Section title="Appearance">
+              <SettingRow
+                label="Theme"
+                description="System follows your OS setting."
+              >
                 <ThemePicker />
-              </Row>
+              </SettingRow>
 
-              <div className="mt-4 border-t border-ln pt-4">
-                <SaveForm action={saveAppearance}>
-                  <Row
-                    label="Accent"
-                    hint="Used only for the active state, progress and scheduled blocks."
-                  >
-                    <div className="flex gap-1.5">
-                      {ACCENTS.map((a) => (
-                        <label
-                          key={a.value}
-                          title={a.label}
-                          className="cursor-pointer rounded-md border border-transparent p-0.5 has-[:checked]:border-ink"
-                        >
-                          <input
-                            type="radio"
-                            name="accent"
-                            value={a.value}
-                            defaultChecked={p.accent === a.value}
-                            className="sr-only"
-                          />
-                          <span
-                            aria-label={a.label}
-                            className={`block size-[20px] rounded ${a.dot}`}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </Row>
+              <SaveForm action={saveAppearance} layout="rows">
+                <SettingRow
+                  label="Accent"
+                  description="Used only for the active state, progress and scheduled blocks."
+                >
+                  <div className="flex gap-2">
+                    {ACCENTS.map((a) => (
+                      <label
+                        key={a.value}
+                        title={a.label}
+                        className="cursor-pointer rounded-[7px] p-0.5 ring-ink has-[:checked]:ring-2"
+                      >
+                        <input
+                          type="radio"
+                          name="accent"
+                          value={a.value}
+                          defaultChecked={p.accent === a.value}
+                          className="sr-only"
+                        />
+                        <span
+                          aria-label={a.label}
+                          className={`block size-[22px] rounded-[5px] ${a.dot}`}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </SettingRow>
 
-                  <Row
-                    label="Density"
-                    hint="Compact tightens row height across every list."
-                  >
-                    <Segmented
-                      name="density"
-                      value={p.density}
-                      options={DENSITIES.map((d) => ({
-                        value: d,
-                        label: d === "comfortable" ? "Comfortable" : "Compact",
-                      }))}
-                    />
-                  </Row>
+                <SettingRow
+                  label="Note colours"
+                  description="The five sticky tints. Recolouring them isn't built yet — these are what a note can be."
+                >
+                  <div className="flex gap-2">
+                    {NOTE_COLOURS.map((c) => (
+                      <span
+                        key={c}
+                        title={c}
+                        className={`block size-[22px] rounded-[5px] border ${NOTE_TINT[c]}`}
+                      />
+                    ))}
+                  </div>
+                </SettingRow>
 
-                  <Row
+                <SettingRow
+                  label="Density"
+                  description="Compact tightens row height across every list."
+                >
+                  <Segmented
+                    name="density"
+                    value={p.density}
+                    options={DENSITIES.map((d) => ({
+                      value: d,
+                      label: d === "comfortable" ? "Comfortable" : "Compact",
+                    }))}
+                  />
+                </SettingRow>
+
+                <SettingRow label="Interface font">
+                  <Segmented
+                    name="interfaceFont"
+                    value={p.interfaceFont}
+                    options={[
+                      { value: "krama", label: "Cal Sans + Inter" },
+                      { value: "system", label: "System" },
+                    ]}
+                  />
+                </SettingRow>
+
+                <SettingRow
+                  label="Reduce motion"
+                  description="Follows your OS setting by default. Disables transitions and the board's drag inertia."
+                >
+                  <Toggle
+                    name="reduceMotion"
+                    defaultChecked={p.reduceMotion}
                     label="Reduce motion"
-                    hint="Disables transitions and the board's drag inertia."
-                  >
-                    <Toggle
-                      name="reduceMotion"
-                      defaultChecked={p.reduceMotion}
-                      label="Reduce motion"
-                    />
-                  </Row>
+                  />
+                </SettingRow>
 
-                  <Row
+                <SettingRow
+                  label="Show points on tasks"
+                  description="Off keeps scores off task rows — they stay on the Today page only."
+                >
+                  <Toggle
+                    name="showPointsOnTasks"
+                    defaultChecked={p.scoringVisibility === "everywhere"}
                     label="Show points on tasks"
-                    help="Off keeps scores off task rows — they stay on the Today page only. This is the same setting as the Scoring tab's visibility, phrased for this page."
-                  >
-                    <Toggle
-                      name="showPointsOnTasks"
-                      defaultChecked={p.scoringVisibility === "everywhere"}
-                      label="Show points on tasks"
-                    />
-                  </Row>
-                </SaveForm>
-              </div>
+                  />
+                </SettingRow>
+              </SaveForm>
             </Section>
           )}
           {section === "data" && (

@@ -181,6 +181,7 @@ export const rhythmSchema = z.object({
 /** The Appearance tab. */
 export const appearanceSchema = z.object({
   accent: z.enum(ACCENT_VALUES),
+  interfaceFont: z.enum(["krama", "system"]),
   density: z.enum(DENSITIES),
   reduceMotion: z.coerce.boolean(),
   showPointsOnTasks: z.coerce.boolean(),

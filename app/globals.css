@@ -243,3 +243,12 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* --------------------------------------------------------- interface font
+   "system" drops the app's pairing for whatever the OS uses. A webfont
+   is a download and a rendering difference, and some people would
+   rather not have either. */
+[data-font="system"] {
+  --display: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
