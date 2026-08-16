@@ -32,6 +32,10 @@ export default function SaveForm({
   const rows = layout === "rows";
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Nothing to save until something is changed. A button that is always
+  // there is furniture — it stops being read, and it never confirms that
+  // the edit you just made actually registered anywhere.
+  const [dirty, setDirty] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function submit(formData: FormData) {
@@ -40,6 +44,7 @@ export default function SaveForm({
     startTransition(async () => {
       const result = await action(formData);
       if (result.ok) {
+        setDirty(false);
         setSaved(true);
         // Long enough to notice, short enough not to become furniture.
         setTimeout(() => setSaved(false), 2500);
@@ -50,7 +55,20 @@ export default function SaveForm({
   }
 
   return (
-    <form action={submit} onChange={() => setSaved(false)}>
+    <form
+      action={submit}
+      // onInput as well as onChange: a select fires change, but a text
+      // field only fires it on blur, so typing alone would leave the
+      // form looking untouched.
+      onChange={() => {
+        setDirty(true);
+        setSaved(false);
+      }}
+      onInput={() => {
+        setDirty(true);
+        setSaved(false);
+      }}
+    >
       <fieldset
         disabled={pending}
         className={rows ? "flex flex-col" : "flex flex-col gap-4"}
@@ -70,23 +88,34 @@ export default function SaveForm({
       {/* In a row layout the controls all sit against the right edge, so
           the button belongs there too — left-aligned under a right-hand
           column reads as belonging to nothing. */}
-      {/* A hairline above closes the form. Without it the button floats
-          in whitespace between two rows and reads as belonging to
-          whichever one it happens to sit nearer. */}
-      <div
-        className={
-          rows
-            ? "flex items-center justify-end gap-2.5 border-t border-ln pt-3"
-            : "mt-4 flex items-center gap-2.5"
-        }
-      >
-        {/* aria-live so the confirmation is announced, not just shown. */}
-        <span aria-live="polite" className="text-[11.5px] font-semibold text-ok">
-          {saved && "Saved"}
-        </span>
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {pending ? "Saving…" : label}
-        </Button>
+      {/* aria-live wraps the whole strip so the confirmation is
+          announced even though the region appears and disappears. */}
+      <div aria-live="polite">
+        {(dirty || pending || saved) && (
+          <div
+            className={
+              rows
+                ? "flex items-center justify-end gap-2.5 border-t border-ln pt-3"
+                : "mt-4 flex items-center gap-2.5"
+            }
+          >
+            {saved && !dirty ? (
+              <span className="text-[11.5px] font-semibold text-ok">Saved</span>
+            ) : (
+              <>
+                <span className="text-[11px] text-fai">Unsaved changes</span>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={pending}
+                >
+                  {pending ? "Saving…" : label}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </form>
   );
