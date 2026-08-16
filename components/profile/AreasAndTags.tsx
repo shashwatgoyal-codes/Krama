@@ -202,70 +202,86 @@ export default function AreasAndTags({
       {/* ----------------------------------------------------- tags */}
       <Heading label="Tags" count={`${tags.length} used`} top />
 
-      {shown.length === 0 ? (
-        <p className="py-1 text-[11.5px] text-mut">
-          {showStale
-            ? "Nothing stale — everything here is in use."
-            : "No tags yet."}
-        </p>
-      ) : (
-        <div className="flex flex-wrap items-center gap-1.5 py-1">
-          {shown.map((tag) => (
+      {/* Chips exactly as drawn: mono, small, uppercase, and quiet.
+          They are labels, not controls — which is why there is no x on
+          them. Removing one happens under Review, where tidying is
+          what you came to do. */}
+      <div className="flex flex-wrap items-center gap-1.5 py-2">
+        {shown.length === 0 ? (
+          <span className="text-[11.5px] text-mut">
+            {showStale
+              ? "Nothing stale — everything here is in use."
+              : "No tags yet."}
+          </span>
+        ) : (
+          shown.map((tag) => (
             <span
               key={tag.id}
-              className={
-                "group inline-flex items-center gap-1 rounded border px-2 py-1 text-[11.5px] " +
-                (tag.stale
-                  ? "border-ln2 text-fai"
-                  : "border-ln2 bg-surf text-mut")
-              }
+              className="inline-flex items-center gap-1 rounded-[4px] border border-ln bg-surf2 px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] text-mut"
             >
               {tag.name}
-              {/* Only on hover: nine tags each wearing a × is a wall of
-                  delete buttons on a list you mostly just read. */}
-              <button
-                type="button"
-                disabled={pending}
-                aria-label={`Remove ${tag.name}`}
-                onClick={() => {
-                  const d = new FormData();
-                  d.set("id", tag.id);
-                  run(removeTag, d);
-                }}
-                className="cursor-pointer text-fai opacity-0 transition-opacity hover:text-bad focus-visible:opacity-100 group-hover:opacity-100"
-              >
-                ×
-              </button>
+              {showStale && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  aria-label={`Remove ${tag.name}`}
+                  onClick={() => {
+                    const d = new FormData();
+                    d.set("id", tag.id);
+                    run(removeTag, d);
+                  }}
+                  className="cursor-pointer text-fai hover:text-bad"
+                >
+                  ×
+                </button>
+              )}
             </span>
-          ))}
-        </div>
-      )}
+          ))
+        )}
 
-      {addingTag ? (
-        <form
-          ref={tagForm}
-          action={(d) => run(addTag, d, () => tagForm.current?.reset())}
-          className="mt-2 flex gap-2"
-        >
-          <input
-            name="name"
-            required
-            autoFocus
-            maxLength={32}
-            placeholder="career, deep-work, reading…"
-            aria-label="New tag"
-            className={`max-w-[220px] ${inputClass}`}
-          />
-          <Button type="submit" size="sm" disabled={pending}>
-            Add
-          </Button>
-          <Button type="button" size="sm" onClick={() => setAddingTag(false)}>
-            Done
-          </Button>
-        </form>
-      ) : (
-        <Add label="+ add" onClick={() => setAddingTag(true)} />
-      )}
+        {addingTag ? (
+          <form
+            ref={tagForm}
+            action={(d) => run(addTag, d, () => tagForm.current?.reset())}
+            className="flex items-center gap-1.5"
+          >
+            <input
+              name="name"
+              required
+              autoFocus
+              maxLength={32}
+              placeholder="new tag"
+              aria-label="New tag"
+              className="w-[140px] rounded-[4px] border border-ln2 bg-surf px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] text-ink placeholder:text-fai focus:border-acc focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={pending}
+              className="cursor-pointer rounded-[4px] border border-acc bg-acc-soft px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] text-acc"
+            >
+              add
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddingTag(false)}
+              className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.05em] text-fai hover:text-ink"
+            >
+              done
+            </button>
+          </form>
+        ) : (
+          // The design makes "+ add" a chip of the same size with a
+          // dashed edge, sitting at the end of the row — so adding one
+          // reads as the next item rather than a control below the list.
+          <button
+            type="button"
+            onClick={() => setAddingTag(true)}
+            className="cursor-pointer rounded-[4px] border border-dashed border-ln2 px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] text-fai transition-colors hover:border-acc hover:text-acc"
+          >
+            + add
+          </button>
+        )}
+      </div>
 
       {/* --------------------------------------------------- settings */}
       <div className="mt-4 border-t border-ln">
