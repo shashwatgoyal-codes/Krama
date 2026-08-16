@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import { uploadAvatar, removeAvatar } from "@/app/app/profile/avatar-actions";
-import { AVATAR_MAX_BYTES, formatBytes } from "@/lib/images";
+import { resizeAvatar, AVATAR_EDGE } from "@/lib/resize";
 
 /**
  * The identity block: picture, name, email, and the button that changes
@@ -32,13 +32,22 @@ export default function AvatarField({
   const src = version ? `/api/avatar/${userId}?v=${version}` : null;
 
   function choose(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
+    const original = files?.[0];
+    if (!original) return;
 
     setError(null);
-    const data = new FormData();
-    data.set("avatar", file);
     startTransition(async () => {
+      // Shrunk before it leaves the machine, so a photo off a phone
+      // simply works instead of being refused for its size.
+      const sized = await resizeAvatar(original);
+      if (!sized.ok) {
+        setError(sized.reason);
+        if (input.current) input.current.value = "";
+        return;
+      }
+
+      const data = new FormData();
+      data.set("avatar", sized.file);
       const result = await uploadAvatar(data);
       if (!result.ok) setError(result.error);
       if (input.current) input.current.value = "";
@@ -115,7 +124,8 @@ export default function AvatarField({
         </p>
       ) : (
         <p className="mt-2 text-[11px] text-fai">
-          PNG, JPEG or WebP, up to {formatBytes(AVATAR_MAX_BYTES)}.
+          PNG, JPEG or WebP. Large photos are cropped square and shrunk to
+          {" "}{AVATAR_EDGE}px before upload, so size is rarely a problem.
         </p>
       )}
     </div>
