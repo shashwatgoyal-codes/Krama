@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/guard";
 import { getProfileOverview } from "@/lib/repositories/profile";
 import { zoneGroups } from "@/lib/timezones";
 import Stepper from "@/components/profile/Stepper";
+import TimeSelect from "@/components/profile/TimeSelect";
 import Segmented from "@/components/profile/Segmented";
 import Section from "@/components/profile/Section";
 import Areas from "@/components/profile/Areas";
@@ -262,15 +263,18 @@ export default async function ProfilePage({
               title="Rhythm"
               description="When the app expects you, and when it leaves you alone."
             >
-              <p className="mb-4 label-xs tabular">
-                {p.streakDays}-day streak
-                {p.streakDays > 0 ? " · keep it by clearing the floor" : ""}
-              </p>
+              {/* Only worth saying once there is a streak to describe.
+                  "0-day streak" is a fact nobody needs. */}
+              {p.streakDays > 0 && (
+                <p className="label-xs tabular mb-1">
+                  {p.streakDays}-day streak
+                </p>
+              )}
 
-              <SaveForm action={saveRhythm}>
-                <Row
+              <SaveForm action={saveRhythm} layout="rows">
+                <SettingRow
                   label="Daily minimum"
-                  help="How many things you need to finish for the day to count."
+                  description="How many things you need to finish for the day to count."
                 >
                   <Stepper
                     name="dailyFloor"
@@ -278,13 +282,13 @@ export default async function ProfilePage({
                     min={1}
                     max={20}
                   />
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="Days off"
-                  help="Picked days never break your streak."
+                  description="Picked days never break your streak."
                 >
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap justify-end gap-1.5">
                     {DAYS.map((d) => (
                       <label
                         key={d.value}
@@ -301,40 +305,36 @@ export default async function ProfilePage({
                       </label>
                     ))}
                   </div>
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="Morning planning reminder"
+                  description="A nudge to plan the day before it plans itself. Shown when you next open Krama after this time."
                   htmlFor="morningReminder"
-                  hint="A nudge to plan the day before it plans itself. Leave empty for none."
                 >
-                  <input
+                  <TimeSelect
                     id="morningReminder"
                     name="morningReminder"
-                    type="time"
-                    defaultValue={p.morningReminder ?? ""}
-                    className={`max-w-[140px] ${inputClass}`}
+                    value={p.morningReminder}
                   />
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="Evening check-in reminder"
+                  description="A prompt to log anything you did but didn't tick off."
                   htmlFor="eveningReminder"
-                  hint="A prompt to log anything you did but didn't tick off."
                 >
-                  <input
+                  <TimeSelect
                     id="eveningReminder"
                     name="eveningReminder"
-                    type="time"
-                    defaultValue={p.eveningReminder ?? ""}
-                    className={`max-w-[140px] ${inputClass}`}
+                    value={p.eveningReminder}
                   />
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="How far back you can log"
-                  help="Without a limit you could log a whole month on the 31st, and your streak would stop meaning anything. Older entries still save — they just count for half."
-                  hint="Anything older than this still saves, but counts for half."
+                  description="Anything older than this still saves, but counts for half."
+                  help="Without a limit you could log a whole month on the 31st, and your streak would stop meaning anything."
                 >
                   <Stepper
                     name="backdateLimitDays"
@@ -343,29 +343,30 @@ export default async function ProfilePage({
                     max={30}
                     format="days"
                   />
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="Move unfinished tasks to tomorrow"
-                  hint="Anything you don't finish moves forward instead of disappearing."
+                  description="Anything you don't finish moves forward instead of disappearing."
                 >
                   <Toggle
                     name="rolloverUnfinished"
                     defaultChecked={p.rolloverUnfinished}
                     label="Move unfinished tasks to tomorrow"
                   />
-                </Row>
+                </SettingRow>
 
-                <Row
+                <SettingRow
                   label="Catch up on missed routines"
-                  help="Off means a routine you missed is simply skipped, not stacked up."
+                  description="Off means a routine you missed is simply skipped, not stacked up."
+                  help="On, Krama fills in the last week of missed routine instances when you next open it."
                 >
                   <Toggle
                     name="catchUpRoutines"
                     defaultChecked={p.catchUpRoutines}
                     label="Catch up on missed routines"
                   />
-                </Row>
+                </SettingRow>
               </SaveForm>
             </Section>
           )}
