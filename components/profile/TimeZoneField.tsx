@@ -35,7 +35,7 @@ export default function TimeZoneField({
   const offer = detected && detected !== value && known;
 
   return (
-    <div className="flex flex-col items-end gap-1.5">
+    <div className="flex flex-col items-end gap-1">
       <select
         id="timezone"
         name="timezone"
@@ -58,7 +58,7 @@ export default function TimeZoneField({
         <button
           type="button"
           onClick={() => setValue(detected)}
-          className="cursor-pointer text-[11px] font-semibold text-acc hover:underline"
+          className="cursor-pointer text-[10.5px] font-semibold text-mut hover:text-acc hover:underline"
         >
           Use this computer&rsquo;s zone ({detected.split("/").pop()?.replace(/_/g, " ")})
         </button>

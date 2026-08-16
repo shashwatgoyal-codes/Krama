@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/guard";
 import { getProfileOverview } from "@/lib/repositories/profile";
-import { zoneGroups, describeZone } from "@/lib/timezones";
+import { zoneGroups } from "@/lib/timezones";
 import Stepper from "@/components/profile/Stepper";
 import Segmented from "@/components/profile/Segmented";
 import Section from "@/components/profile/Section";
@@ -90,41 +90,7 @@ export default async function ProfilePage({
   });
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-5 py-6">
-      <div className="mb-1 flex items-center gap-3">
-        <span className="grid size-9 flex-none place-items-center rounded-full bg-acc text-[14px] font-bold text-on-acc">
-          {p.name.charAt(0).toUpperCase()}
-        </span>
-        <div className="min-w-0">
-          <h1 className="truncate font-display text-xl font-semibold tracking-[-0.025em]">
-            {p.name}
-          </h1>
-          <p className="truncate text-[12px] text-mut">{p.email}</p>
-        </div>
-      </div>
-      <p className="mb-5 text-[11.5px] text-fai">
-        With Krama since {memberSince}
-      </p>
-
-      {/* A read-only summary first: what the settings below are shaping. */}
-      {p.scoringVisibility !== "hidden" && (
-        <div className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-ln bg-ln sm:grid-cols-4">
-          {[
-            { label: "Level", value: p.level },
-            { label: "Points", value: p.totalPoints },
-            { label: "Streak", value: `${p.streakDays}d` },
-            { label: "Tasks done", value: p.tasksDone },
-          ].map((s) => (
-            <div key={s.label} className="bg-surf px-3 py-3">
-              <p className="label-xs">{s.label}</p>
-              <p className="tabular mt-1 font-display text-[19px] font-semibold">
-                {s.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
+    <div className="mx-auto w-full max-w-[860px] px-5 py-6">
       <div className="grid gap-5 md:grid-cols-[152px_1fr]">
         <SectionNav active={section} />
 
@@ -171,7 +137,7 @@ export default async function ProfilePage({
 
                 <SettingRow
                   label="Time zone"
-                  description={`All your dates and times use this. Currently ${describeZone(p.timezone)}.`}
+                  description="All your dates and times use this."
                   htmlFor="timezone"
                 >
                   <TimeZoneField groups={zones} current={p.timezone} />
@@ -216,7 +182,7 @@ export default async function ProfilePage({
               {/* Password and devices are rows of this panel, as drawn —
                   each its own action, so neither rides along with a
                   "save profile" the user meant for their name. */}
-              <div className="mt-1 border-t border-ln pt-1">
+              <div className="mt-5">
                 <ChangePasswordRow
                   lastChanged={
                     p.passwordChangedAt

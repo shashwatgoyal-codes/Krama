@@ -70,9 +70,14 @@ export default function SaveForm({
       {/* In a row layout the controls all sit against the right edge, so
           the button belongs there too — left-aligned under a right-hand
           column reads as belonging to nothing. */}
+      {/* A hairline above closes the form. Without it the button floats
+          in whitespace between two rows and reads as belonging to
+          whichever one it happens to sit nearer. */}
       <div
         className={
-          "mt-4 flex items-center gap-2.5 " + (rows ? "justify-end" : "")
+          rows
+            ? "flex items-center justify-end gap-2.5 border-t border-ln pt-3"
+            : "mt-4 flex items-center gap-2.5"
         }
       >
         {/* aria-live so the confirmation is announced, not just shown. */}
