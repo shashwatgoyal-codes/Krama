@@ -53,34 +53,44 @@ export default function ChangePasswordRow({
           )
         }
       >
-        <Button type="button" size="sm" onClick={() => setOpen((v) => !v)}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
           {open ? "Cancel" : "Change password"}
         </Button>
       </SettingRow>
 
       {open && (
-        <form action={submit}>
-          <fieldset disabled={pending}>
-            {/* The revealed fields use the same row shape as everything
-                else on the page. Two inputs crammed side by side read as
-                a different kind of thing than the settings above them,
-                which is exactly what they are not. */}
-            <SettingRow label="Current password" htmlFor="currentPassword">
+        // A contained card rather than three more rows in the flat list.
+        // The two fields and their button are one task, and a settings
+        // page that lays them out like unrelated settings makes you hunt
+        // for where the task ends.
+        <form
+          action={submit}
+          className="mb-3 rounded-lg border border-ln bg-surf2 p-3"
+        >
+          <fieldset disabled={pending} className="flex flex-wrap gap-3">
+            <div className="min-w-[180px] flex-1">
+              <label htmlFor="currentPassword" className="label-xs mb-1 block">
+                Current password
+              </label>
               <input
                 id="currentPassword"
                 name="currentPassword"
                 type="password"
                 required
                 autoComplete="current-password"
-                className={`w-[220px] ${inputClass}`}
+                className={inputClass}
               />
-            </SettingRow>
+            </div>
 
-            <SettingRow
-              label="New password"
-              description="At least 10 characters. Length matters more than symbols — a short phrase you'll remember beats a scramble you won't."
-              htmlFor="newPassword"
-            >
+            <div className="min-w-[180px] flex-1">
+              <label htmlFor="newPassword" className="label-xs mb-1 block">
+                New password
+              </label>
               <input
                 id="newPassword"
                 name="newPassword"
@@ -88,28 +98,28 @@ export default function ChangePasswordRow({
                 required
                 minLength={10}
                 autoComplete="new-password"
-                className={`w-[220px] ${inputClass}`}
+                className={inputClass}
               />
-            </SettingRow>
+            </div>
           </fieldset>
 
-          {error && (
-            <p
-              role="alert"
-              className="mt-3 rounded-lg border border-bad bg-bad-soft px-2.5 py-2 text-[11.5px] text-ink"
-            >
-              {error}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="max-w-[38ch] text-[11px] leading-relaxed text-fai">
+              At least 10 characters. Saving signs out every other device.
             </p>
-          )}
-
-          <div className="mt-3 flex items-center justify-end gap-2.5">
-            <span className="text-[11px] text-fai">
-              Signs out every other device.
-            </span>
             <Button type="submit" variant="primary" size="sm" disabled={pending}>
               {pending ? "Changing…" : "Save new password"}
             </Button>
           </div>
+
+          {error && (
+            <p
+              role="alert"
+              className="mt-2 rounded-lg border border-bad bg-bad-soft px-2.5 py-2 text-[11.5px] text-ink"
+            >
+              {error}
+            </p>
+          )}
         </form>
       )}
     </>
