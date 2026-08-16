@@ -5,6 +5,15 @@ import Button from "@/components/ui/Button";
 import { inputClass } from "./Row";
 import SettingRow from "./SettingRow";
 import { AREA_COLOURS, AREA_DOT } from "@/lib/areas";
+
+/** .chip, .chip.a and .chip.o from the design, as classes. */
+const CHIP: Record<string, string> = {
+  mut: "border-ln bg-surf2 text-mut",
+  acc: "border-acc bg-acc-soft text-acc",
+  ok: "border-ok bg-ok-soft text-ok",
+  warn: "border-warn bg-warn-soft text-warn",
+  bad: "border-bad bg-bad-soft text-bad",
+};
 import { addArea, editArea, removeArea } from "@/app/app/profile/areas-actions";
 import { addTag, removeTag, setDefaultArea } from "@/app/app/profile/tags-actions";
 
@@ -17,7 +26,12 @@ export type AreaRow = {
   totalTasks: number;
 };
 
-export type TagView = { id: string; name: string; stale: boolean };
+export type TagView = {
+  id: string;
+  name: string;
+  colour: string;
+  stale: boolean;
+};
 
 /**
  * One panel, as drawn: areas and tags are the same idea at two scales —
@@ -196,7 +210,16 @@ export default function AreasAndTags({
           </Button>
         </form>
       ) : (
-        <Add label="+ New area" onClick={() => setAddingArea(true)} />
+        <div className="mt-3">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => setAddingArea(true)}
+          >
+            + New area
+          </Button>
+        </div>
       )}
 
       {/* ----------------------------------------------------- tags */}
@@ -217,7 +240,7 @@ export default function AreasAndTags({
           shown.map((tag) => (
             <span
               key={tag.id}
-              className="inline-flex items-center gap-1 rounded-[4px] border border-ln bg-surf2 px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] text-mut"
+              className={`inline-flex items-center gap-1 rounded-[4px] border px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] ${CHIP[tag.colour] ?? CHIP.mut}`}
             >
               {tag.name}
               {showStale && (
@@ -359,17 +382,6 @@ function Heading({
   );
 }
 
-function Add({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-2.5 cursor-pointer text-[12.5px] font-semibold text-acc hover:underline"
-    >
-      {label}
-    </button>
-  );
-}
 
 function Colours({ defaultValue }: { defaultValue: string }) {
   return (

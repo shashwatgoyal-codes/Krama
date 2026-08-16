@@ -220,6 +220,8 @@ model Tag {
   id     String @id @default(cuid())
   userId String
   name   String
+  /// Same palette as areas — "mut" is the plain grey most tags stay.
+  colour String @default("mut")
   /// Touched whenever the tag is applied, so unused ones can be found.
   usedAt DateTime?
 

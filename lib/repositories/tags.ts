@@ -2,21 +2,39 @@ import { db } from "@/lib/db";
 
 /** Every function takes userId first and filters on it. No exceptions. */
 
-export type TagRow = { id: string; name: string; usedAt: Date | null };
+export type TagRow = {
+  id: string;
+  name: string;
+  colour: string;
+  usedAt: Date | null;
+};
 
 export async function listTags(userId: string): Promise<TagRow[]> {
   return db.tag.findMany({
     where: { userId },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, usedAt: true },
+    select: { id: true, name: true, colour: true, usedAt: true },
   });
 }
 
-export async function createTag(userId: string, name: string): Promise<TagRow> {
+export async function createTag(
+  userId: string,
+  name: string,
+  colour = "mut",
+): Promise<TagRow> {
   return db.tag.create({
-    data: { userId, name },
-    select: { id: true, name: true, usedAt: true },
+    data: { userId, name, colour },
+    select: { id: true, name: true, colour: true, usedAt: true },
   });
+}
+
+export async function recolourTag(
+  userId: string,
+  id: string,
+  colour: string,
+): Promise<boolean> {
+  const { count } = await db.tag.updateMany({ where: { id, userId }, data: { colour } });
+  return count > 0;
 }
 
 export async function deleteTag(userId: string, id: string): Promise<boolean> {
@@ -36,7 +54,7 @@ export async function staleTags(
       OR: [{ usedAt: null, createdAt: { lt: cutoff } }, { usedAt: { lt: cutoff } }],
     },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, usedAt: true },
+    select: { id: true, name: true, colour: true, usedAt: true },
   });
 }
 

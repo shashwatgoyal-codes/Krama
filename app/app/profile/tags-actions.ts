@@ -3,7 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireUserOrThrow } from "@/lib/auth/guard";
-import { listTags, createTag, deleteTag } from "@/lib/repositories/tags";
+import { listTags, createTag, deleteTag, recolourTag } from "@/lib/repositories/tags";
+import { AREA_COLOURS } from "@/lib/areas";
 import { areaBelongsTo } from "@/lib/repositories/areas";
 import { updateProfileSettings } from "@/lib/repositories/profile";
 import { firstIssue, type ActionResult } from "@/lib/validation";
@@ -31,8 +32,11 @@ const tagName = z
 export async function addTag(formData: FormData): Promise<ActionResult> {
   const user = await requireUserOrThrow();
   const parsed = z
-    .object({ name: tagName })
-    .safeParse({ name: formData.get("name") });
+    .object({ name: tagName, colour: z.enum(AREA_COLOURS).default("mut") })
+    .safeParse({
+      name: formData.get("name"),
+      colour: formData.get("colour") ?? "mut",
+    });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
   const existing = await listTags(user.id);
@@ -43,7 +47,7 @@ export async function addTag(formData: FormData): Promise<ActionResult> {
     return { ok: false, error: "You already have that tag." };
   }
 
-  await createTag(user.id, parsed.data.name);
+  await createTag(user.id, parsed.data.name, parsed.data.colour);
   touched();
   return { ok: true };
 }
@@ -74,6 +78,21 @@ export async function setDefaultArea(
   }
 
   await updateProfileSettings(user.id, { defaultAreaId: areaId });
+  touched();
+  return { ok: true };
+}
+
+/** Cycles a tag through the palette — the design picks a couple out. */
+export async function cycleTagColour(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = z
+    .object({ id: z.string().cuid(), colour: z.enum(AREA_COLOURS) })
+    .safeParse({ id: formData.get("id"), colour: formData.get("colour") });
+  if (!parsed.success) return { ok: false, error: "Unknown colour." };
+
+  await recolourTag(user.id, parsed.data.id, parsed.data.colour);
   touched();
   return { ok: true };
 }

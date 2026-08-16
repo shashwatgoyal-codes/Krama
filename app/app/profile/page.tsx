@@ -371,10 +371,7 @@ export default async function ProfilePage({
             </Section>
           )}
           {section === "areas" && (
-            <Section
-              title="Areas & tags"
-              description="Areas are the few big buckets your effort splits between; tags are free-form and cross-cutting. Both are shared by tasks, notes, events and saved links, so a label means the same thing everywhere."
-            >
+            <Section title="Areas & tags">
               <AreasAndTags
                 areas={areas.map((a) => {
                   const stat = stats.find((s) => s.id === a.id);
@@ -390,6 +387,7 @@ export default async function ProfilePage({
                 tags={tags.map((t) => ({
                   id: t.id,
                   name: t.name,
+                  colour: t.colour,
                   stale: staleIds.has(t.id),
                 }))}
                 defaultAreaId={p.defaultAreaId}
