@@ -105,6 +105,8 @@ export async function getStreak(
 }
 
 export type ProfileOverview = {
+  userId: string;
+  avatarAt: Date | null;
   name: string;
   email: string;
   memberSince: Date;
@@ -147,6 +149,7 @@ export async function getProfileOverview(
         name: true,
         email: true,
         createdAt: true,
+        avatarAt: true,
         profile: {
           select: {
             timezone: true,
@@ -184,6 +187,8 @@ export async function getProfileOverview(
   const streak = await getStreak(userId, user.profile);
 
   return {
+    userId,
+    avatarAt: user.avatarAt,
     name: user.name,
     email: user.email,
     memberSince: user.createdAt,

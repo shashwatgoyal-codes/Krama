@@ -24,6 +24,16 @@ model User {
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
 
+  /// A small avatar, kept in the row rather than in object storage —
+  /// there is no bucket configured, and one 200KB image per account is
+  /// not what Postgres struggles with. Capped hard on the way in.
+  avatar     Bytes?
+  /// The type sniffed from the file's own bytes, never the browser's
+  /// claim. Serving back what was declared is how an "image" becomes
+  /// an HTML page.
+  avatarType String?
+  avatarAt   DateTime?
+
   profile  Profile?
   sessions Session[]
   codes    VerificationCode[]

@@ -6,6 +6,7 @@ import Stepper from "@/components/profile/Stepper";
 import Segmented from "@/components/profile/Segmented";
 import Section from "@/components/profile/Section";
 import Areas from "@/components/profile/Areas";
+import AvatarField from "@/components/profile/AvatarField";
 import Tags from "@/components/profile/Tags";
 import Toggle from "@/components/profile/Toggle";
 import DataPanel from "@/components/profile/DataPanel";
@@ -98,26 +99,12 @@ export default async function ProfilePage({
         <div className="flex min-w-0 flex-col gap-4">
           {section === "profile" && (
             <Section title="Profile">
-              {/* The identity block sits inside the panel, as drawn —
-                  not in the page header, where it belonged to no
-                  section in particular. */}
-              <div className="flex items-center gap-3 border-b border-ln pb-4">
-                <span className="grid size-10 flex-none place-items-center rounded-full bg-acc text-[15px] font-bold text-on-acc">
-                  {p.name.charAt(0).toUpperCase()}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-ink">
-                    {p.name}
-                  </p>
-                  <p className="truncate text-[11.5px] text-mut">{p.email}</p>
-                </div>
-                <span
-                  title="Photo upload isn't built — nothing in the app takes a file yet."
-                  className="flex-none cursor-not-allowed rounded-[7px] border border-ln2 px-2.5 py-1 text-[11.5px] font-semibold text-fai"
-                >
-                  Change photo
-                </span>
-              </div>
+              <AvatarField
+                userId={p.userId}
+                name={p.name}
+                email={p.email}
+                version={p.avatarAt ? p.avatarAt.getTime() : null}
+              />
 
               <SaveForm action={saveProfileTab} layout="rows">
                 <SettingRow

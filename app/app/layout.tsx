@@ -25,6 +25,7 @@ export default async function AppLayout({
         where: { id: user.id },
         select: {
           emailVerified: true,
+          avatarAt: true,
           profile: {
             select: { accent: true, density: true, reduceMotion: true },
           },
@@ -67,7 +68,15 @@ export default async function AppLayout({
       <style dangerouslySetInnerHTML={{ __html: accentCss }} />
       {/* Read on the server: APP_ENV isn't NEXT_PUBLIC_, so it never
           reaches the browser except as this one resolved value. */}
-      <TopBar env={appEnv()} name={user?.name ?? "You"} />
+      <TopBar
+        env={appEnv()}
+        name={user?.name ?? "You"}
+        avatar={
+          user && account?.avatarAt
+            ? `/api/avatar/${user.id}?v=${account.avatarAt.getTime()}`
+            : null
+        }
+      />
       {user && !account?.emailVerified && <VerifyBanner email={user.email} />}
       {children}
     </div>
