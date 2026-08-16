@@ -4,6 +4,7 @@ import { appEnv } from "@/lib/env";
 import { getSessionUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { ACCENT_TOKENS, isAccent } from "@/lib/appearance";
+import { tintCss, DEFAULT_TINTS } from "@/lib/notes";
 import VerifyBanner from "@/components/VerifyBanner";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default async function AppLayout({
               density: true,
               reduceMotion: true,
               interfaceFont: true,
+              noteTints: true,
             },
           },
         },
@@ -69,9 +71,15 @@ export default async function AppLayout({
       data-density={settings?.density ?? "comfortable"}
       data-motion={settings?.reduceMotion ? "reduced" : "full"}
       data-font={settings?.interfaceFont ?? "krama"}
+      data-tints=""
       className="flex min-h-screen flex-col"
     >
-      <style dangerouslySetInnerHTML={{ __html: accentCss }} />
+      <style
+        dangerouslySetInnerHTML={{
+          __html:
+            accentCss + tintCss(settings?.noteTints ?? DEFAULT_TINTS),
+        }}
+      />
       {/* Read on the server: APP_ENV isn't NEXT_PUBLIC_, so it never
           reaches the browser except as this one resolved value. */}
       <TopBar

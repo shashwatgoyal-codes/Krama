@@ -200,6 +200,8 @@ model Profile {
   reduceMotion Boolean @default(false)
   /// "krama" = Cal Sans + Inter, "system" = the OS stack.
   interfaceFont String @default("krama")
+  /// Five preset names, one per sticky tint. See lib/notes.ts.
+  noteTints     String[] @default(["amber", "sky", "rose", "violet", "slate"])
   /// Palette token for the single accent hue. See lib/appearance.ts.
   accent       String  @default("amber")
 

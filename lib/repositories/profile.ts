@@ -127,6 +127,7 @@ export type ProfileOverview = {
   density: string;
   reduceMotion: boolean;
   interfaceFont: string;
+  noteTints: string[];
   accent: string;
   defaultAreaId: string | null;
   totalPoints: number;
@@ -170,6 +171,7 @@ export async function getProfileOverview(
             density: true,
             reduceMotion: true,
             interfaceFont: true,
+            noteTints: true,
             accent: true,
             defaultAreaId: true,
             totalPoints: true,
@@ -227,6 +229,7 @@ export async function updateProfileSettings(
     density?: string;
     reduceMotion?: boolean;
     interfaceFont?: string;
+    noteTints?: string[];
     accent?: string;
     defaultAreaId?: string | null;
   },
