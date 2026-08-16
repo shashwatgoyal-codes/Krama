@@ -3,13 +3,11 @@
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import { inputClass } from "./Row";
-import { signOutEverywhere, deleteAccountAction } from "@/app/app/profile/actions";
+import { deleteAccountAction } from "@/app/app/profile/actions";
 
 export default function DangerZone({
-  otherSessions,
   counts,
 }: {
-  otherSessions: number;
   counts: { tasksDone: number; notesKept: number; totalPoints: number };
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -27,29 +25,6 @@ export default function DangerZone({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* sign out everywhere */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="max-w-[46ch]">
-          <p className="text-[12px] font-semibold text-ink">
-            Sign out on every device
-          </p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-mut">
-            {otherSessions === 0
-              ? "This is the only device signed in. You'll be signed out here."
-              : `${otherSessions} other ${
-                  otherSessions === 1 ? "device is" : "devices are"
-                } signed in. This signs out all of them, and this one too.`}
-          </p>
-        </div>
-        <form action={signOutEverywhere}>
-          <Button type="submit" size="sm">
-            Sign out everywhere
-          </Button>
-        </form>
-      </div>
-
-      <hr className="border-ln" />
-
       {/* delete account */}
       <div>
         <p className="text-[12px] font-semibold text-ink">Delete my account</p>

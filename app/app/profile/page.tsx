@@ -499,7 +499,7 @@ export default async function ProfilePage({
           )}
           {section === "data" && (
             <>
-              <Section title="Your data">
+              <Section title="What you've done">
                 <DataPanel counts={counts} memberSince={memberSince} />
               </Section>
 
@@ -509,7 +509,6 @@ export default async function ProfilePage({
                 danger
               >
                 <DangerZone
-                  otherSessions={p.otherSessions}
                   counts={{
                     tasksDone: p.tasksDone,
                     notesKept: p.notesKept,

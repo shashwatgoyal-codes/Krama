@@ -340,6 +340,7 @@ export async function getTodayStats(userId: string): Promise<TodayStats> {
 
 
 export type ContentCounts = {
+  tasksDone: number;
   tasks: number;
   notes: number;
   events: number;
@@ -347,13 +348,14 @@ export type ContentCounts = {
 };
 
 export async function getContentCounts(userId: string): Promise<ContentCounts> {
-  const [tasks, notes, events, links] = await Promise.all([
+  const [tasksDone, tasks, notes, events, links] = await Promise.all([
+    db.task.count({ where: { userId, status: "done" } }),
     db.task.count({ where: { userId } }),
     db.note.count({ where: { userId, archivedAt: null } }),
     db.event.count({ where: { userId } }),
     db.link.count({ where: { userId, archivedAt: null } }),
   ]);
-  return { tasks, notes, events, links };
+  return { tasksDone, tasks, notes, events, links };
 }
 
 /**

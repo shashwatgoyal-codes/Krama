@@ -3,18 +3,29 @@
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import { inputClass } from "./Row";
+import SettingRow from "./SettingRow";
 import { recountScore, eraseAllContent } from "@/app/app/profile/actions";
 
 /**
- * Getting your data out is one click and complete. Putting a file back
- * in is deliberately not offered — the reasoning is on the panel itself,
- * because a refusal without a reason just reads as a missing feature.
+ * What the account contains, and the two ways to empty it.
+ *
+ * There is no export and no import. Export was built and then taken out
+ * deliberately: it handed over a file containing the points history,
+ * which is the one thing in here worth tampering with, and it invited an
+ * import that could never safely accept one back. What this page is for
+ * is telling you how much you have actually done.
  */
 export default function DataPanel({
   counts,
   memberSince,
 }: {
-  counts: { tasks: number; notes: number; events: number; links: number };
+  counts: {
+    tasksDone: number;
+    tasks: number;
+    notes: number;
+    events: number;
+    links: number;
+  };
   memberSince: string;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
@@ -22,99 +33,63 @@ export default function DataPanel({
   const [erasing, setErasing] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const stats = [
-    { label: "Tasks", value: counts.tasks },
-    { label: "Notes", value: counts.notes },
-    { label: "Events", value: counts.events },
-    { label: "Saved links", value: counts.links },
-  ];
+  const open = Math.max(0, counts.tasks - counts.tasksDone);
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="label-xs mb-2">since {memberSince}</p>
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-ln bg-ln sm:grid-cols-4">
-          {stats.map((s) => (
-            <div key={s.label} className="bg-surf px-3 py-2.5">
-              <p className="label-xs">{s.label}</p>
-              <p className="tabular mt-0.5 font-display text-[17px] font-semibold">
-                {s.value}
-              </p>
-            </div>
-          ))}
-        </div>
+      {/* The headline is what you finished, not how many rows exist. */}
+      <div className="rounded-xl border border-ln bg-surf2 px-4 py-5 text-center">
+        <p className="tabular font-display text-[34px] font-semibold leading-none text-ink">
+          {counts.tasksDone}
+        </p>
+        <p className="mt-2 text-[12.5px] text-mut">
+          {counts.tasksDone === 1 ? "task finished" : "tasks finished"} since{" "}
+          {memberSince}
+        </p>
       </div>
 
-      <div>
-        <p className="text-[12px] font-semibold text-ink">
-          Download a copy of everything
-        </p>
-        <p className="mb-2 mt-1 max-w-[52ch] text-[11.5px] leading-relaxed text-mut">
-          One file with all your tasks, notes, events and links — and your
-          points history.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {/* Plain links, not fetches: the browser handles the download,
-              and the route sets Content-Disposition. */}
-          <a
-            href="/api/export"
-            download
-            className="inline-flex cursor-pointer items-center rounded-[9px] border border-ink bg-ink px-[13px] py-[7px] text-[12.5px] font-semibold text-paper transition-colors hover:border-ink2 hover:bg-ink2"
-          >
-            Download
-          </a>
-          <a
-            href="/api/export?format=csv"
-            download
-            className="inline-flex cursor-pointer items-center rounded-[9px] border border-ln2 bg-surf px-[13px] py-[7px] text-[12.5px] font-semibold text-ink2 transition-colors hover:border-acc hover:text-acc"
-          >
-            As spreadsheet
-          </a>
-        </div>
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-ln bg-ln sm:grid-cols-4">
+        {[
+          { label: "Still open", value: open },
+          { label: "Notes", value: counts.notes },
+          { label: "Events", value: counts.events },
+          { label: "Saved links", value: counts.links },
+        ].map((s) => (
+          <div key={s.label} className="bg-surf px-3 py-2.5">
+            <p className="label-xs">{s.label}</p>
+            <p className="tabular mt-0.5 font-display text-[17px] font-semibold">
+              {s.value}
+            </p>
+          </div>
+        ))}
       </div>
 
-      <div className="border-t border-ln pt-4">
-        <p className="text-[12px] font-semibold text-ink">Lost something?</p>
-        <p className="mb-2 mt-1 max-w-[52ch] text-[11.5px] leading-relaxed text-mut">
-          Deleted something by accident, or your data looks wrong? Krama keeps
-          its own backups — nothing is restored from a file you upload, for the
-          reasons below. Get in touch and it can be brought back.
-        </p>
-        <a
-          href="mailto:support@krama.app?subject=Krama%20%E2%80%94%20help%20recovering%20data"
-          className="inline-flex cursor-pointer items-center rounded-[9px] border border-ln2 bg-surf px-[13px] py-[7px] text-[12.5px] font-semibold text-ink2 transition-colors hover:border-acc hover:text-acc"
+      <div className="border-t border-ln">
+        <SettingRow
+          label="Fix my score"
+          description="If your level or streak looks wrong, this recounts it from your actual history. It can only move the number toward the record."
         >
-          Ask for help
-        </a>
+          <Button
+            type="button"
+            size="sm"
+            disabled={pending}
+            onClick={() => {
+              setError(null);
+              setNotice(null);
+              startTransition(async () => {
+                const result = await recountScore();
+                if (result.ok && typeof result.data === "string")
+                  setNotice(result.data);
+                else if (!result.ok) setError(result.error);
+              });
+            }}
+          >
+            {pending ? "Counting…" : "Recount"}
+          </Button>
+        </SettingRow>
       </div>
 
-      <div className="border-t border-ln pt-4">
-        <p className="text-[12px] font-semibold text-ink">Fix my score</p>
-        <p className="mb-2 mt-1 max-w-[52ch] text-[11.5px] leading-relaxed text-mut">
-          If your level or streak looks wrong, this recounts it from your
-          actual history. It can only move the number toward the record.
-        </p>
-        <Button
-          type="button"
-          size="sm"
-          disabled={pending}
-          onClick={() => {
-            setError(null);
-            setNotice(null);
-            startTransition(async () => {
-              const result = await recountScore();
-              if (result.ok && typeof result.data === "string")
-                setNotice(result.data);
-              else if (!result.ok) setError(result.error);
-            });
-          }}
-        >
-          {pending ? "Counting…" : "Recount"}
-        </Button>
-        {notice && (
-          <p className="mt-2 text-[11.5px] font-semibold text-ok">{notice}</p>
-        )}
-      </div>
+      {notice && <p className="text-[11.5px] font-semibold text-ok">{notice}</p>}
 
       <div className="rounded-lg border border-bad">
         <div className="border-b border-bad/40 bg-bad-soft px-3 py-2">
@@ -130,8 +105,8 @@ export default function DataPanel({
           </p>
           <p className="mt-1 max-w-[52ch] text-[11.5px] leading-relaxed text-mut">
             Deletes every task, note, event and link, and resets your score.
-            Your account stays and you can start fresh. Download a copy first
-            if you might want it.
+            Your account, areas and tags stay, so you can start fresh. There is
+            no export, so none of it comes back.
           </p>
 
           {erasing ? (
@@ -193,23 +168,6 @@ export default function DataPanel({
           {error}
         </p>
       )}
-
-      <details className="rounded-lg border border-ln bg-surf2 px-3 py-2.5">
-        <summary className="cursor-pointer text-[11.5px] font-semibold text-ink">
-          Why you can download but not upload
-        </summary>
-        <p className="mt-2 max-w-[62ch] text-[11.5px] leading-relaxed text-mut">
-          Taking your data out is yours by right and carries no risk. Putting a
-          file back in is a different thing entirely — a downloaded file can be
-          edited before it&rsquo;s returned, and the export contains your points
-          history. Anyone could set themselves to level 90 in a text editor and
-          upload it, which would make every score in the app meaningless. There
-          are quieter risks too: a crafted file can carry text that becomes
-          harmful when the app later displays it, or enough rows to exhaust
-          storage. So restoring is done from the server&rsquo;s own backups on
-          request, never from a file you supply.
-        </p>
-      </details>
     </div>
   );
 }
