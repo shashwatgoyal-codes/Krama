@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { withVerifiedSsl } from "./neon";
 
 /**
  * Connects through Neon's *pooled* endpoint (host contains "-pooler").
@@ -26,7 +27,10 @@ function createClient(): PrismaClient {
         "Neon pooled connection string (the host containing '-pooler').",
     );
   }
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  // verify-full, not whatever the URL happens to say — see lib/neon.ts.
+  return new PrismaClient({
+    adapter: new PrismaPg({ connectionString: withVerifiedSsl(connectionString) }),
+  });
 }
 
 function client(): PrismaClient {

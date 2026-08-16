@@ -1,5 +1,5 @@
 import { defineConfig } from "prisma/config";
-import { toDirectUrl } from "./lib/neon";
+import { toDirectUrl, withVerifiedSsl } from "./lib/neon";
 
 /**
  * Migrations only. The running app never uses this — it connects through
@@ -13,7 +13,9 @@ import { toDirectUrl } from "./lib/neon";
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: process.env.DIRECT_URL || toDirectUrl(process.env.DATABASE_URL ?? ""),
+    url: withVerifiedSsl(
+      process.env.DIRECT_URL || toDirectUrl(process.env.DATABASE_URL ?? ""),
+    ),
   },
   migrations: {
     path: "prisma/migrations",

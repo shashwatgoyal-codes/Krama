@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toDirectUrl, toPooledUrl, isPooled } from "@/lib/neon";
+import { toDirectUrl, toPooledUrl, isPooled, withVerifiedSsl } from "@/lib/neon";
 
 const POOLED =
   "postgresql://krama_owner:npg_secret@ep-still-frost-a1b2c3-pooler.ap-south-1.aws.neon.tech/krama?sslmode=require";
@@ -42,5 +42,50 @@ describe("deriving one Neon URL from the other", () => {
     // The build runs before anyone has configured a database.
     expect(toDirectUrl("")).toBe("");
     expect(toPooledUrl("")).toBe("");
+  });
+});
+
+describe("withVerifiedSsl", () => {
+  it("raises sslmode=require to verify-full", () => {
+    // pg treats `require` as verify-full today and will stop doing so in
+    // v9, silently dropping certificate verification on the same URL.
+    const out = withVerifiedSsl(
+      "postgresql://u:p@ep-x-pooler.aws.neon.tech/db?sslmode=require",
+    );
+    expect(out).toContain("sslmode=verify-full");
+    expect(out).not.toContain("sslmode=require");
+  });
+
+  it("raises the other weak modes too", () => {
+    for (const mode of ["prefer", "verify-ca", "allow"]) {
+      expect(
+        withVerifiedSsl(`postgresql://u:p@h/db?sslmode=${mode}`),
+      ).toContain("sslmode=verify-full");
+    }
+  });
+
+  it("leaves an explicit disable alone", () => {
+    // Someone running without TLS on purpose, presumably locally.
+    // Silently encrypting it would be its own surprise.
+    expect(withVerifiedSsl("postgresql://u:p@localhost/db?sslmode=disable"))
+      .toContain("sslmode=disable");
+  });
+
+  it("adds the mode when the URL has none", () => {
+    expect(withVerifiedSsl("postgresql://u:p@h/db")).toContain(
+      "sslmode=verify-full",
+    );
+  });
+
+  it("keeps every other parameter", () => {
+    const out = withVerifiedSsl(
+      "postgresql://u:p@h/db?sslmode=require&channel_binding=require",
+    );
+    expect(out).toContain("channel_binding=require");
+  });
+
+  it("returns nonsense unchanged rather than throwing", () => {
+    expect(withVerifiedSsl("not a url")).toBe("not a url");
+    expect(withVerifiedSsl("")).toBe("");
   });
 });
