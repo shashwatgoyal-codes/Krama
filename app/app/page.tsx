@@ -59,7 +59,11 @@ export default async function TodayPage() {
     return {
       id: b.id,
       title: b.title,
-      clock: formatClock(b.startsAt, settings.timezone),
+      clock: formatClock(
+        b.startsAt,
+        settings.timezone,
+        settings.timeFormat as "12" | "24",
+      ),
       duration: formatDuration(minutesBetween(b.startsAt, b.endsAt)),
       meta: parts.join(" · ") || "No area",
       tone: b.taskDone ? "done" : b.id === firstOpen ? "next" : "later",

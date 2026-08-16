@@ -66,8 +66,8 @@ export default async function CalendarPage({
     view === "day"
       ? [anchor]
       : view === "week"
-        ? weekDays(anchor)
-        : monthGridDays(anchor);
+        ? weekDays(anchor, settings.weekStartsOn)
+        : monthGridDays(anchor, settings.weekStartsOn);
 
   const from = zonedTimeToInstant(days[0], 0, 0, settings.timezone);
   const to = zonedTimeToInstant(
@@ -113,6 +113,7 @@ export default async function CalendarPage({
     if (dayIndex === -1) return [];
 
     const clock = formatClock(b.startsAt, settings.timezone);
+    const shown = formatClock(b.startsAt, settings.timezone, settings.timeFormat as "12" | "24");
     const offsetMinutes =
       (Number(clock.slice(0, 2)) - START_HOUR) * 60 + Number(clock.slice(3, 5));
     if (offsetMinutes < 0) return [];
@@ -125,7 +126,7 @@ export default async function CalendarPage({
         dayIndex,
         offsetMinutes,
         durationMinutes,
-        clock,
+        clock: shown,
         duration: formatDuration(durationMinutes),
         done: b.taskDone,
       },
@@ -142,7 +143,11 @@ export default async function CalendarPage({
       .map((b) => ({
         id: b.id,
         title: b.title,
-        clock: formatClock(b.startsAt, settings.timezone),
+        clock: formatClock(
+          b.startsAt,
+          settings.timezone,
+          settings.timeFormat as "12" | "24",
+        ),
         done: b.taskDone,
       })),
   }));
@@ -238,7 +243,7 @@ export default async function CalendarPage({
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[1.9fr_1fr]">
         <div className="min-w-0 overflow-x-auto border-r border-ln bg-surf">
           {view === "month" ? (
-            <MonthGrid cells={monthCells} />
+            <MonthGrid cells={monthCells} startsOn={settings.weekStartsOn} />
           ) : (
             <WeekGrid
               columns={columns}

@@ -73,6 +73,18 @@ export function shiftDayKey(key: string, delta: number): string {
  */
 export const BACKDATE_MULTIPLIER = 0.5;
 
-export function isBackdated(countedFor: string, today: string): boolean {
-  return daysBetween(countedFor, today) > 0;
+/**
+ * Whether an entry is old enough to pay half.
+ *
+ * `limitDays` is the grace period the user set: logging yesterday's work
+ * this morning is ordinary life, not gaming the score. Beyond it the
+ * entry still saves — it just counts for half, which is the whole reason
+ * the limit exists rather than a refusal.
+ */
+export function isBackdated(
+  countedFor: string,
+  today: string,
+  limitDays = 0,
+): boolean {
+  return daysBetween(countedFor, today) > Math.max(0, limitDays);
 }

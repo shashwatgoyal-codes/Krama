@@ -38,16 +38,19 @@ import {
 export async function createTask(formData: FormData): Promise<ActionResult> {
   const user = await requireUserOrThrow();
 
+  const settings = await getSettings(user.id);
+
   const parsed = createTaskSchema.safeParse({
     title: formData.get("title"),
     notes: formData.get("notes") || undefined,
-    areaId: formData.get("areaId") || undefined,
+    // Falls back to the area chosen in Settings, so a quick capture
+    // lands somewhere rather than nowhere.
+    areaId: formData.get("areaId") || settings.defaultAreaId || undefined,
     points: formData.get("points") ? Number(formData.get("points")) : undefined,
     recurrence: formData.get("recurrence") || "none",
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
-  const settings = await getSettings(user.id);
   await createTaskRow(user.id, {
     ...parsed.data,
     timezone: settings.timezone,
@@ -91,6 +94,7 @@ export async function toggleTask(formData: FormData): Promise<ActionResult> {
       dayEndsAtHour: settings.dayEndsAtHour,
       dailyFloor: settings.dailyFloor,
       restDays: settings.restDays,
+      backdateLimitDays: settings.backdateLimitDays,
     });
   } else {
     await reverseAward({
