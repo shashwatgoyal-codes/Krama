@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/guard";
 import { getProfileOverview } from "@/lib/repositories/profile";
-import { timeZoneOptions, formatZone, describeZone } from "@/lib/timezones";
+import { zoneGroups, describeZone } from "@/lib/timezones";
 import Stepper from "@/components/profile/Stepper";
 import Segmented from "@/components/profile/Segmented";
 import Section from "@/components/profile/Section";
@@ -22,6 +22,7 @@ import SectionNav, {
 import { listAreasWithCounts } from "@/lib/repositories/areas";
 import Row, { inputClass } from "@/components/profile/Row";
 import SettingRow from "@/components/profile/SettingRow";
+import TimeZoneField from "@/components/profile/TimeZoneField";
 import ChangePasswordRow from "@/components/profile/ChangePasswordRow";
 import SaveForm from "@/components/profile/SaveForm";
 import DangerZone from "@/components/profile/DangerZone";
@@ -81,7 +82,7 @@ export default async function ProfilePage({
   ]);
   const staleIds = new Set(stale.map((t) => t.id));
 
-  const zones = timeZoneOptions(p.timezone);
+  const zones = zoneGroups(p.timezone);
   const memberSince = p.memberSince.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -173,18 +174,7 @@ export default async function ProfilePage({
                   description={`All your dates and times use this. Currently ${describeZone(p.timezone)}.`}
                   htmlFor="timezone"
                 >
-                  <select
-                    id="timezone"
-                    name="timezone"
-                    defaultValue={p.timezone}
-                    className={`w-[220px] ${inputClass}`}
-                  >
-                    {zones.map((z) => (
-                      <option key={z} value={z}>
-                        {formatZone(z)}
-                      </option>
-                    ))}
-                  </select>
+                  <TimeZoneField groups={zones} current={p.timezone} />
                 </SettingRow>
 
                 <SettingRow

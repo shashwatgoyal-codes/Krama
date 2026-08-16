@@ -48,3 +48,111 @@ export function describeZone(zone: string, at = new Date()): string {
     return zone;
   }
 }
+
+
+/**
+ * The dropdown, grouped and labelled.
+ *
+ * A flat list of 419 raw IANA names is a data dump, not a picker: you
+ * cannot scan it, "Asia/Kolkata" and "Asia/Katmandu" look alike at a
+ * glance, and a wrong value can sit in it unnoticed — which is exactly
+ * what happened here.
+ *
+ * So: grouped by region, the city spelled normally, and the current
+ * offset on every row, because the offset is the thing people actually
+ * recognise about their own zone.
+ *
+ * Offsets are computed once per process per day. They only change at
+ * DST boundaries, and recomputing 419 of them on every render is a
+ * measurable waste.
+ */
+
+export type ZoneOption = { value: string; label: string };
+export type ZoneGroup = { region: string; zones: ZoneOption[] };
+
+let cache: { day: string; groups: ZoneGroup[] } | null = null;
+
+/** "GMT+5:30", or "GMT" for UTC itself. */
+export function offsetLabel(zone: string, at = new Date()): string {
+  try {
+    const name = new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      timeZoneName: "longOffset",
+    })
+      .formatToParts(at)
+      .find((p) => p.type === "timeZoneName")?.value;
+    if (!name) return "";
+    // longOffset gives "GMT+05:30". People write "+5:30", and a whole
+    // hour as "-5" rather than "-5:00"; UTC is just "GMT".
+    if (name === "GMT+00:00") return "GMT";
+    return name
+      .replace(/GMT([+-])0?(\d)/, "GMT$1$2")
+      .replace(/:00$/, "");
+  } catch {
+    return "";
+  }
+}
+
+/** "Kolkata", "New York", "Argentina / Rio Gallegos". */
+function cityOf(zone: string): string {
+  const [, ...rest] = zone.split("/");
+  if (rest.length === 0) return zone;
+  return rest.join(" / ").replace(/_/g, " ");
+}
+
+function regionOf(zone: string): string {
+  const region = zone.split("/")[0];
+  return region === "Etc" ? "Other" : region.replace(/_/g, " ");
+}
+
+export function zoneGroups(current: string, at = new Date()): ZoneGroup[] {
+  const day = at.toISOString().slice(0, 10);
+  if (cache && cache.day === day) return withCurrent(cache.groups, current, at);
+
+  const byRegion = new Map<string, ZoneOption[]>();
+  for (const zone of timeZoneOptions(current)) {
+    const region = regionOf(zone);
+    const offset = offsetLabel(zone, at);
+    const list = byRegion.get(region) ?? [];
+    list.push({
+      value: zone,
+      label: offset ? `${cityOf(zone)} · ${offset}` : cityOf(zone),
+    });
+    byRegion.set(region, list);
+  }
+
+  const groups = [...byRegion.entries()]
+    .map(([region, zones]) => ({
+      region,
+      zones: zones.sort((a, b) => a.label.localeCompare(b.label)),
+    }))
+    .sort((a, b) => a.region.localeCompare(b.region));
+
+  cache = { day, groups };
+  return withCurrent(groups, current, at);
+}
+
+/**
+ * The zone already in use goes to the top, so the field opens on the
+ * answer rather than on Africa.
+ */
+function withCurrent(
+  groups: ZoneGroup[],
+  current: string,
+  at: Date,
+): ZoneGroup[] {
+  if (!current) return groups;
+  const offset = offsetLabel(current, at);
+  return [
+    {
+      region: "Current",
+      zones: [
+        {
+          value: current,
+          label: offset ? `${cityOf(current)} · ${offset}` : cityOf(current),
+        },
+      ],
+    },
+    ...groups,
+  ];
+}
