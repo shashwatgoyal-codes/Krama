@@ -7,7 +7,6 @@ import {
   createArea,
   renameArea,
   deleteArea,
-  reorderAreas,
   listAreas,
 } from "@/lib/repositories/areas";
 import { AREA_COLOURS } from "@/lib/areas";
@@ -117,38 +116,6 @@ export async function removeArea(formData: FormData): Promise<ActionResult> {
   const removed = await deleteArea(user.id, parsed.data.id);
   if (!removed) return { ok: false, error: "That area no longer exists." };
 
-  touched();
-  return { ok: true };
-}
-
-export async function moveArea(formData: FormData): Promise<ActionResult> {
-  const user = await requireUserOrThrow();
-
-  const parsed = z
-    .object({
-      id: z.string().cuid(),
-      direction: z.enum(["up", "down"]),
-    })
-    .safeParse({
-      id: formData.get("id"),
-      direction: formData.get("direction"),
-    });
-  if (!parsed.success) return { ok: false, error: "Couldn't move that." };
-
-  const areas = await listAreas(user.id);
-  const index = areas.findIndex((a) => a.id === parsed.data.id);
-  if (index === -1) return { ok: false, error: "That area no longer exists." };
-
-  const target = parsed.data.direction === "up" ? index - 1 : index + 1;
-  if (target < 0 || target >= areas.length) return { ok: true }; // already at the end
-
-  const reordered = [...areas];
-  [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
-
-  await reorderAreas(
-    user.id,
-    reordered.map((a) => a.id),
-  );
   touched();
   return { ok: true };
 }

@@ -6,9 +6,8 @@ import Stepper from "@/components/profile/Stepper";
 import TimeSelect from "@/components/profile/TimeSelect";
 import Segmented from "@/components/profile/Segmented";
 import Section from "@/components/profile/Section";
-import Areas from "@/components/profile/Areas";
+import AreasAndTags from "@/components/profile/AreasAndTags";
 import AvatarField from "@/components/profile/AvatarField";
-import Tags from "@/components/profile/Tags";
 import Toggle from "@/components/profile/Toggle";
 import DataPanel from "@/components/profile/DataPanel";
 import { listTags, staleTags, areaStats } from "@/lib/repositories/tags";
@@ -372,44 +371,31 @@ export default async function ProfilePage({
             </Section>
           )}
           {section === "areas" && (
-            <>
-              <Section
-                title="Areas"
-                meta={`${areas.length} active`}
-                description="The few big buckets your effort splits between. Deleting one never deletes its tasks; they just become unfiled."
-              >
-                <Areas
-                  areas={areas.map((a) => {
-                    const stat = stats.find((s) => s.id === a.id);
-                    return {
-                      id: a.id,
-                      name: a.name,
-                      colour: a.colour,
-                      items: stat?.items ?? 0,
-                      minutesThisWeek: stat?.minutesThisWeek ?? 0,
-                      totalTasks: a.totalTasks,
-                    };
-                  })}
-                />
-              </Section>
-
-              <Section
-                title="Tags"
-                meta={`${tags.length} ${tags.length === 1 ? "used" : "used"}`}
-                description="Free-form and cross-cutting. Shared by tasks, notes, events and saved links, so a label means the same thing everywhere."
-              >
-                <Tags
-                  tags={tags.map((t) => ({
-                    id: t.id,
-                    name: t.name,
-                    stale: staleIds.has(t.id),
-                  }))}
-                  areas={areas.map((a) => ({ id: a.id, name: a.name }))}
-                  defaultAreaId={p.defaultAreaId}
-                  staleCount={stale.length}
-                />
-              </Section>
-            </>
+            <Section
+              title="Areas & tags"
+              description="Areas are the few big buckets your effort splits between; tags are free-form and cross-cutting. Both are shared by tasks, notes, events and saved links, so a label means the same thing everywhere."
+            >
+              <AreasAndTags
+                areas={areas.map((a) => {
+                  const stat = stats.find((s) => s.id === a.id);
+                  return {
+                    id: a.id,
+                    name: a.name,
+                    colour: a.colour,
+                    items: stat?.items ?? 0,
+                    minutesThisWeek: stat?.minutesThisWeek ?? 0,
+                    totalTasks: a.totalTasks,
+                  };
+                })}
+                tags={tags.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  stale: staleIds.has(t.id),
+                }))}
+                defaultAreaId={p.defaultAreaId}
+                staleCount={stale.length}
+              />
+            </Section>
           )}
           {section === "appearance" && (
             <Section
