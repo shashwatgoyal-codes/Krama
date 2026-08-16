@@ -14,6 +14,7 @@ export type SavedPreview = { id: string; title: string; unread: boolean };
  * right. Drag right to left to schedule.
  */
 export default function Today({
+  reminder,
   name,
   day,
   blocks,
@@ -24,6 +25,7 @@ export default function Today({
   stats,
   showScoring,
 }: {
+  reminder: string | null;
   name: string;
   day: string;
   blocks: PlanBlockView[];
@@ -49,6 +51,12 @@ export default function Today({
             {blocks.length > 0 ? `${committed} committed` : day}
           </span>
         </div>
+
+        {reminder && (
+          <p className="mb-3 rounded-lg border border-acc bg-acc-soft px-3 py-2 text-[12px] leading-relaxed text-ink">
+            {reminder}
+          </p>
+        )}
 
         {nothingAtAll ? (
           /* First run. Someone arriving here has none of the context the

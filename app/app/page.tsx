@@ -6,6 +6,7 @@ import { listNotes } from "@/lib/repositories/notes";
 import { recentLinks } from "@/lib/repositories/links";
 import { dayKeyFor } from "@/lib/day";
 import { materialiseRecurring } from "@/lib/repositories/recurring";
+import { runDayMaintenance, reminderDue } from "@/lib/repositories/maintenance";
 import { formatDay } from "@/lib/format";
 import { formatClock, formatDuration, minutesBetween, totalCommitted } from "@/lib/time";
 import { describeRecurrence } from "@/lib/recurrence";
@@ -24,6 +25,14 @@ export default async function TodayPage() {
   // background infrastructure, and it's idempotent, so opening two tabs
   // doesn't produce two standups.
   await materialiseRecurring(user.id, dayKey);
+
+  // Roll unfinished work forward and catch up missed routines, if the
+  // user asked for either. Both are idempotent, so opening two tabs
+  // does the work once.
+  await runDayMaintenance(user.id, dayKey, {
+    rolloverUnfinished: settings.rolloverUnfinished,
+    catchUpRoutines: settings.catchUpRoutines,
+  });
 
   const [stats, blocks, open, scheduled, notes, saved] = await Promise.all([
     getTodayStats(user.id),
@@ -87,8 +96,20 @@ export default async function TodayPage() {
           : undefined,
     }));
 
+  // Reminders are shown here rather than pushed — there is no scheduler
+  // and no notification channel, so the nudge waits until you open the
+  // app after the time you set.
+  const nowHHMM = formatClock(new Date(), settings.timezone);
+  const reminder =
+    reminderDue(settings.eveningReminder, nowHHMM) && !stats.floorCleared
+      ? "Evening check-in: anything you did today but didn't tick off?"
+      : reminderDue(settings.morningReminder, nowHHMM) && view.length === 0
+        ? "Nothing has a time yet. Worth deciding when, before the day decides for you."
+        : null;
+
   return (
     <Today
+      reminder={reminder}
       name={user.name}
       day={formatDay(new Date())}
       blocks={view}

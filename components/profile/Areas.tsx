@@ -10,7 +10,8 @@ export type AreaRow = {
   id: string;
   name: string;
   colour: string;
-  openTasks: number;
+  items: number;
+  minutesThisWeek: number;
   totalTasks: number;
 };
 
@@ -91,7 +92,11 @@ export default function Areas({ areas }: { areas: AreaRow[] }) {
               </span>
 
               <span className="label-xs tabular flex-none">
-                {area.openTasks} open · {area.totalTasks} total
+                {area.items} {area.items === 1 ? "item" : "items"}
+                {" · "}
+                {area.minutesThisWeek >= 60
+                  ? `${Math.round(area.minutesThisWeek / 60)}h this week`
+                  : `${area.minutesThisWeek}m this week`}
               </span>
 
               <div className="flex flex-none gap-1">

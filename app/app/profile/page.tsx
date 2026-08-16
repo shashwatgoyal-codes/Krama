@@ -9,7 +9,9 @@ import Areas from "@/components/profile/Areas";
 import Tags from "@/components/profile/Tags";
 import Toggle from "@/components/profile/Toggle";
 import DataPanel from "@/components/profile/DataPanel";
-import { listTags, staleTags } from "@/lib/repositories/tags";
+import { listTags, staleTags, areaStats } from "@/lib/repositories/tags";
+import { weekDays } from "@/lib/week";
+import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 import { getContentCounts } from "@/lib/repositories/profile";
 import { ACCENTS, DENSITIES } from "@/lib/appearance";
 import PointsTable from "@/components/profile/PointsTable";
@@ -21,7 +23,7 @@ import { listAreasWithCounts } from "@/lib/repositories/areas";
 import Row, { inputClass } from "@/components/profile/Row";
 import SaveForm from "@/components/profile/SaveForm";
 import DangerZone from "@/components/profile/DangerZone";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemePicker from "@/components/profile/ThemePicker";
 import {
   signOutEverywhere,
   saveProfileTab,
@@ -68,9 +70,10 @@ export default async function ProfilePage({
   const user = await requireUser();
   const params = await searchParams;
   const section: SectionKey = isSectionKey(params.s) ? params.s : "profile";
-  const [p, areas, tags, stale, counts] = await Promise.all([
+  const [p, areas, stats, tags, stale, counts] = await Promise.all([
     getProfileOverview(user.id),
     listAreasWithCounts(user.id),
+    areaStats(user.id, dayKeyToDate(weekDays(dayKeyFor(new Date(), "UTC", 0))[0])),
     listTags(user.id),
     staleTags(user.id),
     getContentCounts(user.id),
@@ -428,13 +431,17 @@ export default async function ProfilePage({
                 description="The few big buckets your effort splits between. Deleting one never deletes its tasks; they just become unfiled."
               >
                 <Areas
-                  areas={areas.map((a) => ({
-                    id: a.id,
-                    name: a.name,
-                    colour: a.colour,
-                    openTasks: a.openTasks,
-                    totalTasks: a.totalTasks,
-                  }))}
+                  areas={areas.map((a) => {
+                    const stat = stats.find((s) => s.id === a.id);
+                    return {
+                      id: a.id,
+                      name: a.name,
+                      colour: a.colour,
+                      items: stat?.items ?? 0,
+                      minutesThisWeek: stat?.minutesThisWeek ?? 0,
+                      totalTasks: a.totalTasks,
+                    };
+                  })}
                 />
               </Section>
 
@@ -461,7 +468,7 @@ export default async function ProfilePage({
               description="Deliberately small. The accent is one hue with one job."
             >
               <Row label="Theme" hint="System follows your OS setting.">
-                <ThemeToggle />
+                <ThemePicker />
               </Row>
 
               <div className="mt-4 border-t border-ln pt-4">

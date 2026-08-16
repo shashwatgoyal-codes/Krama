@@ -14,6 +14,10 @@ export type ProfileSettings = {
   timeFormat: string;
   backdateLimitDays: number;
   defaultAreaId: string | null;
+  rolloverUnfinished: boolean;
+  catchUpRoutines: boolean;
+  morningReminder: string | null;
+  eveningReminder: string | null;
   totalPoints: number;
 };
 
@@ -38,6 +42,10 @@ export async function getSettings(userId: string): Promise<ProfileSettings> {
       timeFormat: true,
       backdateLimitDays: true,
       defaultAreaId: true,
+      rolloverUnfinished: true,
+      catchUpRoutines: true,
+      morningReminder: true,
+      eveningReminder: true,
       totalPoints: true,
     },
   });

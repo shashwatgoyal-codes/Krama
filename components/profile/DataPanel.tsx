@@ -74,6 +74,21 @@ export default function DataPanel({
       </div>
 
       <div className="border-t border-ln pt-4">
+        <p className="text-[12px] font-semibold text-ink">Lost something?</p>
+        <p className="mb-2 mt-1 max-w-[52ch] text-[11.5px] leading-relaxed text-mut">
+          Deleted something by accident, or your data looks wrong? Krama keeps
+          its own backups — nothing is restored from a file you upload, for the
+          reasons below. Get in touch and it can be brought back.
+        </p>
+        <a
+          href="mailto:support@krama.app?subject=Krama%20%E2%80%94%20help%20recovering%20data"
+          className="inline-flex cursor-pointer items-center rounded-[9px] border border-ln2 bg-surf px-[13px] py-[7px] text-[12.5px] font-semibold text-ink2 transition-colors hover:border-acc hover:text-acc"
+        >
+          Ask for help
+        </a>
+      </div>
+
+      <div className="border-t border-ln pt-4">
         <p className="text-[12px] font-semibold text-ink">Fix my score</p>
         <p className="mb-2 mt-1 max-w-[52ch] text-[11.5px] leading-relaxed text-mut">
           If your level or streak looks wrong, this recounts it from your
