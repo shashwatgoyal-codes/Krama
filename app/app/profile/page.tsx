@@ -22,6 +22,7 @@ import SectionNav, {
 import { listAreasWithCounts } from "@/lib/repositories/areas";
 import Row, { inputClass } from "@/components/profile/Row";
 import SettingRow from "@/components/profile/SettingRow";
+import ChangePasswordRow from "@/components/profile/ChangePasswordRow";
 import SaveForm from "@/components/profile/SaveForm";
 import DangerZone from "@/components/profile/DangerZone";
 import ThemePicker from "@/components/profile/ThemePicker";
@@ -31,7 +32,6 @@ import {
   saveRhythm,
   saveAppearance,
   saveScoring,
-  changePassword,
 } from "./actions";
 
 export const metadata: Metadata = {
@@ -129,143 +129,114 @@ export default async function ProfilePage({
 
         <div className="flex min-w-0 flex-col gap-4">
           {section === "profile" && (
-            <>
-              <Section title="Profile">
-                {/* The identity block sits inside the panel, as drawn —
-                    not in the page header, where it belonged to no
-                    section in particular. */}
-                <div className="mb-1 flex items-center gap-3 border-b border-ln pb-4">
-                  <span className="grid size-10 flex-none place-items-center rounded-full bg-acc text-[15px] font-bold text-on-acc">
-                    {p.name.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-ink">
-                      {p.name}
-                    </p>
-                    <p className="truncate text-[11.5px] text-mut">{p.email}</p>
-                  </div>
-                  <span
-                    title="Photo upload isn't built — nothing in the app takes a file yet."
-                    className="flex-none cursor-not-allowed rounded-[7px] border border-ln2 px-2.5 py-1 text-[11.5px] font-semibold text-fai"
-                  >
-                    Change photo
-                  </span>
+            <Section title="Profile">
+              {/* The identity block sits inside the panel, as drawn —
+                  not in the page header, where it belonged to no
+                  section in particular. */}
+              <div className="flex items-center gap-3 border-b border-ln pb-4">
+                <span className="grid size-10 flex-none place-items-center rounded-full bg-acc text-[15px] font-bold text-on-acc">
+                  {p.name.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold text-ink">
+                    {p.name}
+                  </p>
+                  <p className="truncate text-[11.5px] text-mut">{p.email}</p>
                 </div>
+                <span
+                  title="Photo upload isn't built — nothing in the app takes a file yet."
+                  className="flex-none cursor-not-allowed rounded-[7px] border border-ln2 px-2.5 py-1 text-[11.5px] font-semibold text-fai"
+                >
+                  Change photo
+                </span>
+              </div>
 
-                <SaveForm action={saveProfileTab}>
-                  <SettingRow
-                    label="Display name"
-                    description="Shown in the greeting on Today."
-                    htmlFor="name"
-                  >
-                    <input
-                      id="name"
-                      name="name"
-                      required
-                      maxLength={80}
-                      defaultValue={p.name}
-                      autoComplete="name"
-                      className={`w-[220px] ${inputClass}`}
-                    />
-                  </SettingRow>
-
-                  <SettingRow
-                    label="Time zone"
-                    description={`All your dates and times use this. Currently ${describeZone(p.timezone)}.`}
-                    htmlFor="timezone"
-                  >
-                    <select
-                      id="timezone"
-                      name="timezone"
-                      defaultValue={p.timezone}
-                      className={`w-[220px] ${inputClass}`}
-                    >
-                      {zones.map((z) => (
-                        <option key={z} value={z}>
-                          {formatZone(z)}
-                        </option>
-                      ))}
-                    </select>
-                  </SettingRow>
-
-                  <SettingRow
-                    label="When your day ends"
-                    help="Anything you finish before this time still counts as yesterday. Set it to when you actually go to sleep."
-                  >
-                    <Stepper
-                      name="dayEndsAtHour"
-                      defaultValue={p.dayEndsAtHour}
-                      min={0}
-                      max={12}
-                      format="hour"
-                    />
-                  </SettingRow>
-
-                  <SettingRow label="Week starts on">
-                    <Segmented
-                      name="weekStartsOn"
-                      value={String(p.weekStartsOn)}
-                      options={[
-                        { value: "1", label: "Monday" },
-                        { value: "0", label: "Sunday" },
-                      ]}
-                    />
-                  </SettingRow>
-
-                  <SettingRow label="Time format">
-                    <Segmented
-                      name="timeFormat"
-                      value={p.timeFormat}
-                      options={[
-                        { value: "24", label: "24-hour" },
-                        { value: "12", label: "12-hour" },
-                      ]}
-                    />
-                  </SettingRow>
-                </SaveForm>
-              </Section>
-
-              <Section title="Password">
-                <SaveForm action={changePassword} label="Change password">
-                  <SettingRow
-                    label="Current password"
-                    description={
-                      p.passwordChangedAt
-                        ? `Last changed ${relativeSince(p.passwordChangedAt)}.`
-                        : "Never changed since you signed up."
-                    }
-                    htmlFor="currentPassword"
-                  >
-                    <input
-                      id="currentPassword"
-                      name="currentPassword"
-                      type="password"
-                      required
-                      autoComplete="current-password"
-                      className={`w-[220px] ${inputClass}`}
-                    />
-                  </SettingRow>
-                  <SettingRow
-                    label="New password"
-                    description="At least 10 characters. Length matters more than symbols."
-                    htmlFor="newPassword"
-                  >
-                    <input
-                      id="newPassword"
-                      name="newPassword"
-                      type="password"
-                      required
-                      minLength={10}
-                      autoComplete="new-password"
-                      className={`w-[220px] ${inputClass}`}
-                    />
-                  </SettingRow>
-                </SaveForm>
-              </Section>
-
-              <Section title="Signed-in devices">
+              <SaveForm action={saveProfileTab}>
                 <SettingRow
-                  label="This account"
+                  label="Display name"
+                  description="Shown in the greeting on Today."
+                  htmlFor="name"
+                >
+                  <input
+                    id="name"
+                    name="name"
+                    required
+                    maxLength={80}
+                    defaultValue={p.name}
+                    autoComplete="name"
+                    className={`w-[220px] ${inputClass}`}
+                  />
+                </SettingRow>
+
+                <SettingRow
+                  label="Time zone"
+                  description={`All your dates and times use this. Currently ${describeZone(p.timezone)}.`}
+                  htmlFor="timezone"
+                >
+                  <select
+                    id="timezone"
+                    name="timezone"
+                    defaultValue={p.timezone}
+                    className={`w-[220px] ${inputClass}`}
+                  >
+                    {zones.map((z) => (
+                      <option key={z} value={z}>
+                        {formatZone(z)}
+                      </option>
+                    ))}
+                  </select>
+                </SettingRow>
+
+                <SettingRow
+                  label="When your day ends"
+                  help="Anything you finish before this time still counts as yesterday. Set it to when you actually go to sleep."
+                >
+                  <Stepper
+                    name="dayEndsAtHour"
+                    defaultValue={p.dayEndsAtHour}
+                    min={0}
+                    max={12}
+                    format="hour"
+                  />
+                </SettingRow>
+
+                <SettingRow label="Week starts on">
+                  <Segmented
+                    name="weekStartsOn"
+                    value={String(p.weekStartsOn)}
+                    options={[
+                      { value: "1", label: "Monday" },
+                      { value: "0", label: "Sunday" },
+                    ]}
+                  />
+                </SettingRow>
+
+                <SettingRow label="Time format">
+                  <Segmented
+                    name="timeFormat"
+                    value={p.timeFormat}
+                    options={[
+                      { value: "24", label: "24-hour" },
+                      { value: "12", label: "12-hour" },
+                    ]}
+                  />
+                </SettingRow>
+              </SaveForm>
+
+              {/* Password and devices are rows of this panel, as drawn —
+                  each its own action, so neither rides along with a
+                  "save profile" the user meant for their name. */}
+              <div className="mt-1 border-t border-ln pt-1">
+                <ChangePasswordRow
+                  lastChanged={
+                    p.passwordChangedAt
+                      ? `Last changed ${relativeSince(p.passwordChangedAt)}.`
+                      : "Never changed since you signed up."
+                  }
+                />
+
+                <SettingRow
+                  label="Signed-in devices"
                   description={
                     p.otherSessions === 0
                       ? "This is the only device signed in."
@@ -281,8 +252,8 @@ export default async function ProfilePage({
                     </button>
                   </form>
                 </SettingRow>
-              </Section>
-            </>
+              </div>
+            </Section>
           )}
           {section === "scoring" && (
             <Section
