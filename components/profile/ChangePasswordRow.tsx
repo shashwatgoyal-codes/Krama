@@ -65,7 +65,7 @@ export default function ChangePasswordRow({
           // Autofill has nothing to latch onto until the form exists,
           // which is half the reason it only exists once asked for.
         >
-          <fieldset disabled={pending} className="flex flex-wrap gap-3">
+          <fieldset disabled={pending} className="flex flex-wrap justify-end gap-3">
             <div>
               <label
                 htmlFor="currentPassword"

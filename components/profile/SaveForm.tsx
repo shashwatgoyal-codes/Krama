@@ -16,11 +16,20 @@ export default function SaveForm({
   action,
   children,
   label = "Save",
+  layout = "fields",
 }: {
   action: (formData: FormData) => Promise<ActionResult>;
   children: React.ReactNode;
   label?: string;
+  /**
+   * "rows" for SettingRow children, which carry their own padding and
+   * hairline — stacking a gap on top of that leaves uneven gutters and
+   * a border floating in the middle of the space. "fields" keeps the
+   * old spacing for the tabs still using stacked label-over-input.
+   */
+  layout?: "rows" | "fields";
 }) {
+  const rows = layout === "rows";
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -42,7 +51,10 @@ export default function SaveForm({
 
   return (
     <form action={submit} onChange={() => setSaved(false)}>
-      <fieldset disabled={pending} className="flex flex-col gap-4">
+      <fieldset
+        disabled={pending}
+        className={rows ? "flex flex-col" : "flex flex-col gap-4"}
+      >
         {children}
       </fieldset>
 
@@ -55,14 +67,21 @@ export default function SaveForm({
         </p>
       )}
 
-      <div className="mt-4 flex items-center gap-2.5">
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {pending ? "Saving…" : label}
-        </Button>
+      {/* In a row layout the controls all sit against the right edge, so
+          the button belongs there too — left-aligned under a right-hand
+          column reads as belonging to nothing. */}
+      <div
+        className={
+          "mt-4 flex items-center gap-2.5 " + (rows ? "justify-end" : "")
+        }
+      >
         {/* aria-live so the confirmation is announced, not just shown. */}
         <span aria-live="polite" className="text-[11.5px] font-semibold text-ok">
           {saved && "Saved"}
         </span>
+        <Button type="submit" variant="primary" size="sm" disabled={pending}>
+          {pending ? "Saving…" : label}
+        </Button>
       </div>
     </form>
   );

@@ -152,7 +152,7 @@ export default async function ProfilePage({
                 </span>
               </div>
 
-              <SaveForm action={saveProfileTab}>
+              <SaveForm action={saveProfileTab} layout="rows">
                 <SettingRow
                   label="Display name"
                   description="Shown in the greeting on Today."
