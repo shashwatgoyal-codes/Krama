@@ -20,10 +20,16 @@ import {
   updatePasswordHash,
   getPasswordHash,
   deleteAccount,
+  getSettings,
+  recountPoints,
+  eraseContent,
 } from "@/lib/repositories/profile";
+import { z } from "zod";
 import {
   nameSchema,
   profileTabSchema,
+  rhythmSchema,
+  appearanceSchema,
   dayScheduleSchema,
   scoringSchema,
   changePasswordSchema,
@@ -109,6 +115,87 @@ export async function saveScoring(formData: FormData): Promise<ActionResult> {
   revalidatePath("/app/profile");
   revalidatePath("/app");
   revalidatePath("/app/tasks");
+  return { ok: true };
+}
+
+/** The Rhythm tab. */
+export async function saveRhythm(formData: FormData): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = rhythmSchema.safeParse({
+    dailyFloor: formData.get("dailyFloor"),
+    // Unchecked boxes send nothing, so an empty list is a real answer:
+    // "no rest days", not "field missing".
+    restDays: formData.getAll("restDays"),
+    morningReminder: formData.get("morningReminder") ?? undefined,
+    eveningReminder: formData.get("eveningReminder") ?? undefined,
+    backdateLimitDays: formData.get("backdateLimitDays"),
+    rolloverUnfinished: formData.get("rolloverUnfinished") === "on",
+    catchUpRoutines: formData.get("catchUpRoutines") === "on",
+  });
+  if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
+
+  await updateProfileSettings(user.id, parsed.data);
+  revalidatePath("/app/profile");
+  revalidatePath("/app");
+  return { ok: true };
+}
+
+/** The Appearance tab. */
+export async function saveAppearance(formData: FormData): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = appearanceSchema.safeParse({
+    accent: formData.get("accent"),
+    density: formData.get("density"),
+    reduceMotion: formData.get("reduceMotion") === "on",
+    showPointsOnTasks: formData.get("showPointsOnTasks") === "on",
+  });
+  if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
+
+  const { showPointsOnTasks, ...rest } = parsed.data;
+  // "Show points on tasks" is the same decision as the Scoring tab's
+  // visibility, phrased for this page. Giving it its own column would
+  // mean two settings that can disagree about the same thing.
+  const current = await getSettings(user.id);
+  const scoringVisibility =
+    current.scoringVisibility === "hidden"
+      ? "hidden"
+      : showPointsOnTasks
+        ? "everywhere"
+        : "normal";
+
+  await updateProfileSettings(user.id, { ...rest, scoringVisibility });
+  revalidatePath("/app/profile");
+  revalidatePath("/app");
+  revalidatePath("/app/tasks");
+  return { ok: true };
+}
+
+/** The Data tab: reconcile the cached score against the ledger. */
+export async function recountScore(): Promise<ActionResult<string>> {
+  const user = await requireUserOrThrow();
+  const total = await recountPoints(user.id);
+  revalidatePath("/app/profile");
+  revalidatePath("/app");
+  return { ok: true, data: `Recounted from your history: ${total} points.` };
+}
+
+/** The Data tab: erase everything made, keep the account. */
+export async function eraseAllContent(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUserOrThrow();
+  const parsed = z
+    .object({ confirm: z.literal("delete", { error: "Type delete to confirm." }) })
+    .safeParse({ confirm: formData.get("confirm") });
+  if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
+
+  await eraseContent(user.id);
+  revalidatePath("/app/profile");
+  revalidatePath("/app");
+  revalidatePath("/app/tasks");
+  revalidatePath("/app/notes");
+  revalidatePath("/app/calendar");
+  revalidatePath("/app/explore");
   return { ok: true };
 }
 

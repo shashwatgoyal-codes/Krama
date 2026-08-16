@@ -6,6 +6,12 @@ import Stepper from "@/components/profile/Stepper";
 import Segmented from "@/components/profile/Segmented";
 import Section from "@/components/profile/Section";
 import Areas from "@/components/profile/Areas";
+import Tags from "@/components/profile/Tags";
+import Toggle from "@/components/profile/Toggle";
+import DataPanel from "@/components/profile/DataPanel";
+import { listTags, staleTags } from "@/lib/repositories/tags";
+import { getContentCounts } from "@/lib/repositories/profile";
+import { ACCENTS, DENSITIES } from "@/lib/appearance";
 import PointsTable from "@/components/profile/PointsTable";
 import SectionNav, {
   isSectionKey,
@@ -19,7 +25,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import {
   signOutEverywhere,
   saveProfileTab,
-  saveDaySchedule,
+  saveRhythm,
+  saveAppearance,
   saveScoring,
   changePassword,
 } from "./actions";
@@ -52,11 +59,6 @@ function relativeSince(at: Date): string {
   return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
-function hourLabel(h: number): string {
-  if (h === 0) return "Midnight";
-  if (h === 12) return "Noon";
-  return `${h}:00 am`;
-}
 
 export default async function ProfilePage({
   searchParams,
@@ -66,10 +68,14 @@ export default async function ProfilePage({
   const user = await requireUser();
   const params = await searchParams;
   const section: SectionKey = isSectionKey(params.s) ? params.s : "profile";
-  const [p, areas] = await Promise.all([
+  const [p, areas, tags, stale, counts] = await Promise.all([
     getProfileOverview(user.id),
     listAreasWithCounts(user.id),
+    listTags(user.id),
+    staleTags(user.id),
+    getContentCounts(user.id),
   ]);
+  const staleIds = new Set(stale.map((t) => t.id));
 
   const zones = timeZoneOptions(p.timezone);
   const memberSince = p.memberSince.toLocaleDateString("en-GB", {
@@ -305,50 +311,30 @@ export default async function ProfilePage({
           )}
           {section === "rhythm" && (
             <Section
-              title="When your day starts and ends"
-              description="Krama has to decide which day a finished task belongs to. These two settings are how it decides."
+              title="Rhythm"
+              description="When the app expects you, and when it leaves you alone."
             >
-              <SaveForm action={saveDaySchedule}>
+              <p className="mb-4 label-xs tabular">
+                {p.streakDays}-day streak
+                {p.streakDays > 0 ? " · keep it by clearing the floor" : ""}
+              </p>
+
+              <SaveForm action={saveRhythm}>
                 <Row
-                  label="Time zone"
-                  htmlFor="timezone"
-                  help="Everything is filed against your local date. If this is wrong, tasks will land on the wrong day."
+                  label="Daily minimum"
+                  help="How many things you need to finish for the day to count."
                 >
-                  <select
-                    id="timezone"
-                    name="timezone"
-                    defaultValue={p.timezone}
-                    className={`max-w-[320px] ${inputClass}`}
-                  >
-                    {zones.map((z) => (
-                      <option key={z} value={z}>
-                        {formatZone(z)}
-                      </option>
-                    ))}
-                  </select>
+                  <Stepper
+                    name="dailyFloor"
+                    defaultValue={p.dailyFloor}
+                    min={1}
+                    max={20}
+                  />
                 </Row>
 
                 <Row
-                  label="My day ends at"
-                  htmlFor="dayEndsAtHour"
-                  help="If you finish something at 1am, you almost certainly think of it as part of last night — not as the first thing you did today. Anything completed before this hour counts toward the previous day, so a late night doesn't break a streak or start a new day early."
-                >
-                  <select
-                    id="dayEndsAtHour"
-                    name="dayEndsAtHour"
-                    defaultValue={p.dayEndsAtHour}
-                    className={`max-w-[200px] ${inputClass}`}
-                  >
-                    {Array.from({ length: 13 }, (_, h) => (
-                      <option key={h} value={h}>
-                        {hourLabel(h)}
-                      </option>
-                    ))}
-                  </select>
-                </Row>
-                <Row
                   label="Days off"
-                  help="Days that never count against you. A streak survives them untouched, so a deliberate rest doesn't read as a failure."
+                  help="Picked days never break your streak."
                 >
                   <div className="flex flex-wrap gap-1.5">
                     {DAYS.map((d) => (
@@ -368,54 +354,208 @@ export default async function ProfilePage({
                     ))}
                   </div>
                 </Row>
+
+                <Row
+                  label="Morning planning reminder"
+                  htmlFor="morningReminder"
+                  hint="A nudge to plan the day before it plans itself. Leave empty for none."
+                >
+                  <input
+                    id="morningReminder"
+                    name="morningReminder"
+                    type="time"
+                    defaultValue={p.morningReminder ?? ""}
+                    className={`max-w-[140px] ${inputClass}`}
+                  />
+                </Row>
+
+                <Row
+                  label="Evening check-in reminder"
+                  htmlFor="eveningReminder"
+                  hint="A prompt to log anything you did but didn't tick off."
+                >
+                  <input
+                    id="eveningReminder"
+                    name="eveningReminder"
+                    type="time"
+                    defaultValue={p.eveningReminder ?? ""}
+                    className={`max-w-[140px] ${inputClass}`}
+                  />
+                </Row>
+
+                <Row
+                  label="How far back you can log"
+                  help="Without a limit you could log a whole month on the 31st, and your streak would stop meaning anything. Older entries still save — they just count for half."
+                  hint="Anything older than this still saves, but counts for half."
+                >
+                  <Stepper
+                    name="backdateLimitDays"
+                    defaultValue={p.backdateLimitDays}
+                    min={0}
+                    max={30}
+                    format="days"
+                  />
+                </Row>
+
+                <Row
+                  label="Move unfinished tasks to tomorrow"
+                  hint="Anything you don't finish moves forward instead of disappearing."
+                >
+                  <Toggle
+                    name="rolloverUnfinished"
+                    defaultChecked={p.rolloverUnfinished}
+                    label="Move unfinished tasks to tomorrow"
+                  />
+                </Row>
+
+                <Row
+                  label="Catch up on missed routines"
+                  help="Off means a routine you missed is simply skipped, not stacked up."
+                >
+                  <Toggle
+                    name="catchUpRoutines"
+                    defaultChecked={p.catchUpRoutines}
+                    label="Catch up on missed routines"
+                  />
+                </Row>
               </SaveForm>
             </Section>
           )}
           {section === "areas" && (
-            <Section
-              title="Areas"
-              description="How work is grouped — on the Tasks list, in the detail panel, and on each block in the plan. Deleting one never deletes its tasks; they just become unfiled."
-            >
-              <Areas
-                areas={areas.map((a) => ({
-                  id: a.id,
-                  name: a.name,
-                  colour: a.colour,
-                  openTasks: a.openTasks,
-                  totalTasks: a.totalTasks,
-                }))}
-              />
-            </Section>
+            <>
+              <Section
+                title="Areas"
+                description="The few big buckets your effort splits between. Deleting one never deletes its tasks; they just become unfiled."
+              >
+                <Areas
+                  areas={areas.map((a) => ({
+                    id: a.id,
+                    name: a.name,
+                    colour: a.colour,
+                    openTasks: a.openTasks,
+                    totalTasks: a.totalTasks,
+                  }))}
+                />
+              </Section>
+
+              <Section
+                title="Tags"
+                description="Free-form and cross-cutting. A tag means the same thing on a task, a note, an event or a saved link."
+              >
+                <Tags
+                  tags={tags.map((t) => ({
+                    id: t.id,
+                    name: t.name,
+                    stale: staleIds.has(t.id),
+                  }))}
+                  areas={areas.map((a) => ({ id: a.id, name: a.name }))}
+                  defaultAreaId={p.defaultAreaId}
+                  staleCount={stale.length}
+                />
+              </Section>
+            </>
           )}
           {section === "appearance" && (
-            <Section title="Appearance">
-              <div className="flex items-center justify-between gap-3">
-                <div className="max-w-[46ch]">
-                  <p className="text-[12px] font-semibold text-ink">Theme</p>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-mut">
-                    Follows your system by default. Switching here overrides it
-                    and is remembered on this device.
-                  </p>
-                </div>
+            <Section
+              title="Appearance"
+              description="Deliberately small. The accent is one hue with one job."
+            >
+              <Row label="Theme" hint="System follows your OS setting.">
                 <ThemeToggle />
+              </Row>
+
+              <div className="mt-4 border-t border-ln pt-4">
+                <SaveForm action={saveAppearance}>
+                  <Row
+                    label="Accent"
+                    hint="Used only for the active state, progress and scheduled blocks."
+                  >
+                    <div className="flex gap-1.5">
+                      {ACCENTS.map((a) => (
+                        <label
+                          key={a.value}
+                          title={a.label}
+                          className="cursor-pointer rounded-md border border-transparent p-0.5 has-[:checked]:border-ink"
+                        >
+                          <input
+                            type="radio"
+                            name="accent"
+                            value={a.value}
+                            defaultChecked={p.accent === a.value}
+                            className="sr-only"
+                          />
+                          <span
+                            aria-label={a.label}
+                            className={`block size-[20px] rounded ${a.dot}`}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </Row>
+
+                  <Row
+                    label="Density"
+                    hint="Compact tightens row height across every list."
+                  >
+                    <Segmented
+                      name="density"
+                      value={p.density}
+                      options={DENSITIES.map((d) => ({
+                        value: d,
+                        label: d === "comfortable" ? "Comfortable" : "Compact",
+                      }))}
+                    />
+                  </Row>
+
+                  <Row
+                    label="Reduce motion"
+                    hint="Disables transitions and the board's drag inertia."
+                  >
+                    <Toggle
+                      name="reduceMotion"
+                      defaultChecked={p.reduceMotion}
+                      label="Reduce motion"
+                    />
+                  </Row>
+
+                  <Row
+                    label="Show points on tasks"
+                    help="Off keeps scores off task rows — they stay on the Today page only. This is the same setting as the Scoring tab's visibility, phrased for this page."
+                  >
+                    <Toggle
+                      name="showPointsOnTasks"
+                      defaultChecked={p.scoringVisibility === "everywhere"}
+                      label="Show points on tasks"
+                    />
+                  </Row>
+                </SaveForm>
               </div>
             </Section>
           )}
           {section === "data" && (
-            <Section
-              title="Danger zone"
-              description="Everything here is immediate and cannot be undone."
-              danger
-            >
-              <DangerZone
-                otherSessions={p.otherSessions}
-                counts={{
-                  tasksDone: p.tasksDone,
-                  notesKept: p.notesKept,
-                  totalPoints: p.totalPoints,
-                }}
-              />
-            </Section>
+            <>
+              <Section title="Your data">
+                <DataPanel
+                  counts={counts}
+                  memberSince={memberSince}
+                />
+              </Section>
+
+              <Section
+                title="Delete my account"
+                description="Removes your account and everything in it, permanently."
+                danger
+              >
+                <DangerZone
+                  otherSessions={p.otherSessions}
+                  counts={{
+                    tasksDone: p.tasksDone,
+                    notesKept: p.notesKept,
+                    totalPoints: p.totalPoints,
+                  }}
+                />
+              </Section>
+            </>
           )}
         </div>
       </div>

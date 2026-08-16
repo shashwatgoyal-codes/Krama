@@ -32,6 +32,7 @@ model User {
   areas    Area[]
   tasks    Task[]
   notes    Note[]
+  tags     Tag[]
   ledger   PointEntry[]
 
   @@map("users")
@@ -185,6 +186,11 @@ model Profile {
   /// "comfortable" | "compact"
   density      String  @default("comfortable")
   reduceMotion Boolean @default(false)
+  /// Palette token for the single accent hue. See lib/appearance.ts.
+  accent       String  @default("amber")
+
+  /// Where a quick capture lands when no area is chosen.
+  defaultAreaId String?
 
   lastActiveOn DateTime?
 
@@ -194,6 +200,25 @@ model Profile {
 }
 
 // ---------------------------------------------------------------- content
+
+/// Free-form, cross-cutting labels. Areas are the few big buckets; tags
+/// are everything else, and they mean the same thing on a task, a note,
+/// an event or a saved link.
+model Tag {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  /// Touched whenever the tag is applied, so unused ones can be found.
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
 
 model Area {
   id     String @id @default(cuid())

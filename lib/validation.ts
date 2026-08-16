@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth/password";
 import { BLOCK_MINUTES } from "./time";
+import { ACCENT_VALUES, DENSITIES } from "./appearance";
 
 /**
  * Every server action validates its input through one of these before
@@ -148,6 +149,41 @@ export const dayScheduleSchema = z.object({
     .int()
     .min(0, "Pick an hour between midnight and noon.")
     .max(12, "Pick an hour between midnight and noon."),
+});
+
+/** "HH:MM" in the user's own zone, or empty for no nudge. */
+const reminderSchema = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.length ? v : null))
+  .refine(
+    (v) => v === null || /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
+    "Use a time like 08:30.",
+  );
+
+/** The Rhythm tab: when the app expects you, and when it leaves you alone. */
+export const rhythmSchema = z.object({
+  dailyFloor: z.coerce
+    .number()
+    .int()
+    .min(1, "The floor needs to be at least one action.")
+    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+  restDays: restDaysSchema,
+  morningReminder: reminderSchema,
+  eveningReminder: reminderSchema,
+  // Zero means "today only". Thirty is already generous enough that a
+  // streak stops meaning much beyond it.
+  backdateLimitDays: z.coerce.number().int().min(0).max(30),
+  rolloverUnfinished: z.coerce.boolean(),
+  catchUpRoutines: z.coerce.boolean(),
+});
+
+/** The Appearance tab. */
+export const appearanceSchema = z.object({
+  accent: z.enum(ACCENT_VALUES),
+  density: z.enum(DENSITIES),
+  reduceMotion: z.coerce.boolean(),
+  showPointsOnTasks: z.coerce.boolean(),
 });
 
 export const scoringSchema = z.object({
