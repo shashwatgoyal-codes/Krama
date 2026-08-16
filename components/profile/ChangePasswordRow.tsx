@@ -59,34 +59,28 @@ export default function ChangePasswordRow({
       </SettingRow>
 
       {open && (
-        <form
-          action={submit}
-          className="border-b border-ln px-0 py-3"
-          // Autofill has nothing to latch onto until the form exists,
-          // which is half the reason it only exists once asked for.
-        >
-          <fieldset disabled={pending} className="flex flex-wrap justify-end gap-3">
-            <div>
-              <label
-                htmlFor="currentPassword"
-                className="label-xs mb-1 block"
-              >
-                Current password
-              </label>
+        <form action={submit}>
+          <fieldset disabled={pending}>
+            {/* The revealed fields use the same row shape as everything
+                else on the page. Two inputs crammed side by side read as
+                a different kind of thing than the settings above them,
+                which is exactly what they are not. */}
+            <SettingRow label="Current password" htmlFor="currentPassword">
               <input
                 id="currentPassword"
                 name="currentPassword"
                 type="password"
                 required
                 autoComplete="current-password"
-                className={`w-[200px] ${inputClass}`}
+                className={`w-[220px] ${inputClass}`}
               />
-            </div>
+            </SettingRow>
 
-            <div>
-              <label htmlFor="newPassword" className="label-xs mb-1 block">
-                New password
-              </label>
+            <SettingRow
+              label="New password"
+              description="At least 10 characters. Length matters more than symbols — a short phrase you'll remember beats a scramble you won't."
+              htmlFor="newPassword"
+            >
               <input
                 id="newPassword"
                 name="newPassword"
@@ -94,31 +88,28 @@ export default function ChangePasswordRow({
                 required
                 minLength={10}
                 autoComplete="new-password"
-                className={`w-[200px] ${inputClass}`}
+                className={`w-[220px] ${inputClass}`}
               />
-            </div>
-
-            <div className="flex items-end">
-              <Button type="submit" variant="primary" size="sm" disabled={pending}>
-                {pending ? "Changing…" : "Save"}
-              </Button>
-            </div>
+            </SettingRow>
           </fieldset>
-
-          <p className="mt-2 max-w-[52ch] text-[11px] leading-relaxed text-fai">
-            At least 10 characters — length matters more than symbols.
-            Changing it signs out every other device, which is the point if
-            one of them isn&rsquo;t yours any more.
-          </p>
 
           {error && (
             <p
               role="alert"
-              className="mt-2 max-w-[52ch] rounded-lg border border-bad bg-bad-soft px-2.5 py-2 text-[11.5px] text-ink"
+              className="mt-3 rounded-lg border border-bad bg-bad-soft px-2.5 py-2 text-[11.5px] text-ink"
             >
               {error}
             </p>
           )}
+
+          <div className="mt-3 flex items-center justify-end gap-2.5">
+            <span className="text-[11px] text-fai">
+              Signs out every other device.
+            </span>
+            <Button type="submit" variant="primary" size="sm" disabled={pending}>
+              {pending ? "Changing…" : "Save new password"}
+            </Button>
+          </div>
         </form>
       )}
     </>
