@@ -18,7 +18,16 @@ const NAV = [
   { href: "/app/explore", label: "Explore" },
 ];
 
-export default function TopBar({ env, name }: { env: AppEnv; name: string }) {
+export default function TopBar({
+  env,
+  name,
+  avatar,
+}: {
+  env: AppEnv;
+  name: string;
+  /** Src for the uploaded picture, or null for the initial. */
+  avatar: string | null;
+}) {
   const pathname = usePathname();
 
   return (
@@ -76,7 +85,18 @@ export default function TopBar({ env, name }: { env: AppEnv; name: string }) {
               : "")
           }
         >
-          {name.charAt(0).toUpperCase()}
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatar}
+              alt=""
+              width={26}
+              height={26}
+              className="size-full rounded-full object-cover"
+            />
+          ) : (
+            name.charAt(0).toUpperCase()
+          )}
         </Link>
       </div>
     </header>
