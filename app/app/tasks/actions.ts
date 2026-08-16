@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
 import { getTask, updateTaskFields } from "@/lib/repositories/tasks";
+import { areaBelongsTo } from "@/lib/repositories/areas";
 import {
   createBlock,
   getBlock,
@@ -97,6 +98,11 @@ export async function clearSchedule(formData: FormData): Promise<ActionResult> {
 
 const detailsSchema = z.object({
   id: z.string().cuid(),
+  // Empty means unfiled — a real choice, not a missing field.
+  areaId: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.length ? v : null)),
   notes: z.string().trim().max(2000).optional(),
   // An empty date field means "no due date", not "invalid".
   dueOn: z
@@ -113,6 +119,7 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
 
   const parsed = detailsSchema.safeParse({
     id: formData.get("id"),
+    areaId: formData.get("areaId") ?? undefined,
     notes: formData.get("notes") ?? undefined,
     dueOn: formData.get("dueOn") ?? undefined,
     recurrence: formData.get("recurrence") ?? "none",
@@ -120,7 +127,14 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
+  // Proven to be this user's area before it is written, so a crafted
+  // post can't file a task under somebody else's category.
+  if (parsed.data.areaId && !(await areaBelongsTo(user.id, parsed.data.areaId))) {
+    return { ok: false, error: "That area doesn't exist.", field: "areaId" };
+  }
+
   const updated = await updateTaskFields(user.id, parsed.data.id, {
+    areaId: parsed.data.areaId,
     notes: parsed.data.notes ?? null,
     dueOn: parsed.data.dueOn ? new Date(`${parsed.data.dueOn}T00:00:00.000Z`) : null,
     recurrence: parsed.data.recurrence,

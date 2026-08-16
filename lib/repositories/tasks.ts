@@ -209,6 +209,7 @@ export type TaskPanel = {
   status: string;
   points: number;
   dueOn: Date | null;
+  areaId: string | null;
   areaName: string | null;
   areaColour: string | null;
   recurrence: string;
@@ -238,6 +239,7 @@ export async function getTaskPanel(
       status: true,
       points: true,
       dueOn: true,
+      areaId: true,
       recurrence: true,
       recurrenceValue: true,
       area: { select: { name: true, colour: true } },
@@ -262,6 +264,7 @@ export async function getTaskPanel(
     status: task.status,
     points: task.points,
     dueOn: task.dueOn,
+    areaId: task.areaId,
     areaName: task.area?.name ?? null,
     areaColour: task.area?.colour ?? null,
     recurrence: task.recurrence,
@@ -278,6 +281,7 @@ export async function updateTaskFields(
   data: {
     title?: string;
     notes?: string | null;
+    areaId?: string | null;
     dueOn?: Date | null;
     recurrence?: Recurrence;
     recurrenceValue?: number | null;

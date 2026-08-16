@@ -78,7 +78,7 @@ export default async function TasksPage({
     notes: panel.notes ?? "",
     done: panel.status === "done",
     points: panel.points,
-    areaName: panel.areaName,
+    areaId: panel.areaId,
     dueOn: panel.dueOn ? panel.dueOn.toISOString().slice(0, 10) : "",
     recurrence: panel.recurrence,
     recurrenceValue: panel.recurrenceValue,
@@ -214,7 +214,7 @@ export default async function TasksPage({
 
       <aside className="min-w-0 bg-surf2 p-4">
         {view ? (
-          <TaskDetail key={view.id} task={view} />
+          <TaskDetail key={view.id} task={view} areas={areas} />
         ) : (
           <p className="rounded-lg border border-dashed border-ln2 px-3 py-5 text-center text-[11.5px] leading-relaxed text-mut">
             Pick a task to see its detail — due date, when it&rsquo;s
