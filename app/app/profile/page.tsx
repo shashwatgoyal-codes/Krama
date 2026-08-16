@@ -396,7 +396,7 @@ export default async function ProfilePage({
               <Section
                 title="Tags"
                 meta={`${tags.length} ${tags.length === 1 ? "used" : "used"}`}
-                description="Free-form and cross-cutting. A tag means the same thing on a task, a note, an event or a saved link."
+                description="Free-form and cross-cutting. Shared by tasks, notes, events and saved links, so a label means the same thing everywhere."
               >
                 <Tags
                   tags={tags.map((t) => ({

@@ -13,7 +13,7 @@ export const SECTIONS = [
   { key: "profile", label: "Profile" },
   { key: "scoring", label: "Scoring" },
   { key: "rhythm", label: "Rhythm" },
-  { key: "areas", label: "Areas" },
+  { key: "areas", label: "Areas & tags" },
   { key: "appearance", label: "Appearance" },
   { key: "data", label: "Data" },
 ] as const;

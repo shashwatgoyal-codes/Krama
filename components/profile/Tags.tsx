@@ -115,6 +115,7 @@ export default function Tags({
       <SettingRow
         label="Where quick notes go"
         description="When you capture something fast and don't pick an area, it lands here."
+        help="Anything created without an area — a note turned into a task, a saved link made into one — is filed here instead of sitting unfiled forever."
         htmlFor="defaultAreaId"
       >
         <form action={(data) => run(setDefaultArea, data)} className="flex gap-2">
