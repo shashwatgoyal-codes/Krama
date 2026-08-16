@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth/password";
 import { BLOCK_MINUTES } from "./time";
 import { ACCENT_VALUES, DENSITIES } from "./appearance";
+import { TINT_PRESETS } from "./notes";
 
 /**
  * Every server action validates its input through one of these before
@@ -182,6 +183,12 @@ export const rhythmSchema = z.object({
 export const appearanceSchema = z.object({
   accent: z.enum(ACCENT_VALUES),
   interfaceFont: z.enum(["krama", "system"]),
+  // Exactly five, each a known preset. A short list would leave a note
+  // colour undefined; a long one would silently ignore the extras.
+  noteTints: z.array(z.string()).length(5).refine(
+    (t) => t.every((v) => TINT_PRESETS.some((p) => p.value === v)),
+    "That isn't one of the tints.",
+  ),
   density: z.enum(DENSITIES),
   reduceMotion: z.coerce.boolean(),
   showPointsOnTasks: z.coerce.boolean(),

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { rhythmSchema, appearanceSchema } from "@/lib/validation";
 import { ACCENTS, ACCENT_TOKENS, isAccent } from "@/lib/appearance";
+import { DEFAULT_TINTS } from "@/lib/notes";
 
 const RHYTHM = {
   dailyFloor: "3",
@@ -61,6 +62,7 @@ describe("appearanceSchema", () => {
     density: "comfortable",
     reduceMotion: false,
     showPointsOnTasks: true,
+    noteTints: DEFAULT_TINTS,
   };
 
   it("accepts every accent offered", () => {

@@ -15,7 +15,7 @@ import { weekDays } from "@/lib/week";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 import { getContentCounts } from "@/lib/repositories/profile";
 import { ACCENTS, DENSITIES } from "@/lib/appearance";
-import { NOTE_COLOURS, NOTE_TINT } from "@/lib/notes";
+import TintPicker from "@/components/profile/TintPicker";
 import PointsTable from "@/components/profile/PointsTable";
 import SectionNav, {
   isSectionKey,
@@ -434,17 +434,9 @@ export default async function ProfilePage({
 
                 <SettingRow
                   label="Note colours"
-                  description="The five sticky tints. Recolouring them isn't built yet — these are what a note can be."
+                  description="The five sticky tints. Click one to recolour it."
                 >
-                  <div className="flex gap-2">
-                    {NOTE_COLOURS.map((c) => (
-                      <span
-                        key={c}
-                        title={c}
-                        className={`block size-[22px] rounded-[5px] border ${NOTE_TINT[c]}`}
-                      />
-                    ))}
-                  </div>
+                  <TintPicker chosen={p.noteTints} />
                 </SettingRow>
 
                 <SettingRow

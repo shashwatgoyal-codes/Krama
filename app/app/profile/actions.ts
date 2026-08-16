@@ -146,6 +146,7 @@ export async function saveAppearance(formData: FormData): Promise<ActionResult> 
   const parsed = appearanceSchema.safeParse({
     accent: formData.get("accent"),
     interfaceFont: formData.get("interfaceFont"),
+    noteTints: formData.getAll("noteTints"),
     density: formData.get("density"),
     reduceMotion: formData.get("reduceMotion") === "on",
     showPointsOnTasks: formData.get("showPointsOnTasks") === "on",
