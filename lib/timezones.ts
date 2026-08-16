@@ -33,3 +33,18 @@ export function timeZoneOptions(current: string): string[] {
 export function formatZone(zone: string): string {
   return zone.replace(/_/g, " ").replace("/", " / ");
 }
+
+/** "Asia/Kolkata · GMT+5:30", as the design labels it. */
+export function describeZone(zone: string, at = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      timeZoneName: "longOffset",
+    }).formatToParts(at);
+    const offset = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+    // longOffset gives "GMT+05:30"; the design shows "GMT+5:30".
+    return `${zone} · ${offset.replace(/GMT([+-])0?(\d)/, "GMT$1$2")}`;
+  } catch {
+    return zone;
+  }
+}

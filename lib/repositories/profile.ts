@@ -98,6 +98,9 @@ export type ProfileOverview = {
   dailyCap: number;
   scoringVisibility: string;
   restDays: number[];
+  weekStartsOn: number;
+  timeFormat: string;
+  passwordChangedAt: Date | null;
   totalPoints: number;
   streakDays: number;
   level: number;
@@ -127,6 +130,9 @@ export async function getProfileOverview(
             dailyCap: true,
             scoringVisibility: true,
             restDays: true,
+            weekStartsOn: true,
+            timeFormat: true,
+            passwordChangedAt: true,
             totalPoints: true,
           },
         },
@@ -169,6 +175,9 @@ export async function updateProfileSettings(
     dailyCap?: number;
     scoringVisibility?: string;
     restDays?: number[];
+    weekStartsOn?: number;
+    timeFormat?: string;
+    passwordChangedAt?: Date;
   },
 ): Promise<void> {
   await db.profile.update({ where: { userId }, data: patch });

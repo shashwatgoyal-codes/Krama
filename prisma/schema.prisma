@@ -162,6 +162,30 @@ model Profile {
   // Days that never break a streak. 0 = Sunday.
   restDays          Int[]  @default([0, 6])
 
+  // --- Profile tab -------------------------------------------------
+  /// 1 = Monday, 0 = Sunday. Drives the calendar's first column.
+  weekStartsOn Int    @default(1)
+  /// "24" | "12"
+  timeFormat   String @default("24")
+  /// Shown as "last changed N months ago", never the password itself.
+  passwordChangedAt DateTime?
+
+  // --- Rhythm tab --------------------------------------------------
+  /// "HH:MM" in the user's zone, or null for no nudge.
+  morningReminder String?
+  eveningReminder String?
+  /// How far back something may be logged and still count for half.
+  backdateLimitDays  Int     @default(2)
+  /// Unfinished work moves forward instead of disappearing.
+  rolloverUnfinished Boolean @default(true)
+  /// Off means a missed routine is skipped, not stacked up.
+  catchUpRoutines    Boolean @default(false)
+
+  // --- Appearance tab ----------------------------------------------
+  /// "comfortable" | "compact"
+  density      String  @default("comfortable")
+  reduceMotion Boolean @default(false)
+
   lastActiveOn DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

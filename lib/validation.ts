@@ -115,6 +115,25 @@ const restDaysSchema = z
   // A duplicate day in the form post shouldn't become a duplicate row.
   .transform((days) => [...new Set(days)].sort((a, b) => a - b));
 
+/** The Profile tab: who you are and the time settings everything derives from. */
+export const profileTabSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "What should we call you?")
+    .max(80, "That name is a bit long."),
+  timezone: z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+  // Capped at noon: a "day" that ends in the evening isn't a late night,
+  // it's a different day, and allowing it would quietly corrupt every
+  // date the scoring engine derives.
+  dayEndsAtHour: z.coerce.number().int().min(0).max(12),
+  weekStartsOn: z.coerce.number().int().refine((d) => d === 0 || d === 1),
+  timeFormat: z.enum(["12", "24"]),
+});
+
 export const dayScheduleSchema = z.object({
   timezone: z
     .string()
