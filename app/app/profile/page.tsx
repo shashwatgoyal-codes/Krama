@@ -50,7 +50,6 @@ const DAYS = [
   { value: 6, label: "Sat" },
 ];
 
-
 /** "3 months ago", "yesterday" — enough to judge, no false precision. */
 function relativeSince(at: Date): string {
   const days = Math.floor((Date.now() - at.getTime()) / 86_400_000);
@@ -63,7 +62,6 @@ function relativeSince(at: Date): string {
   return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
-
 export default async function ProfilePage({
   searchParams,
 }: {
@@ -75,7 +73,10 @@ export default async function ProfilePage({
   const [p, areas, stats, tags, stale, counts] = await Promise.all([
     getProfileOverview(user.id),
     listAreasWithCounts(user.id),
-    areaStats(user.id, dayKeyToDate(weekDays(dayKeyFor(new Date(), "UTC", 0))[0])),
+    areaStats(
+      user.id,
+      dayKeyToDate(weekDays(dayKeyFor(new Date(), "UTC", 0))[0]),
+    ),
     listTags(user.id),
     staleTags(user.id),
     getContentCounts(user.id),
@@ -191,23 +192,29 @@ export default async function ProfilePage({
                   }
                 />
 
-                <SettingRow
-                  label="Signed-in devices"
-                  description={
-                    p.otherSessions === 0
-                      ? "This is the only device signed in."
-                      : `You're signed in on ${p.otherSessions + 1} devices.`
-                  }
-                >
-                  <form action={signOutEverywhere}>
-                    <button
-                      type="submit"
-                      className="cursor-pointer rounded-[9px] border border-ln2 bg-surf px-[13px] py-[7px] text-[12.5px] font-semibold text-ink2 transition-colors hover:border-acc hover:text-acc"
-                    >
-                      Sign out everywhere
-                    </button>
-                  </form>
-                </SettingRow>
+                {/* Its own group. Sitting flush under the password row,
+                    an identical outline button reads as a second thing
+                    you can do to your password — and it isn't: it ends
+                    every session, including the one reading this. */}
+                <div className="mt-5 border-t border-ln pt-1">
+                  <SettingRow
+                    label="Signed-in devices"
+                    description={
+                      p.otherSessions === 0
+                        ? "This is the only device signed in."
+                        : `You're signed in on ${p.otherSessions + 1} devices.`
+                    }
+                  >
+                    <form action={signOutEverywhere}>
+                      <button
+                        type="submit"
+                        className="cursor-pointer rounded-[9px] border border-bad bg-surf px-[13px] py-[7px] text-[12.5px] font-semibold text-bad transition-colors hover:bg-bad-soft"
+                      >
+                        Sign out everywhere
+                      </button>
+                    </form>
+                  </SettingRow>
+                </div>
               </div>
             </Section>
           )}
@@ -493,10 +500,7 @@ export default async function ProfilePage({
           {section === "data" && (
             <>
               <Section title="Your data">
-                <DataPanel
-                  counts={counts}
-                  memberSince={memberSince}
-                />
+                <DataPanel counts={counts} memberSince={memberSince} />
               </Section>
 
               <Section
