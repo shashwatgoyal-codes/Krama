@@ -15,8 +15,17 @@ export type AreaRow = {
   totalTasks: number;
 };
 
+/**
+ * Areas as plain rows, as drawn: a dot, the name, what is filed under it
+ * and how long it took this week, then Edit.
+ *
+ * Colour, order and delete all live inside Edit rather than on the row.
+ * A row carrying its own delete link and two reorder arrows is four
+ * controls for something you read far more often than you change.
+ */
 export default function Areas({ areas }: { areas: AreaRow[] }) {
   const [editing, setEditing] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -41,160 +50,179 @@ export default function Areas({ areas }: { areas: AreaRow[] }) {
     run(moveArea, data);
   }
 
+  const thisWeek = (minutes: number) =>
+    minutes >= 60
+      ? `${Math.round(minutes / 60)}h this week`
+      : `${minutes}m this week`;
+
   return (
-    <div className="flex flex-col gap-3">
+    <div>
       {areas.length === 0 && (
-        <p className="rounded-lg border border-dashed border-ln2 px-3 py-4 text-center text-[11.5px] text-mut">
-          No areas yet. Everything will sit under &ldquo;Unfiled&rdquo; until
-          you add one.
+        <p className="border-b border-ln py-3 text-[11.5px] text-mut">
+          No areas yet. Everything sits under &ldquo;Unfiled&rdquo; until you
+          add one.
         </p>
       )}
 
       {areas.map((area, index) => (
-        <div key={area.id} className="rounded-lg border border-ln bg-surf">
-          {editing === area.id ? (
-            <form
-              action={(data) => run(editArea, data, () => setEditing(null))}
-              className="flex flex-wrap items-end gap-2 p-2.5"
+        <div key={area.id} className="border-b border-ln last:border-b-0">
+          <div className="flex flex-wrap items-center gap-3 py-3">
+            <span
+              aria-hidden
+              className={`size-2.5 flex-none rounded-full ${AREA_DOT[area.colour] ?? "bg-mut"}`}
+            />
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+              {area.name}
+            </span>
+            <span className="label-xs tabular flex-none">
+              {area.items} {area.items === 1 ? "item" : "items"} ·{" "}
+              {thisWeek(area.minutesThisWeek)}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setEditing(editing === area.id ? null : area.id);
+                setConfirming(null);
+              }}
             >
-              <input type="hidden" name="id" value={area.id} />
+              {editing === area.id ? "Done" : "Edit"}
+            </Button>
+          </div>
 
-              <div className="min-w-[140px] flex-1">
-                <label className="label-xs mb-1 block">Name</label>
-                <input
-                  name="name"
-                  defaultValue={area.name}
-                  required
-                  maxLength={40}
-                  className={inputClass}
-                />
-              </div>
-
-              <ColourPicker defaultValue={area.colour} />
-
-              <div className="flex gap-1.5">
+          {editing === area.id && (
+            <div className="mb-3 rounded-lg border border-ln bg-surf2 p-3">
+              <form
+                action={(data) => run(editArea, data, () => setEditing(null))}
+                className="flex flex-wrap items-end gap-3"
+              >
+                <input type="hidden" name="id" value={area.id} />
+                <div className="min-w-[150px] flex-1">
+                  <label className="label-xs mb-1 block">Name</label>
+                  <input
+                    name="name"
+                    defaultValue={area.name}
+                    required
+                    maxLength={40}
+                    className={inputClass}
+                  />
+                </div>
+                <ColourPicker defaultValue={area.colour} />
                 <Button type="submit" variant="primary" size="sm" disabled={pending}>
                   Save
                 </Button>
-                <Button type="button" size="sm" onClick={() => setEditing(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2.5 px-3 py-2.5">
-              <span
-                aria-hidden
-                className={`size-3 flex-none rounded-full ${AREA_DOT[area.colour] ?? "bg-mut"}`}
-              />
-              <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">
-                {area.name}
-              </span>
+              </form>
 
-              <span className="label-xs tabular flex-none">
-                {area.items} {area.items === 1 ? "item" : "items"}
-                {" · "}
-                {area.minutesThisWeek >= 60
-                  ? `${Math.round(area.minutesThisWeek / 60)}h this week`
-                  : `${area.minutesThisWeek}m this week`}
-              </span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ln pt-3">
+                <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={pending || index === 0}
+                    onClick={() => move(area.id, "up")}
+                  >
+                    Move up
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={pending || index === areas.length - 1}
+                    onClick={() => move(area.id, "down")}
+                  >
+                    Move down
+                  </Button>
+                </div>
 
-              <div className="flex flex-none gap-1">
-                <IconButton
-                  label={`Move ${area.name} up`}
-                  disabled={pending || index === 0}
-                  onClick={() => move(area.id, "up")}
-                >
-                  ↑
-                </IconButton>
-                <IconButton
-                  label={`Move ${area.name} down`}
-                  disabled={pending || index === areas.length - 1}
-                  onClick={() => move(area.id, "down")}
-                >
-                  ↓
-                </IconButton>
-                <Button type="button" size="sm" onClick={() => setEditing(area.id)}>
-                  Edit
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {confirming === area.id ? (
-            <div className="border-t border-ln bg-bad-soft px-3 py-2.5">
-              <p className="text-[11.5px] leading-relaxed text-ink">
-                Delete <span className="font-semibold">{area.name}</span>?{" "}
-                {area.totalTasks > 0 ? (
-                  <>
-                    Its {area.totalTasks}{" "}
-                    {area.totalTasks === 1
-                      ? "task stays — it just becomes unfiled."
-                      : "tasks stay — they just become unfiled."}
-                  </>
+                {confirming === area.id ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] text-mut">
+                      {area.totalTasks > 0
+                        ? `Its ${area.totalTasks} ${
+                            area.totalTasks === 1
+                              ? "task stays, unfiled"
+                              : "tasks stay, unfiled"
+                          }.`
+                        : "Nothing is filed under it."}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => {
+                        const data = new FormData();
+                        data.set("id", area.id);
+                        run(removeArea, data, () => {
+                          setConfirming(null);
+                          setEditing(null);
+                        });
+                      }}
+                      className="cursor-pointer rounded-[9px] border border-bad bg-bad px-[11px] py-1 text-[11.5px] font-semibold text-paper disabled:opacity-50"
+                    >
+                      Delete it
+                    </button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setConfirming(null)}
+                    >
+                      Keep
+                    </Button>
+                  </div>
                 ) : (
-                  "Nothing is filed under it."
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(area.id)}
+                    className="cursor-pointer text-[11.5px] font-semibold text-bad hover:underline"
+                  >
+                    Delete this area
+                  </button>
                 )}
-              </p>
-              <div className="mt-2 flex gap-1.5">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => {
-                    const data = new FormData();
-                    data.set("id", area.id);
-                    run(removeArea, data, () => setConfirming(null));
-                  }}
-                  className="cursor-pointer rounded-[9px] border border-bad bg-bad px-[11px] py-1 text-[11.5px] font-semibold text-paper disabled:opacity-50"
-                >
-                  Delete it
-                </button>
-                <Button type="button" size="sm" onClick={() => setConfirming(null)}>
-                  Keep it
-                </Button>
               </div>
             </div>
-          ) : (
-            editing !== area.id && (
-              <button
-                type="button"
-                onClick={() => setConfirming(area.id)}
-                className="cursor-pointer border-t border-ln px-3 py-1.5 text-[11px] text-fai hover:text-bad"
-              >
-                Delete
-              </button>
-            )
           )}
         </div>
       ))}
 
-      <form
-        action={(data) => run(addArea, data)}
-        className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-ln2 p-2.5"
-      >
-        <div className="min-w-[140px] flex-1">
-          <label htmlFor="new-area" className="label-xs mb-1 block">
-            New area
-          </label>
-          <input
-            id="new-area"
-            name="name"
-            required
-            maxLength={40}
-            placeholder="Office, Research, Health…"
-            className={inputClass}
-          />
-        </div>
-        <ColourPicker defaultValue="acc" />
-        <Button type="submit" size="sm" disabled={pending}>
-          Add
-        </Button>
-      </form>
+      {adding ? (
+        <form
+          action={(data) => run(addArea, data, () => setAdding(false))}
+          className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-ln bg-surf2 p-3"
+        >
+          <div className="min-w-[150px] flex-1">
+            <label htmlFor="new-area" className="label-xs mb-1 block">
+              Name
+            </label>
+            <input
+              id="new-area"
+              name="name"
+              required
+              autoFocus
+              maxLength={40}
+              placeholder="Office, Research, Health…"
+              className={inputClass}
+            />
+          </div>
+          <ColourPicker defaultValue="acc" />
+          <Button type="submit" variant="primary" size="sm" disabled={pending}>
+            Add
+          </Button>
+          <Button type="button" size="sm" onClick={() => setAdding(false)}>
+            Cancel
+          </Button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="mt-3 cursor-pointer text-[12.5px] font-semibold text-acc hover:underline"
+        >
+          + New area
+        </button>
+      )}
 
       {error && (
         <p
           role="alert"
-          className="rounded-lg border border-bad bg-bad-soft px-2.5 py-2 text-[11.5px] text-ink"
+          className="mt-3 rounded-lg border border-bad bg-bad-soft px-2.5 py-2 text-[11.5px] text-ink"
         >
           {error}
         </p>
@@ -229,30 +257,5 @@ function ColourPicker({ defaultValue }: { defaultValue: string }) {
         ))}
       </div>
     </div>
-  );
-}
-
-function IconButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="grid size-[26px] cursor-pointer place-items-center rounded-md border border-ln2 text-[12px] text-ink2 transition-colors hover:border-acc hover:text-acc disabled:cursor-not-allowed disabled:opacity-35"
-    >
-      {children}
-    </button>
   );
 }

@@ -309,7 +309,8 @@ export default async function ProfilePage({
 
                 <SettingRow
                   label="Morning planning reminder"
-                  description="A nudge to plan the day before it plans itself. Shown when you next open Krama after this time."
+                  description="A nudge to plan the day before it plans itself."
+                  help="Shown the next time you open Krama after this time — Krama has no way to push a notification, so it waits for you."
                   htmlFor="morningReminder"
                 >
                   <TimeSelect
@@ -374,6 +375,7 @@ export default async function ProfilePage({
             <>
               <Section
                 title="Areas"
+                meta={`${areas.length} active`}
                 description="The few big buckets your effort splits between. Deleting one never deletes its tasks; they just become unfiled."
               >
                 <Areas
@@ -393,6 +395,7 @@ export default async function ProfilePage({
 
               <Section
                 title="Tags"
+                meta={`${tags.length} ${tags.length === 1 ? "used" : "used"}`}
                 description="Free-form and cross-cutting. A tag means the same thing on a task, a note, an event or a saved link."
               >
                 <Tags

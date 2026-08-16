@@ -182,9 +182,11 @@ model Profile {
   passwordChangedAt DateTime?
 
   // --- Rhythm tab --------------------------------------------------
-  /// "HH:MM" in the user's zone, or null for no nudge.
-  morningReminder String?
-  eveningReminder String?
+  /// "HH:MM" in the user's zone, or null for no nudge. The defaults are
+  /// the ones the design shows: a reminder you have to go and switch on
+  /// is a reminder almost nobody switches on.
+  morningReminder String? @default("08:30")
+  eveningReminder String? @default("21:00")
   /// How far back something may be logged and still count for half.
   backdateLimitDays  Int     @default(2)
   /// Unfinished work moves forward instead of disappearing.
