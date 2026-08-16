@@ -6,7 +6,9 @@ import {
   scoringSchema,
   changePasswordSchema,
   deleteAccountSchema,
+  profileTabSchema,
 } from "@/lib/validation";
+import { describeZone } from "@/lib/timezones";
 
 describe("isValidTimeZone", () => {
   it("accepts real IANA zones", () => {
@@ -225,5 +227,63 @@ describe("deleteAccountSchema", () => {
     expect(
       deleteAccountSchema.safeParse({ password: "", confirm: "DELETE" }).success,
     ).toBe(false);
+  });
+});
+
+describe("profileTabSchema", () => {
+  const base = {
+    name: "Shashwat",
+    timezone: "Asia/Kolkata",
+    dayEndsAtHour: "4",
+    weekStartsOn: "1",
+    timeFormat: "24",
+  };
+
+  it("accepts what the Profile tab posts", () => {
+    const r = profileTabSchema.parse(base);
+    expect(r.weekStartsOn).toBe(1);
+    expect(r.dayEndsAtHour).toBe(4);
+    expect(r.timeFormat).toBe("24");
+  });
+
+  it("accepts Sunday as a week start", () => {
+    expect(profileTabSchema.parse({ ...base, weekStartsOn: "0" }).weekStartsOn)
+      .toBe(0);
+  });
+
+  it("rejects a week starting on any other day", () => {
+    // The calendar only knows how to lead with Monday or Sunday; a 3
+    // here would shift every column silently.
+    for (const d of ["3", "7", "-1"]) {
+      expect(profileTabSchema.safeParse({ ...base, weekStartsOn: d }).success)
+        .toBe(false);
+    }
+  });
+
+  it("rejects a time format it doesn't render", () => {
+    expect(profileTabSchema.safeParse({ ...base, timeFormat: "military" })
+      .success).toBe(false);
+  });
+
+  it("still refuses an evening day-end", () => {
+    expect(profileTabSchema.safeParse({ ...base, dayEndsAtHour: "20" })
+      .success).toBe(false);
+  });
+
+  it("still refuses a bogus time zone", () => {
+    expect(profileTabSchema.safeParse({ ...base, timezone: "Nowhere/None" })
+      .success).toBe(false);
+  });
+});
+
+describe("describeZone", () => {
+  it("labels a zone with its offset, as the design shows", () => {
+    expect(describeZone("Asia/Kolkata", new Date("2026-08-16T00:00:00Z")))
+      .toBe("Asia/Kolkata · GMT+5:30");
+  });
+
+  it("handles a whole-hour offset", () => {
+    expect(describeZone("UTC", new Date("2026-08-16T00:00:00Z")))
+      .toContain("UTC");
   });
 });

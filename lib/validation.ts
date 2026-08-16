@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth/password";
 import { BLOCK_MINUTES } from "./time";
+import { ACCENT_VALUES, DENSITIES } from "./appearance";
 
 /**
  * Every server action validates its input through one of these before
@@ -115,6 +116,25 @@ const restDaysSchema = z
   // A duplicate day in the form post shouldn't become a duplicate row.
   .transform((days) => [...new Set(days)].sort((a, b) => a - b));
 
+/** The Profile tab: who you are and the time settings everything derives from. */
+export const profileTabSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "What should we call you?")
+    .max(80, "That name is a bit long."),
+  timezone: z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+  // Capped at noon: a "day" that ends in the evening isn't a late night,
+  // it's a different day, and allowing it would quietly corrupt every
+  // date the scoring engine derives.
+  dayEndsAtHour: z.coerce.number().int().min(0).max(12),
+  weekStartsOn: z.coerce.number().int().refine((d) => d === 0 || d === 1),
+  timeFormat: z.enum(["12", "24"]),
+});
+
 export const dayScheduleSchema = z.object({
   timezone: z
     .string()
@@ -129,6 +149,41 @@ export const dayScheduleSchema = z.object({
     .int()
     .min(0, "Pick an hour between midnight and noon.")
     .max(12, "Pick an hour between midnight and noon."),
+});
+
+/** "HH:MM" in the user's own zone, or empty for no nudge. */
+const reminderSchema = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.length ? v : null))
+  .refine(
+    (v) => v === null || /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
+    "Use a time like 08:30.",
+  );
+
+/** The Rhythm tab: when the app expects you, and when it leaves you alone. */
+export const rhythmSchema = z.object({
+  dailyFloor: z.coerce
+    .number()
+    .int()
+    .min(1, "The floor needs to be at least one action.")
+    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+  restDays: restDaysSchema,
+  morningReminder: reminderSchema,
+  eveningReminder: reminderSchema,
+  // Zero means "today only". Thirty is already generous enough that a
+  // streak stops meaning much beyond it.
+  backdateLimitDays: z.coerce.number().int().min(0).max(30),
+  rolloverUnfinished: z.coerce.boolean(),
+  catchUpRoutines: z.coerce.boolean(),
+});
+
+/** The Appearance tab. */
+export const appearanceSchema = z.object({
+  accent: z.enum(ACCENT_VALUES),
+  density: z.enum(DENSITIES),
+  reduceMotion: z.coerce.boolean(),
+  showPointsOnTasks: z.coerce.boolean(),
 });
 
 export const scoringSchema = z.object({

@@ -98,6 +98,18 @@ export type ProfileOverview = {
   dailyCap: number;
   scoringVisibility: string;
   restDays: number[];
+  weekStartsOn: number;
+  timeFormat: string;
+  passwordChangedAt: Date | null;
+  morningReminder: string | null;
+  eveningReminder: string | null;
+  backdateLimitDays: number;
+  rolloverUnfinished: boolean;
+  catchUpRoutines: boolean;
+  density: string;
+  reduceMotion: boolean;
+  accent: string;
+  defaultAreaId: string | null;
   totalPoints: number;
   streakDays: number;
   level: number;
@@ -127,6 +139,18 @@ export async function getProfileOverview(
             dailyCap: true,
             scoringVisibility: true,
             restDays: true,
+            weekStartsOn: true,
+            timeFormat: true,
+            passwordChangedAt: true,
+            morningReminder: true,
+            eveningReminder: true,
+            backdateLimitDays: true,
+            rolloverUnfinished: true,
+            catchUpRoutines: true,
+            density: true,
+            reduceMotion: true,
+            accent: true,
+            defaultAreaId: true,
             totalPoints: true,
           },
         },
@@ -169,6 +193,18 @@ export async function updateProfileSettings(
     dailyCap?: number;
     scoringVisibility?: string;
     restDays?: number[];
+    weekStartsOn?: number;
+    timeFormat?: string;
+    passwordChangedAt?: Date;
+    morningReminder?: string | null;
+    eveningReminder?: string | null;
+    backdateLimitDays?: number;
+    rolloverUnfinished?: boolean;
+    catchUpRoutines?: boolean;
+    density?: string;
+    reduceMotion?: boolean;
+    accent?: string;
+    defaultAreaId?: string | null;
   },
 ): Promise<void> {
   await db.profile.update({ where: { userId }, data: patch });
@@ -276,4 +312,64 @@ export async function getTodayStats(userId: string): Promise<TodayStats> {
     dailyFloor: settings.dailyFloor,
     floorCleared: streak.clearedToday,
   };
+}
+
+
+export type ContentCounts = {
+  tasks: number;
+  notes: number;
+  events: number;
+  links: number;
+};
+
+export async function getContentCounts(userId: string): Promise<ContentCounts> {
+  const [tasks, notes, events, links] = await Promise.all([
+    db.task.count({ where: { userId } }),
+    db.note.count({ where: { userId, archivedAt: null } }),
+    db.event.count({ where: { userId } }),
+    db.link.count({ where: { userId, archivedAt: null } }),
+  ]);
+  return { tasks, notes, events, links };
+}
+
+/**
+ * Recomputes the cached total from the ledger.
+ *
+ * The ledger is the record; profiles.totalPoints is a convenience copy
+ * that a crash mid-award could in principle leave behind. This is the
+ * button that reconciles the two, and it can only ever move the cache
+ * toward the history, never the other way.
+ */
+export async function recountPoints(userId: string): Promise<number> {
+  const rows = await db.$queryRaw<{ total: bigint | null }[]>`
+    SELECT COALESCE(SUM("points"), 0)::bigint AS total
+      FROM "point_ledger" WHERE "userId" = ${userId}
+  `;
+  const total = Math.max(0, Number(rows[0]?.total ?? 0));
+  await db.profile.update({
+    where: { userId },
+    data: { totalPoints: total, level: levelProgress(total).level },
+  });
+  return total;
+}
+
+/**
+ * Erases everything the user made, keeping the account.
+ *
+ * The ledger goes too, which needs the append-only trigger's escape
+ * hatch — "start fresh" that left a points history behind would be a
+ * strange kind of fresh, and the score would describe work that no
+ * longer exists.
+ */
+export async function eraseContent(userId: string): Promise<void> {
+  await db.$transaction([
+    db.$executeRaw`SELECT set_config('krama.allow_ledger_delete', 'on', true)`,
+    db.$executeRaw`DELETE FROM "point_ledger" WHERE "userId" = ${userId}`,
+    db.$executeRaw`DELETE FROM "events" WHERE "userId" = ${userId}`,
+    db.$executeRaw`DELETE FROM "links"  WHERE "userId" = ${userId}`,
+    db.$executeRaw`DELETE FROM "notes"  WHERE "userId" = ${userId}`,
+    db.$executeRaw`DELETE FROM "tasks"  WHERE "userId" = ${userId}`,
+    db.$executeRaw`UPDATE "profiles" SET "totalPoints" = 0, "level" = 1,
+                     "streakDays" = 0, "pace" = 0 WHERE "userId" = ${userId}`,
+  ]);
 }

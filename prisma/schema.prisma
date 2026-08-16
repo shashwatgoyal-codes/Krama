@@ -32,6 +32,7 @@ model User {
   areas    Area[]
   tasks    Task[]
   notes    Note[]
+  tags     Tag[]
   ledger   PointEntry[]
 
   @@map("users")
@@ -162,6 +163,35 @@ model Profile {
   // Days that never break a streak. 0 = Sunday.
   restDays          Int[]  @default([0, 6])
 
+  // --- Profile tab -------------------------------------------------
+  /// 1 = Monday, 0 = Sunday. Drives the calendar's first column.
+  weekStartsOn Int    @default(1)
+  /// "24" | "12"
+  timeFormat   String @default("24")
+  /// Shown as "last changed N months ago", never the password itself.
+  passwordChangedAt DateTime?
+
+  // --- Rhythm tab --------------------------------------------------
+  /// "HH:MM" in the user's zone, or null for no nudge.
+  morningReminder String?
+  eveningReminder String?
+  /// How far back something may be logged and still count for half.
+  backdateLimitDays  Int     @default(2)
+  /// Unfinished work moves forward instead of disappearing.
+  rolloverUnfinished Boolean @default(true)
+  /// Off means a missed routine is skipped, not stacked up.
+  catchUpRoutines    Boolean @default(false)
+
+  // --- Appearance tab ----------------------------------------------
+  /// "comfortable" | "compact"
+  density      String  @default("comfortable")
+  reduceMotion Boolean @default(false)
+  /// Palette token for the single accent hue. See lib/appearance.ts.
+  accent       String  @default("amber")
+
+  /// Where a quick capture lands when no area is chosen.
+  defaultAreaId String?
+
   lastActiveOn DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -170,6 +200,25 @@ model Profile {
 }
 
 // ---------------------------------------------------------------- content
+
+/// Free-form, cross-cutting labels. Areas are the few big buckets; tags
+/// are everything else, and they mean the same thing on a task, a note,
+/// an event or a saved link.
+model Tag {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  /// Touched whenever the tag is applied, so unused ones can be found.
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
 
 model Area {
   id     String @id @default(cuid())
