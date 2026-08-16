@@ -106,6 +106,7 @@ export async function saveScoring(formData: FormData): Promise<ActionResult> {
   const user = await requireUserOrThrow();
   const parsed = scoringSchema.safeParse({
     dailyFloor: formData.get("dailyFloor"),
+    dailyTargetPoints: formData.get("dailyTargetPoints"),
     dailyCap: formData.get("dailyCap"),
     scoringVisibility: formData.get("scoringVisibility"),
   });
@@ -123,6 +124,7 @@ export async function saveRhythm(formData: FormData): Promise<ActionResult> {
   const user = await requireUserOrThrow();
   const parsed = rhythmSchema.safeParse({
     dailyFloor: formData.get("dailyFloor"),
+    dailyTargetPoints: formData.get("dailyTargetPoints"),
     // Unchecked boxes send nothing, so an empty list is a real answer:
     // "no rest days", not "field missing".
     restDays: formData.getAll("restDays"),

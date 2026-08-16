@@ -165,8 +165,17 @@ model Profile {
   // toward the previous day.
   dayEndsAtHour Int @default(4)
 
-  dailyFloor Int @default(3)
+  // How many finished things keep the streak alive. One by default:
+  // the streak measures whether you showed up, not how much you did.
+  dailyFloor Int @default(1)
   dailyCap   Int @default(150)
+
+  // A day's worth of work, used as the yardstick for pace. Its own
+  // number rather than dailyFloor × 20: once you set your own points
+  // per task there is no fixed worth to multiply by, and the floor
+  // answers a different question ("did you show up") than pace does
+  // ("how much did you do").
+  dailyTargetPoints Int @default(60)
 
   // "hidden" | "normal" | "everywhere"
   scoringVisibility String @default("normal")

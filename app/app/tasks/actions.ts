@@ -104,6 +104,10 @@ const detailsSchema = z.object({
     .optional()
     .transform((v) => (v && v.length ? v : null)),
   notes: z.string().trim().max(2000).optional(),
+  // Same 1–30 band the create form uses. Editing this changes what the
+  // task will pay next time it is completed; it never rewrites a ledger
+  // row that has already been written.
+  points: z.coerce.number().int().min(1).max(30).optional(),
   // An empty date field means "no due date", not "invalid".
   dueOn: z
     .string()
@@ -121,6 +125,7 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
     id: formData.get("id"),
     areaId: formData.get("areaId") ?? undefined,
     notes: formData.get("notes") ?? undefined,
+    points: formData.get("points") || undefined,
     dueOn: formData.get("dueOn") ?? undefined,
     recurrence: formData.get("recurrence") ?? "none",
     recurrenceValue: formData.get("recurrenceValue") ?? undefined,
@@ -136,6 +141,7 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
   const updated = await updateTaskFields(user.id, parsed.data.id, {
     areaId: parsed.data.areaId,
     notes: parsed.data.notes ?? null,
+    points: parsed.data.points,
     dueOn: parsed.data.dueOn ? new Date(`${parsed.data.dueOn}T00:00:00.000Z`) : null,
     recurrence: parsed.data.recurrence,
     recurrenceValue:

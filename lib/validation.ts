@@ -169,6 +169,11 @@ export const rhythmSchema = z.object({
     .int()
     .min(1, "The floor needs to be at least one action.")
     .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+  dailyTargetPoints: z.coerce
+    .number()
+    .int()
+    .min(1, "A day's work has to be worth at least a point.")
+    .max(500, "Above 500 a day, pace stops telling you anything."),
   restDays: restDaysSchema,
   morningReminder: reminderSchema,
   eveningReminder: reminderSchema,
@@ -200,6 +205,11 @@ export const scoringSchema = z.object({
     .int()
     .min(1, "The floor needs to be at least one action.")
     .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+  dailyTargetPoints: z.coerce
+    .number()
+    .int()
+    .min(1, "A day's work has to be worth at least a point.")
+    .max(500, "Above 500 a day, pace stops telling you anything."),
   dailyCap: z.coerce
     .number()
     .int()

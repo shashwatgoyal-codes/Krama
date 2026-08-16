@@ -8,6 +8,7 @@ export type ProfileSettings = {
   dayEndsAtHour: number;
   dailyFloor: number;
   dailyCap: number;
+  dailyTargetPoints: number;
   scoringVisibility: string;
   restDays: number[];
   weekStartsOn: number;
@@ -36,6 +37,7 @@ export async function getSettings(userId: string): Promise<ProfileSettings> {
       dayEndsAtHour: true,
       dailyFloor: true,
       dailyCap: true,
+      dailyTargetPoints: true,
       scoringVisibility: true,
       restDays: true,
       weekStartsOn: true,
@@ -114,6 +116,7 @@ export type ProfileOverview = {
   dayEndsAtHour: number;
   dailyFloor: number;
   dailyCap: number;
+  dailyTargetPoints: number;
   scoringVisibility: string;
   restDays: number[];
   weekStartsOn: number;
@@ -158,6 +161,7 @@ export async function getProfileOverview(
             dayEndsAtHour: true,
             dailyFloor: true,
             dailyCap: true,
+            dailyTargetPoints: true,
             scoringVisibility: true,
             restDays: true,
             weekStartsOn: true,
@@ -216,6 +220,7 @@ export async function updateProfileSettings(
     dayEndsAtHour?: number;
     dailyFloor?: number;
     dailyCap?: number;
+    dailyTargetPoints?: number;
     scoringVisibility?: string;
     restDays?: number[];
     weekStartsOn?: number;
@@ -324,7 +329,11 @@ export async function getTodayStats(userId: string): Promise<TodayStats> {
   const dailyPoints = days.map((d) => pointsByDay.get(d) ?? 0);
 
   // A day's worth of work, used as the yardstick for pace.
-  const dailyTarget = settings.dailyFloor * 20;
+  // Its own setting, not dailyFloor × 20. That old formula assumed every
+  // task was worth 20, which only held while nothing could set a task's
+  // points; now that you choose them, it would quietly measure pace
+  // against a number that no longer describes a day's work.
+  const dailyTarget = Math.max(1, settings.dailyTargetPoints);
   const progress = levelProgress(settings.totalPoints);
 
   return {

@@ -141,10 +141,22 @@ export default function TaskDetail({
             </select>
           </Field>
 
-          <Field label="Points">
-            <span className="tabular text-[13px] font-semibold">
-              {task.points}
-            </span>
+          <Field label="Worth">
+            <input
+              type="number"
+              name="points"
+              min={1}
+              max={30}
+              step={1}
+              defaultValue={task.points}
+              aria-describedby="points-hint"
+              className={`${FIELD} tabular`}
+            />
+            <p id="points-hint" className="mt-1 text-[11px] text-fai">
+              {task.done
+                ? "Already paid. Changing this only affects a re-completion."
+                : "1–30. Big effort high, small errand low."}
+            </p>
           </Field>
 
           <Field label="Due">

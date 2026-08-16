@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * The − value + control the design uses for every bounded number.
@@ -44,13 +44,27 @@ export default function Stepper({
   disabled?: boolean;
 }) {
   const [value, setValue] = useState(defaultValue);
+  const hidden = useRef<HTMLInputElement>(null);
+  const firstRender = useRef(true);
+
+  // React setting a hidden input's value fires no native event, so the
+  // form wrapping this never learned anything had changed and its Save
+  // button stayed hidden — the setting looked unchangeable. Announcing
+  // the change by hand is what makes a stepper saveable at all.
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    hidden.current?.dispatchEvent(new Event("input", { bubbles: true }));
+  }, [value]);
 
   const clamp = (next: number) => Math.min(max, Math.max(min, next));
   const shown = render(value, format);
 
   return (
     <div className="flex items-center gap-2">
-      <input type="hidden" name={name} value={value} />
+      <input ref={hidden} type="hidden" name={name} value={value} />
 
       <Nudge
         label={`Decrease ${name}`}

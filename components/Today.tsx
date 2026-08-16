@@ -68,7 +68,10 @@ export default function Today({
             <p className="mx-auto mt-2 max-w-[46ch] text-[12.5px] leading-relaxed text-mut">
               Krama keeps score of what you actually do — not what other people
               decide. Add the first thing you want to get done today, however
-              small. Three of them clears the day.
+              small.{" "}
+              {stats.dailyFloor <= 1
+                ? "One finished thing keeps the streak."
+                : `${stats.dailyFloor} of them clears the day.`}
             </p>
             <div className="mx-auto mt-5 max-w-[340px]">
               <AddTask autoFocus />

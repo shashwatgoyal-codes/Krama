@@ -241,6 +241,19 @@ export default async function ProfilePage({
                 </SettingRow>
 
                 <SettingRow
+                  label="A day's work"
+                  description="Points that add up to a full day. Pace is measured against this. Also on the Rhythm page."
+                >
+                  <Stepper
+                    name="dailyTargetPoints"
+                    defaultValue={p.dailyTargetPoints}
+                    min={1}
+                    max={500}
+                    step={5}
+                  />
+                </SettingRow>
+
+                <SettingRow
                   label="Daily point limit"
                   description="After this many points in a day, extra work counts for less. Nothing is ever blocked."
                   help="Past the limit an award pays half, then a quarter. It exists so a long day doesn't turn into chasing the number."
@@ -273,13 +286,28 @@ export default async function ProfilePage({
               <SaveForm action={saveRhythm} layout="rows">
                 <SettingRow
                   label="Daily minimum"
-                  description="How many things you need to finish for the day to count."
+                  description="How many things you need to finish to keep the streak. At one, showing up at all is enough."
+                  help="The streak asks whether you turned up, not how much you did. Raise this only if one small thing genuinely shouldn't count."
                 >
                   <Stepper
                     name="dailyFloor"
                     defaultValue={p.dailyFloor}
                     min={1}
                     max={20}
+                  />
+                </SettingRow>
+
+                <SettingRow
+                  label="A day's work"
+                  description="Points that add up to a full day. Pace is measured against this."
+                  help="Separate from the daily minimum on purpose: the minimum decides whether the streak holds, this decides what counts as a full day of effort."
+                >
+                  <Stepper
+                    name="dailyTargetPoints"
+                    defaultValue={p.dailyTargetPoints}
+                    min={1}
+                    max={500}
+                    step={5}
                   />
                 </SettingRow>
 

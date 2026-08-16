@@ -5,6 +5,7 @@ import { DEFAULT_TINTS } from "@/lib/notes";
 
 const RHYTHM = {
   dailyFloor: "3",
+  dailyTargetPoints: "60",
   restDays: ["0", "6"],
   morningReminder: "08:30",
   eveningReminder: "21:00",

@@ -86,6 +86,22 @@ export default function AddTask({ autoFocus = false }: { autoFocus?: boolean }) 
             {r.label}
           </button>
         ))}
+
+        {/* Deliberately left alone when the form clears: adding several
+            things of similar size shouldn't mean re-picking the number
+            every time. */}
+        <span className="label-xs ml-2 mr-0.5">Worth</span>
+        <input
+          type="number"
+          name="points"
+          min={1}
+          max={30}
+          step={1}
+          defaultValue={20}
+          disabled={pending}
+          aria-label="Points this task is worth"
+          className="tabular w-[58px] rounded-md border border-ln2 bg-surf px-1.5 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+        />
       </div>
 
       {repeat !== "none" && (

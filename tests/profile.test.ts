@@ -152,6 +152,7 @@ describe("scoringSchema", () => {
   const base = {
     dailyFloor: "3",
     dailyCap: "150",
+    dailyTargetPoints: "60",
     scoringVisibility: "normal",
   };
 
@@ -159,6 +160,7 @@ describe("scoringSchema", () => {
     const r = scoringSchema.parse(base);
     expect(r.dailyFloor).toBe(3);
     expect(r.dailyCap).toBe(150);
+    expect(r.dailyTargetPoints).toBe(60);
   });
 
   it("rejects a floor of zero", () => {

@@ -282,6 +282,7 @@ export async function updateTaskFields(
     title?: string;
     notes?: string | null;
     areaId?: string | null;
+    points?: number;
     dueOn?: Date | null;
     recurrence?: Recurrence;
     recurrenceValue?: number | null;
