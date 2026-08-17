@@ -84,6 +84,9 @@ export default async function TasksPage({
     dueOn: panel.dueOn ? panel.dueOn.toISOString().slice(0, 10) : "",
     recurrence: panel.recurrence,
     recurrenceValue: panel.recurrenceValue,
+    recurrenceUntil: panel.recurrenceUntil
+      ? panel.recurrenceUntil.toISOString().slice(0, 10)
+      : null,
     block: panel.block && {
       id: panel.block.id,
       dayKey: dayKeyFor(panel.block.startsAt, settings.timezone, 0),
@@ -211,7 +214,7 @@ export default async function TasksPage({
         )}
 
         <div className="mt-4">
-          <AddTask />
+          <AddTask today={todayKey} />
         </div>
       </section>
 

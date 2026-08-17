@@ -112,6 +112,7 @@ export default async function TodayPage() {
       reminder={reminder}
       name={user.name}
       day={formatDay(new Date())}
+      todayKey={dayKey}
       blocks={view}
       committed={totalCommitted(blocks)}
       waiting={waiting}

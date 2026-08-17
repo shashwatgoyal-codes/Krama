@@ -308,6 +308,11 @@ model Task {
   recurrence       Recurrence @default(none)
   // For weekly: 0-6. For monthly: day of month.
   recurrenceValue  Int?
+  /// The last day this routine runs, or null for open-ended. Stored as
+  /// a day rather than an instant: "until the end of March" is a date
+  /// someone chose, not a moment, and a timezone should not be able to
+  /// move it.
+  recurrenceUntil  DateTime?
   // Instances point back at the template they came from.
   recurrenceParentId String?
 

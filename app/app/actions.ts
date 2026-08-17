@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { resolveUntil, isUntilPreset } from "@/lib/until";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
 import {
@@ -51,8 +52,24 @@ export async function createTask(formData: FormData): Promise<ActionResult> {
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
+  const todayKey = dayKeyFor(
+    new Date(),
+    settings.timezone,
+    settings.dayEndsAtHour,
+  );
+  const untilRaw = String(formData.get("until") ?? "never");
+  const untilKey =
+    parsed.data.recurrence === "none"
+      ? null
+      : resolveUntil(
+          isUntilPreset(untilRaw) ? untilRaw : "never",
+          todayKey,
+          formData.get("untilDate")?.toString(),
+        );
+
   await createTaskRow(user.id, {
     ...parsed.data,
+    recurrenceUntil: untilKey ? new Date(`${untilKey}T00:00:00.000Z`) : null,
     timezone: settings.timezone,
     dayEndsAtHour: settings.dayEndsAtHour,
   });

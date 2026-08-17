@@ -78,6 +78,8 @@ export type CreateTaskData = {
   dueOn?: Date;
   recurrence?: Task["recurrence"];
   recurrenceValue?: number;
+  /** The last day the routine runs, or null for open-ended. */
+  recurrenceUntil?: Date | null;
   timezone: string;
   dayEndsAtHour: number;
 };
@@ -98,6 +100,7 @@ export async function createTask(
       dueOn: data.dueOn,
       recurrence: data.recurrence ?? "none",
       recurrenceValue: data.recurrenceValue,
+      recurrenceUntil: data.recurrenceUntil ?? null,
       createdForDate: dayKeyToDate(dayKey),
     },
     select: SUMMARY,
@@ -215,6 +218,7 @@ export type TaskPanel = {
   areaColour: string | null;
   recurrence: string;
   recurrenceValue: number | null;
+  recurrenceUntil: Date | null;
   /** The block this task sits in, if it has been given a time. */
   block: { id: string; startsAt: Date; endsAt: Date } | null;
   /** The note it was captured from, if any. */
@@ -244,6 +248,7 @@ export async function getTaskPanel(
       areaId: true,
       recurrence: true,
       recurrenceValue: true,
+      recurrenceUntil: true,
       area: { select: { name: true, colour: true } },
       tags: {
         select: { id: true, name: true, colour: true },
@@ -275,6 +280,7 @@ export async function getTaskPanel(
     areaColour: task.area?.colour ?? null,
     recurrence: task.recurrence,
     recurrenceValue: task.recurrenceValue,
+    recurrenceUntil: task.recurrenceUntil,
     block: task.events[0] ?? null,
     fromNote: note?.body ?? null,
     tags: task.tags,
@@ -293,6 +299,7 @@ export async function updateTaskFields(
     dueOn?: Date | null;
     recurrence?: Recurrence;
     recurrenceValue?: number | null;
+    recurrenceUntil?: Date | null;
   },
 ): Promise<boolean> {
   const { count } = await db.task.updateMany({

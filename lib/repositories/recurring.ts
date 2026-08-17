@@ -31,11 +31,20 @@ export async function materialiseRecurring(
       points: true,
       recurrence: true,
       recurrenceValue: true,
+      recurrenceUntil: true,
     },
   });
 
   const due = templates.filter((t) =>
-    occursOn(dayKey, t.recurrence, t.recurrenceValue),
+    occursOn(
+      dayKey,
+      t.recurrence,
+      t.recurrenceValue,
+      // A routine that has ended stops producing work. Without this the
+      // instances would keep appearing forever and the end date would be
+      // a label rather than a rule.
+      t.recurrenceUntil ? t.recurrenceUntil.toISOString().slice(0, 10) : null,
+    ),
   );
   if (due.length === 0) return 0;
 

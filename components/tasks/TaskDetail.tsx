@@ -6,6 +6,7 @@ import { toggleTask } from "@/app/app/actions";
 import { scheduleAt, clearSchedule, saveDetails } from "@/app/app/tasks/actions";
 import { BLOCK_MINUTES } from "@/lib/time";
 import TagField from "@/components/tags/TagField";
+import UntilField from "@/components/tasks/UntilField";
 import type { TagChip } from "@/lib/tags";
 
 /**
@@ -28,6 +29,8 @@ export type TaskPanelView = {
   dueOn: string;
   recurrence: string;
   recurrenceValue: number | null;
+  /** "2026-12-31" or null for a routine with no end. */
+  recurrenceUntil: string | null;
   block: {
     id: string;
     /** "2026-08-15" */
@@ -235,6 +238,18 @@ export default function TaskDetail({
                 </option>
               ))}
             </select>
+          )}
+          {recurrence !== "none" && (
+            <div className="mt-2.5 border-t border-ln pt-2.5">
+              <div className="mb-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-fai">
+                Until
+              </div>
+              <UntilField
+                value={task.recurrenceUntil}
+                today={task.todayKey}
+                disabled={pending}
+              />
+            </div>
           )}
         </Field>
 

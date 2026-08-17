@@ -17,6 +17,7 @@ export default function Today({
   reminder,
   name,
   day,
+  todayKey,
   blocks,
   committed,
   waiting,
@@ -28,6 +29,8 @@ export default function Today({
   reminder: string | null;
   name: string;
   day: string;
+  /** "2026-08-17" — the key, not the display string in `day`. */
+  todayKey: string;
   blocks: PlanBlockView[];
   committed: string;
   waiting: (TaskItem & { chip?: string })[];
@@ -74,7 +77,7 @@ export default function Today({
                 : `${stats.dailyFloor} of them clears the day.`}
             </p>
             <div className="mx-auto mt-5 max-w-[340px]">
-              <AddTask autoFocus />
+              <AddTask autoFocus today={todayKey} />
             </div>
           </div>
         ) : (
@@ -154,7 +157,7 @@ export default function Today({
         )}
 
         <div className="mt-3">
-          <AddTask />
+          <AddTask today={todayKey} />
         </div>
 
         {notes.length > 0 && (

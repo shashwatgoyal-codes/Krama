@@ -51,7 +51,14 @@ export function occursOn(
   dayKey: string,
   recurrence: Recurrence,
   value: number | null,
+  /** The last day the routine runs, or null for open-ended. */
+  until: string | null = null,
 ): boolean {
+  // Checked before the rule, not after: a routine that has ended does
+  // not fire on a day that would otherwise match, and every caller gets
+  // that for free rather than having to remember it.
+  if (until && dayKey > until) return false;
+
   const dow = weekdayOf(dayKey);
   const dom = dayKeyToDate(dayKey).getUTCDate();
 
@@ -87,15 +94,19 @@ export function nextOccurrence(
   afterDayKey: string,
   recurrence: Recurrence,
   value: number | null,
+  until: string | null = null,
 ): string | null {
   if (recurrence === "none") return null;
+  // Nothing comes after the end, so there is no point walking the year.
+  if (until && afterDayKey >= until) return null;
 
   const cursor = dayKeyToDate(afterDayKey);
   // A month of lookahead covers every rule we support.
   for (let i = 0; i < 366; i++) {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
     const key = cursor.toISOString().slice(0, 10);
-    if (occursOn(key, recurrence, value)) return key;
+    if (until && key > until) return null;
+    if (occursOn(key, recurrence, value, until)) return key;
   }
   return null;
 }

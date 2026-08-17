@@ -8,6 +8,12 @@ import { getTask, updateTaskFields } from "@/lib/repositories/tasks";
 import { areaBelongsTo } from "@/lib/repositories/areas";
 import { setTagsOn } from "@/lib/repositories/tags";
 import { parseTagInput } from "@/lib/tags";
+import { dayKeyFor } from "@/lib/day";
+import {
+  resolveUntil,
+  isUntilPreset,
+  type UntilPreset,
+} from "@/lib/until";
 import {
   createBlock,
   getBlock,
@@ -121,6 +127,10 @@ const detailsSchema = z.object({
   // A comma-separated list of names, not ids: a tag you have just
   // invented has no id yet, and the server is what turns names into rows.
   tags: z.string().max(400).optional(),
+  // The preset, not a resolved date: "end of this month" depends on
+  // which day the user is on, and only the server knows their timezone.
+  until: z.string().optional(),
+  untilDate: z.string().optional(),
 });
 
 export async function saveDetails(formData: FormData): Promise<ActionResult> {
@@ -135,6 +145,8 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
     recurrence: formData.get("recurrence") ?? "none",
     recurrenceValue: formData.get("recurrenceValue") ?? undefined,
     tags: formData.get("tags") ?? undefined,
+    until: formData.get("until") ?? undefined,
+    untilDate: formData.get("untilDate") ?? undefined,
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
@@ -144,7 +156,29 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
     return { ok: false, error: "That area doesn't exist.", field: "areaId" };
   }
 
+  const settings = await getSettings(user.id);
+  const todayKey = dayKeyFor(
+    new Date(),
+    settings.timezone,
+    settings.dayEndsAtHour,
+  );
+
+  // An end date only means anything for something that repeats; keeping
+  // one on a task set back to "never" would resurrect it if the routine
+  // were ever turned on again.
+  const untilKey =
+    parsed.data.recurrence === "none"
+      ? null
+      : resolveUntil(
+          isUntilPreset(parsed.data.until ?? "") 
+            ? (parsed.data.until as UntilPreset)
+            : "never",
+          todayKey,
+          parsed.data.untilDate,
+        );
+
   const updated = await updateTaskFields(user.id, parsed.data.id, {
+    recurrenceUntil: untilKey ? new Date(`${untilKey}T00:00:00.000Z`) : null,
     areaId: parsed.data.areaId,
     notes: parsed.data.notes ?? null,
     points: parsed.data.points,

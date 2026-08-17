@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { createTask } from "@/app/app/actions";
+import UntilField from "@/components/tasks/UntilField";
 
 const REPEATS = [
   { value: "none", label: "Once" },
@@ -11,7 +12,14 @@ const REPEATS = [
   { value: "monthly", label: "Monthly" },
 ] as const;
 
-export default function AddTask({ autoFocus = false }: { autoFocus?: boolean }) {
+export default function AddTask({
+  autoFocus = false,
+  today,
+}: {
+  autoFocus?: boolean;
+  /** Today in the user's zone, so "end of this month" resolves right. */
+  today?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [repeat, setRepeat] = useState<string>("none");
@@ -103,6 +111,15 @@ export default function AddTask({ autoFocus = false }: { autoFocus?: boolean }) 
           className="tabular w-[58px] rounded-md border border-ln2 bg-surf px-1.5 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
         />
       </div>
+
+      {repeat !== "none" && today && (
+        <div className="mt-2">
+          <span className="label-xs mr-1">Until</span>
+          <div className="mt-1">
+            <UntilField value={null} today={today} disabled={pending} />
+          </div>
+        </div>
+      )}
 
       {repeat !== "none" && (
         <p className="mt-1.5 text-[11.5px] text-fai">
