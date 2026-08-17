@@ -11,6 +11,7 @@ import {
 } from "@/lib/repositories/tasks";
 import { dayKeyFor } from "@/lib/day";
 import { describeRecurrence } from "@/lib/recurrence";
+import { listTags } from "@/lib/repositories/tags";
 import { formatClock, minutesBetween } from "@/lib/time";
 import AddTask from "@/components/AddTask";
 import TaskDetail, { type TaskPanelView } from "@/components/tasks/TaskDetail";
@@ -51,7 +52,7 @@ export default async function TasksPage({
   const settings = await getSettings(user.id);
   const todayKey = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
 
-  const [tasks, counts, areas] = await Promise.all([
+  const [tasks, counts, areas, allTags] = await Promise.all([
     listTasks(user.id, filter, todayKey),
     countTasks(user.id, todayKey),
     db.area.findMany({
@@ -59,6 +60,7 @@ export default async function TasksPage({
       orderBy: { order: "asc" },
       select: { id: true, name: true },
     }),
+    listTags(user.id),
   ]);
 
   const showPoints = settings.scoringVisibility !== "hidden";
@@ -94,6 +96,7 @@ export default async function TasksPage({
       )}`,
     },
     fromNote: panel.fromNote,
+    tags: panel.tags,
     todayKey,
   };
 
@@ -214,7 +217,12 @@ export default async function TasksPage({
 
       <aside className="min-w-0 bg-surf2 p-4">
         {view ? (
-          <TaskDetail key={view.id} task={view} areas={areas} />
+          <TaskDetail
+              key={view.id}
+              task={view}
+              areas={areas}
+              allTags={allTags}
+            />
         ) : (
           <p className="rounded-lg border border-dashed border-ln2 px-3 py-5 text-center text-[11.5px] leading-relaxed text-mut">
             Pick a task to see its detail — due date, when it&rsquo;s

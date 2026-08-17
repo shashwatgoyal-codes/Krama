@@ -5,6 +5,8 @@ import Button from "@/components/ui/Button";
 import { toggleTask } from "@/app/app/actions";
 import { scheduleAt, clearSchedule, saveDetails } from "@/app/app/tasks/actions";
 import { BLOCK_MINUTES } from "@/lib/time";
+import TagField from "@/components/tags/TagField";
+import type { TagChip } from "@/lib/tags";
 
 /**
  * The detail panel from the design: what the task is, when it's due,
@@ -37,6 +39,7 @@ export type TaskPanelView = {
     label: string;
   } | null;
   fromNote: string | null;
+  tags: TagChip[];
   /** Today in the user's zone, for sensible defaults. */
   todayKey: string;
 };
@@ -70,9 +73,11 @@ const FIELD =
 export default function TaskDetail({
   task,
   areas,
+  allTags,
 }: {
   task: TaskPanelView;
   areas: { id: string; name: string }[];
+  allTags: TagChip[];
 }) {
   const [scheduling, setScheduling] = useState(false);
   const [recurrence, setRecurrence] = useState(task.recurrence);
@@ -231,6 +236,14 @@ export default function TaskDetail({
               ))}
             </select>
           )}
+        </Field>
+
+        <Field label="Tags">
+          <TagField
+            selected={task.tags}
+            available={allTags}
+            disabled={pending}
+          />
         </Field>
 
         {task.fromNote && (

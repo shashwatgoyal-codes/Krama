@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/guard";
+import TagChips from "@/components/tags/TagChips";
 import { listLinks, countLinks, type LinkFilter } from "@/lib/repositories/links";
 import SaveLinkBar from "@/components/explore/SaveLinkBar";
 import LinkDetail, { type LinkDetailView } from "@/components/explore/LinkDetail";
@@ -168,14 +169,7 @@ export default async function ExplorePage({
                       </div>
                     )}
                     <div className="mt-[5px] flex flex-wrap items-center gap-[7px]">
-                      {l.tags.slice(0, 2).map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded border border-ln2 px-1.5 py-px text-[10px] text-mut"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                      <TagChips tags={l.tags} max={2} size="xs" />
                       {!l.readAt && (
                         <span className="rounded border border-acc bg-acc-soft px-1.5 py-px text-[10px] font-semibold text-acc">
                           unread

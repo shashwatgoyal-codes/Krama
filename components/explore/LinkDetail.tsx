@@ -1,5 +1,7 @@
 "use client";
 
+import type { TagChip } from "@/lib/tags";
+
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import {
@@ -17,7 +19,7 @@ export type LinkDetailView = {
   imageUrl: string | null;
   source: string;
   why: string;
-  tags: string[];
+  tags: TagChip[];
   read: boolean;
   isTask: boolean;
   /** Shortened for display: "linkedin.com/posts/…" */
@@ -104,7 +106,7 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
         <Field label="Tags">
           <input
             name="tags"
-            defaultValue={link.tags.join(", ")}
+            defaultValue={link.tags.map((t) => t.name).join(", ")}
             placeholder="research, career"
             className={FIELD}
           />
@@ -112,10 +114,14 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
             <div className="mt-1.5 flex flex-wrap gap-1">
               {link.tags.map((tag) => (
                 <span
-                  key={tag}
-                  className="rounded border border-ln2 bg-surf px-1.5 py-0.5 text-[10.5px] text-mut"
+                  key={tag.id}
+                  className="rounded border bg-surf px-1.5 py-0.5 text-[10.5px] font-semibold"
+                  style={{
+                    borderColor: `var(--${tag.colour})`,
+                    color: `var(--${tag.colour})`,
+                  }}
                 >
-                  {tag}
+                  {tag.name}
                 </span>
               ))}
             </div>

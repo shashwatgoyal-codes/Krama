@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { Task, TaskStatus, Recurrence } from "@prisma/client";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
+import type { TagChip } from "@/lib/tags";
 
 /**
  * Every function here takes `userId` as a required first argument, and
@@ -218,6 +219,7 @@ export type TaskPanel = {
   block: { id: string; startsAt: Date; endsAt: Date } | null;
   /** The note it was captured from, if any. */
   fromNote: string | null;
+  tags: TagChip[];
 };
 
 /**
@@ -243,6 +245,10 @@ export async function getTaskPanel(
       recurrence: true,
       recurrenceValue: true,
       area: { select: { name: true, colour: true } },
+      tags: {
+        select: { id: true, name: true, colour: true },
+        orderBy: { name: "asc" },
+      },
       events: {
         orderBy: { startsAt: "asc" },
         take: 1,
@@ -271,6 +277,7 @@ export async function getTaskPanel(
     recurrenceValue: task.recurrenceValue,
     block: task.events[0] ?? null,
     fromNote: note?.body ?? null,
+    tags: task.tags,
   };
 }
 

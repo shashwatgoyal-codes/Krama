@@ -2,6 +2,8 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { parseTagInput } from "@/lib/tags";
+import { setTagsOn } from "@/lib/repositories/tags";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
 import { createTask } from "@/lib/repositories/tasks";
@@ -96,20 +98,18 @@ export async function saveLinkDetails(
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
-  const tags = (parsed.data.tags ?? "")
-    .split(",")
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean)
-    // A tag list is a set; two "career"s help nobody.
-    .filter((t, i, all) => all.indexOf(t) === i)
-    .slice(0, 8);
+  // parseTagInput does the splitting, trimming and de-duping, and it is
+  // the same function the task, note and event pickers use — so a tag
+  // typed on a link and one typed on a task land in the same place.
+  const names = parseTagInput(parsed.data.tags ?? "").slice(0, 8);
 
   const updated = await updateLink(user.id, parsed.data.id, {
     title: parsed.data.title,
     why: parsed.data.why || null,
-    tags,
   });
   if (!updated) return { ok: false, error: "That link no longer exists." };
+
+  await setTagsOn(user.id, "link", parsed.data.id, names);
 
   touched();
   return { ok: true };

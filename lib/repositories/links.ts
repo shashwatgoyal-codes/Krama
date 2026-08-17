@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { TagChip } from "@/lib/tags";
 
 /** Every function takes userId first and filters on it. No exceptions. */
 
@@ -12,7 +13,7 @@ export type SavedLink = {
   imageUrl: string | null;
   source: string;
   why: string | null;
-  tags: string[];
+  tags: TagChip[];
   savedAt: Date;
   readAt: Date | null;
   taskId: string | null;
@@ -26,7 +27,7 @@ const SELECT = {
   imageUrl: true,
   source: true,
   why: true,
-  tags: true,
+  tags: { select: { id: true, name: true, colour: true }, orderBy: { name: "asc" } },
   savedAt: true,
   readAt: true,
   taskId: true,
@@ -106,7 +107,6 @@ export async function updateLink(
   data: {
     title?: string;
     why?: string | null;
-    tags?: string[];
     readAt?: Date | null;
     archivedAt?: Date | null;
     taskId?: string | null;

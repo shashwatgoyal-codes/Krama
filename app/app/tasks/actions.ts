@@ -6,6 +6,8 @@ import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
 import { getTask, updateTaskFields } from "@/lib/repositories/tasks";
 import { areaBelongsTo } from "@/lib/repositories/areas";
+import { setTagsOn } from "@/lib/repositories/tags";
+import { parseTagInput } from "@/lib/tags";
 import {
   createBlock,
   getBlock,
@@ -116,6 +118,9 @@ const detailsSchema = z.object({
     .refine((v) => v === null || /^\d{4}-\d{2}-\d{2}$/.test(v), "Pick a date."),
   recurrence: z.enum(["none", "daily", "weekdays", "weekly", "monthly"]),
   recurrenceValue: z.coerce.number().int().min(0).max(31).optional(),
+  // A comma-separated list of names, not ids: a tag you have just
+  // invented has no id yet, and the server is what turns names into rows.
+  tags: z.string().max(400).optional(),
 });
 
 export async function saveDetails(formData: FormData): Promise<ActionResult> {
@@ -129,6 +134,7 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
     dueOn: formData.get("dueOn") ?? undefined,
     recurrence: formData.get("recurrence") ?? "none",
     recurrenceValue: formData.get("recurrenceValue") ?? undefined,
+    tags: formData.get("tags") ?? undefined,
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
@@ -150,6 +156,10 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
         : null,
   });
   if (!updated) return { ok: false, error: "That task no longer exists." };
+
+  // After the row is proven to be this user's, so a crafted post can
+  // neither borrow someone else's tag nor label someone else's task.
+  await setTagsOn(user.id, "task", parsed.data.id, parseTagInput(parsed.data.tags ?? ""));
 
   touched();
   return { ok: true };
