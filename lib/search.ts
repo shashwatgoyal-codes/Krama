@@ -99,8 +99,12 @@ export function parseQuery(raw: string): SearchQuery {
       terms.length === 0 &&
       phrases.length === 0 &&
       tags.length === 0 &&
-      // is: on its own is a real search — "show me my notes" is a
-      // question, even with no words in it.
+      // Any operator on its own is a real search. "is:note" asks to see
+      // your notes and "-draft" asks for everything that isn't one;
+      // both are questions, even with no plain words in them. Counting
+      // some operators and not others would make the search box answer
+      // one typed query and ignore another for no visible reason.
+      excluded.length === 0 &&
       kinds.length === 0,
   };
 }

@@ -139,7 +139,7 @@ describe("daysBetween", () => {
   }
 
   it("is antisymmetric across a long walk", () => {
-    let cursor = "2026-01-01";
+    const cursor = "2026-01-01";
     for (let i = 0; i < 200; i++) {
       const other = shiftDayKey(cursor, i);
       // `|| 0` normalises negative zero, which Object.is treats as a
