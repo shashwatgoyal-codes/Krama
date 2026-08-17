@@ -51,8 +51,15 @@ export function shiftMonth(dayKey: string, delta: number): string {
 
 /** "11 – 17 August", or "29 June – 5 July" when it straddles two months. */
 export function describeWeek(days: string[]): string {
+  // An empty list should read as "no week", not crash the page. Intl
+  // throws RangeError on an invalid date, and this is called during
+  // render — so the cost of the caller passing nothing is a blank
+  // screen rather than a blank heading.
+  if (days.length === 0) return "";
+
   const first = new Date(`${days[0]}T00:00:00.000Z`);
   const last = new Date(`${days[days.length - 1]}T00:00:00.000Z`);
+  if (Number.isNaN(first.getTime()) || Number.isNaN(last.getTime())) return "";
 
   const month = (d: Date) =>
     new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(d);
