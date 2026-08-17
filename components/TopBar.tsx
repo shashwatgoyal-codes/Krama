@@ -67,6 +67,21 @@ export default function TopBar({
       </nav>
 
       <div className="ml-auto flex items-center gap-2.5">
+        {/* A real control this time. The key hint that used to sit here
+            was a label with nothing behind it. */}
+        <Link
+          href="/app/search"
+          aria-label="Search"
+          aria-current={pathname === "/app/search" ? "page" : undefined}
+          className={
+            "rounded-md px-2 py-1 text-[12.5px] transition-colors " +
+            (pathname === "/app/search"
+              ? "bg-acc-soft font-semibold text-acc"
+              : "font-medium text-mut hover:bg-surf2 hover:text-ink")
+          }
+        >
+          Search
+        </Link>
         <ThemeToggle />
         <Link
           href="/app/profile"
