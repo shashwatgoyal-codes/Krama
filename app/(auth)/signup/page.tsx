@@ -16,7 +16,10 @@ const PROMISES = [
   "Tasks, notes, a calendar and saved links in one place",
   "Routines that show up on their own, so you stop remembering them",
   "A score that rewards showing up, and forgives the days you don't",
-  "Export everything, any time, in one click",
+  // Was "Export everything, any time, in one click". Export was taken out
+  // on purpose — it handed over the points history, the one thing worth
+  // tampering with — so the promise had outlived the feature.
+  "Points you set yourself, so effort counts for what it's worth",
 ];
 
 export default async function SignUpPage() {
