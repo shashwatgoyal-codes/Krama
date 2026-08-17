@@ -12,6 +12,7 @@ const FIELDS = {
   y: true,
   z: true,
   taskId: true,
+  tags: { select: { id: true, name: true, colour: true }, orderBy: { name: "asc" } },
 } as const;
 
 export async function listNotes(userId: string): Promise<NoteItem[]> {

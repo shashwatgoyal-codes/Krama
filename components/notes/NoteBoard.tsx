@@ -4,8 +4,15 @@ import { useState, useTransition } from "react";
 import StickyNote from "./StickyNote";
 import { createNote, tidyBoard } from "@/app/app/notes/actions";
 import { NOTE_COLOURS, NOTE_TINT, type NoteItem } from "@/lib/notes";
+import type { TagChip } from "@/lib/tags";
 
-export default function NoteBoard({ notes }: { notes: NoteItem[] }) {
+export default function NoteBoard({
+  notes,
+  allTags = [],
+}: {
+  notes: NoteItem[];
+  allTags?: TagChip[];
+}) {
   const [colour, setColour] = useState<string>("n1");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -107,7 +114,7 @@ export default function NoteBoard({ notes }: { notes: NoteItem[] }) {
         >
           <div className="relative" style={{ height: boardHeight, minWidth: 1100 }}>
             {notes.map((n) => (
-              <StickyNote key={n.id} note={n} />
+              <StickyNote key={n.id} note={n} allTags={allTags} />
             ))}
           </div>
         </div>

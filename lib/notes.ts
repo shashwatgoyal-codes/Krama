@@ -1,3 +1,4 @@
+import type { TagChip } from "./tags";
 /**
  * Values and types shared between the server and the board UI.
  *
@@ -21,6 +22,7 @@ export type NoteItem = {
   y: number;
   z: number;
   taskId: string | null;
+  tags: TagChip[];
 };
 
 /** Tailwind classes per tint, so the mapping lives in one place. */

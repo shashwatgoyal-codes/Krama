@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
 import { createTask } from "@/lib/repositories/tasks";
+import { setTagsOn } from "@/lib/repositories/tags";
+import { parseTagInput } from "@/lib/tags";
 import {
   createNote as createNoteRow,
   updateNote,
@@ -94,6 +96,12 @@ export async function editNote(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
   await updateNote(user.id, parsed.data.id, { body: parsed.data.body });
+  await setTagsOn(
+    user.id,
+    "note",
+    parsed.data.id,
+    parseTagInput(String(formData.get("tags") ?? "")),
+  );
   revalidatePath("/app/notes");
   return { ok: true };
 }

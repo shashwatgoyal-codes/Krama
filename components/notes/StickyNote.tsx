@@ -9,8 +9,17 @@ import {
   noteToTask,
 } from "@/app/app/notes/actions";
 import { NOTE_COLOURS, NOTE_TINT, type NoteItem } from "@/lib/notes";
+import TagField from "@/components/tags/TagField";
+import TagChips from "@/components/tags/TagChips";
+import type { TagChip } from "@/lib/tags";
 
-export default function StickyNote({ note }: { note: NoteItem }) {
+export default function StickyNote({
+  note,
+  allTags = [],
+}: {
+  note: NoteItem;
+  allTags?: TagChip[];
+}) {
   const [pos, setPos] = useState({ x: note.x, y: note.y });
   const [editing, setEditing] = useState(false);
   const [, startTransition] = useTransition();
@@ -91,6 +100,9 @@ export default function StickyNote({ note }: { note: NoteItem }) {
             maxLength={1000}
             className="w-full resize-none rounded-sm border border-ln2/40 bg-surf/60 p-1.5 text-[12.5px] leading-snug text-ink focus:outline-none"
           />
+          <div className="mt-1.5">
+            <TagField selected={note.tags} available={allTags} />
+          </div>
           <div className="mt-1.5 flex gap-1.5">
             <button
               type="submit"
@@ -112,6 +124,12 @@ export default function StickyNote({ note }: { note: NoteItem }) {
           <p className="min-h-[72px] whitespace-pre-wrap break-words text-[12.5px] leading-snug text-ink">
             {note.body}
           </p>
+
+          {note.tags.length > 0 && (
+            <div className="mt-1.5">
+              <TagChips tags={note.tags} max={3} size="xs" />
+            </div>
+          )}
 
           {note.taskId && (
             <span className="mt-1.5 inline-block rounded border border-ok px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-ok">

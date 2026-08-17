@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { dayWindow } from "@/lib/time";
 import type { Recurrence } from "@prisma/client";
+import type { TagChip } from "@/lib/tags";
 
 /** Every function takes userId first and filters on it. No exceptions. */
 
@@ -16,6 +17,10 @@ export type PlanBlock = {
   recurring: boolean;
   recurrence: Recurrence | null;
   recurrenceValue: number | null;
+  /** Every event in the app is scheduled from a task, so the tags shown
+   *  on a block are the task's. The event's own tag relation exists for
+   *  when standalone events do. */
+  tags: TagChip[];
 };
 
 const BLOCK_SELECT = {
@@ -31,7 +36,15 @@ const BLOCK_SELECT = {
       points: true,
       recurrence: true,
       recurrenceValue: true,
+      tags: {
+        select: { id: true, name: true, colour: true },
+        orderBy: { name: "asc" },
+      },
     },
+  },
+  tags: {
+    select: { id: true, name: true, colour: true },
+    orderBy: { name: "asc" },
   },
 } as const;
 
@@ -47,7 +60,9 @@ type Row = {
     points: number;
     recurrence: Recurrence;
     recurrenceValue: number | null;
+    tags: TagChip[];
   } | null;
+  tags: TagChip[];
 };
 
 function toBlock(row: Row): PlanBlock {
@@ -57,6 +72,8 @@ function toBlock(row: Row): PlanBlock {
     startsAt: row.startsAt,
     endsAt: row.endsAt,
     taskId: row.taskId,
+    // The task's tags when it has one, since that is where they are set.
+    tags: row.task?.tags?.length ? row.task.tags : row.tags,
     taskDone: row.task?.status === "done",
     points: row.task?.points ?? null,
     areaName: row.area?.name ?? null,
