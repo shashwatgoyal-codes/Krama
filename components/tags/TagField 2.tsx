@@ -41,17 +41,6 @@ export default function TagField({
   const hidden = useRef<HTMLInputElement>(null);
   const firstRender = useRef(true);
 
-  // What actually gets posted: the committed chips plus whatever is
-  // still half-typed in the box.
-  //
-  // Relying on the draft being committed first would lose it. Blur fires
-  // before submit, but the state update it triggers is asynchronous, so
-  // clicking Save with an uncommitted tag in the box would serialise the
-  // previous value and silently drop what you typed. Including the draft
-  // here means the tag is saved whether or not you thought to press
-  // Enter — the field forgives you rather than quietly disagreeing.
-  const posted = mergeTags(chosen, parseTagInput(draft));
-
   // Same reason the stepper does this: React writing a hidden input's
   // value fires no native event, so a form watching for changes would
   // never notice and would keep its Save button hidden.
@@ -61,7 +50,7 @@ export default function TagField({
       return;
     }
     hidden.current?.dispatchEvent(new Event("input", { bubbles: true }));
-  }, [chosen, draft]);
+  }, [chosen]);
 
   function commitDraft() {
     const names = parseTagInput(draft);
@@ -81,7 +70,7 @@ export default function TagField({
 
   return (
     <div>
-      <input ref={hidden} type="hidden" name={name} value={posted.join(", ")} />
+      <input ref={hidden} type="hidden" name={name} value={chosen.join(", ")} />
 
       {chosen.length > 0 && (
         <div className="mb-1.5 flex flex-wrap gap-1">
