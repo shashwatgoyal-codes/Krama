@@ -214,7 +214,7 @@ model Profile {
   /// Palette token for the single accent hue. See lib/appearance.ts.
   accent       String  @default("amber")
 
-  /// Where a quick capture lands when no area is chosen.
+  /// Where a new task lands when no area is chosen.
   defaultAreaId String?
 
   lastActiveOn DateTime?

@@ -67,9 +67,6 @@ export default function TopBar({
       </nav>
 
       <div className="ml-auto flex items-center gap-2.5">
-        <span className="rounded border border-ln2 px-[5px] py-0.5 font-mono text-[10px] text-fai">
-          ⌘K
-        </span>
         <ThemeToggle />
         <Link
           href="/app/profile"

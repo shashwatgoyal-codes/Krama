@@ -64,7 +64,7 @@ export async function removeTag(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Where a quick capture lands when no area is picked. */
+/** Where a new task lands when no area is picked. */
 export async function setDefaultArea(
   formData: FormData,
 ): Promise<ActionResult> {
