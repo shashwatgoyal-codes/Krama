@@ -159,11 +159,19 @@ export function scoreMatch(
   const needles = [...query.phrases, ...query.terms];
   if (needles.length === 0) return 1;
 
+  // The exact and prefix bonuses are judged against the whole query, not
+  // each word in turn. Per-word they punished the better result: for
+  // "deep work", a note titled "deep work" scored 50 for the prefix plus
+  // 25 for the mention, while one merely titled "deep" scored a full 100
+  // for matching one word exactly — so covering half the query beat
+  // covering all of it.
+  const whole = needles.join(" ");
   let score = 0;
+  if (t === whole) score += 100;
+  else if (t.startsWith(whole)) score += 50;
+
   for (const needle of needles) {
-    if (t === needle) score += 100;
-    else if (t.startsWith(needle)) score += 50;
-    else if (t.includes(needle)) score += 25;
+    if (t.includes(needle)) score += 25;
     else if (b.includes(needle)) score += 5;
   }
   return score;
