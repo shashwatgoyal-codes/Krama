@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { createTask } from "@/app/app/actions";
 import UntilField from "@/components/tasks/UntilField";
+import WeekdayPicker from "@/components/tasks/WeekdayPicker";
 
 const REPEATS = [
   { value: "none", label: "Once" },
@@ -27,11 +28,9 @@ export default function AddTask({
 
   function submit(formData: FormData) {
     setError(null);
-    // Weekly and monthly need a value; default to today's day so adding
-    // a routine is one click rather than a configuration exercise.
-    if (repeat === "weekly") {
-      formData.set("recurrenceValue", String(new Date().getDay()));
-    } else if (repeat === "monthly") {
+    // Monthly still needs a day of the month; weekly carries its own
+    // list from the picker.
+    if (repeat === "monthly") {
       formData.set("recurrenceValue", String(new Date().getDate()));
     }
 
@@ -112,6 +111,15 @@ export default function AddTask({
         />
       </div>
 
+      {repeat === "weekly" && (
+        <div className="mt-2">
+          <span className="label-xs">On</span>
+          <div className="mt-1">
+            <WeekdayPicker selected={[new Date().getDay()]} disabled={pending} />
+          </div>
+        </div>
+      )}
+
       {repeat !== "none" && today && (
         <div className="mt-2">
           <span className="label-xs mr-1">Until</span>
@@ -124,7 +132,7 @@ export default function AddTask({
       {repeat !== "none" && (
         <p className="mt-1.5 text-[11.5px] text-fai">
           {repeat === "weekly"
-            ? "Repeats every week on today's weekday."
+            ? "Repeats every week on the days you picked."
             : repeat === "monthly"
               ? "Repeats monthly on today's date. On short months it lands on the last day."
               : "It will appear on its own — you won't need to add it again."}

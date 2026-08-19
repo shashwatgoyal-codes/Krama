@@ -31,6 +31,7 @@ export async function materialiseRecurring(
       points: true,
       recurrence: true,
       recurrenceValue: true,
+      recurrenceDays: true,
       recurrenceUntil: true,
     },
   });
@@ -44,6 +45,7 @@ export async function materialiseRecurring(
       // instances would keep appearing forever and the end date would be
       // a label rather than a rule.
       t.recurrenceUntil ? t.recurrenceUntil.toISOString().slice(0, 10) : null,
+      t.recurrenceDays,
     ),
   );
   if (due.length === 0) return 0;

@@ -7,6 +7,7 @@ import { scheduleAt, clearSchedule, saveDetails } from "@/app/app/tasks/actions"
 import { BLOCK_MINUTES } from "@/lib/time";
 import TagField from "@/components/tags/TagField";
 import UntilField from "@/components/tasks/UntilField";
+import WeekdayPicker from "@/components/tasks/WeekdayPicker";
 import type { TagChip } from "@/lib/tags";
 
 /**
@@ -29,6 +30,8 @@ export type TaskPanelView = {
   dueOn: string;
   recurrence: string;
   recurrenceValue: number | null;
+  /** Weekdays a weekly routine runs on, 0 = Sunday. */
+  recurrenceDays: number[];
   /** "2026-12-31" or null for a routine with no end. */
   recurrenceUntil: string | null;
   block: {
@@ -54,8 +57,6 @@ const REPEATS = [
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
 ];
-
-const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Half-hour steps across a plausible day. */
 const TIMES = Array.from({ length: 36 }, (_, i) => {
@@ -213,17 +214,16 @@ export default function TaskDetail({
           </div>
 
           {recurrence === "weekly" && (
-            <select
-              name="recurrenceValue"
-              defaultValue={task.recurrenceValue ?? 1}
-              className={`mt-2 ${FIELD}`}
-            >
-              {WEEKDAY_NAMES.map((d, i) => (
-                <option key={d} value={i}>
-                  Every {d}
-                </option>
-              ))}
-            </select>
+            <div className="mt-2">
+              <WeekdayPicker
+                selected={
+                  task.recurrenceDays.length > 0
+                    ? task.recurrenceDays
+                    : [task.recurrenceValue ?? 1]
+                }
+                disabled={pending}
+              />
+            </div>
           )}
 
           {recurrence === "monthly" && (

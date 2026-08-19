@@ -306,8 +306,16 @@ model Task {
   createdForDate DateTime
 
   recurrence       Recurrence @default(none)
-  // For weekly: 0-6. For monthly: day of month.
+  // For monthly: day of month. For weekly it held the single weekday,
+  // and still does for rows written before recurrenceDays existed.
   recurrenceValue  Int?
+  /// Which weekdays a weekly routine runs on, 0 = Sunday.
+  ///
+  /// An array rather than one number because "every day except Sunday"
+  /// is a thing people actually want and a single weekday cannot say
+  /// it. Empty means fall back to recurrenceValue, so rows written
+  /// before this existed keep working.
+  recurrenceDays   Int[]      @default([])
   /// The last day this routine runs, or null for open-ended. Stored as
   /// a day rather than an instant: "until the end of March" is a date
   /// someone chose, not a moment, and a timezone should not be able to

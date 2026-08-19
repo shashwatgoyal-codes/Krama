@@ -11,6 +11,7 @@ import type { Recurrence } from "@prisma/client";
 export function describeRecurrence(
   recurrence: Recurrence,
   value: number | null,
+  days: number[] = [],
 ): string {
   switch (recurrence) {
     case "daily":
@@ -18,13 +19,42 @@ export function describeRecurrence(
     case "weekdays":
       return "Weekdays";
     case "weekly":
-      return `Every ${dayName(value ?? 1)}`;
+      return describeWeekly(days, value);
     case "monthly":
       return `Monthly on the ${ordinal(value ?? 1)}`;
     default:
       return "Once";
   }
 }
+
+/**
+ * How a multi-day weekly rule reads.
+ *
+ * Six days is easier to understand as the one day it leaves out than as
+ * a list of six — "every day except Sunday" is how someone would say it
+ * out loud, and "Mon, Tue, Wed, Thu, Fri, Sat" is a thing you have to
+ * decode.
+ */
+function describeWeekly(days: number[], value: number | null): string {
+  if (days.length === 0) return `Every ${dayName(value ?? 1)}`;
+
+  const set = [...new Set(days.map((d) => ((d % 7) + 7) % 7))].sort();
+  if (set.length === 7) return "Every day";
+  if (set.length === 1) return `Every ${dayName(set[0]!)}`;
+
+  if (set.length === 6) {
+    const missing = [0, 1, 2, 3, 4, 5, 6].find((d) => !set.includes(d))!;
+    return `Every day except ${dayName(missing)}`;
+  }
+
+  // Mon–Fri has its own name, since it is the common case.
+  if (set.length === 5 && set.join() === "1,2,3,4,5") return "Weekdays";
+  if (set.length === 2 && set.join() === "0,6") return "Weekends";
+
+  return set.map((d) => SHORT[d]).join(", ");
+}
+
+const SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const DAYS = [
   "Sunday",
@@ -53,6 +83,8 @@ export function occursOn(
   value: number | null,
   /** The last day the routine runs, or null for open-ended. */
   until: string | null = null,
+  /** Weekdays for a weekly rule, 0 = Sunday. Empty falls back to value. */
+  days: number[] = [],
 ): boolean {
   // Checked before the rule, not after: a routine that has ended does
   // not fire on a day that would otherwise match, and every caller gets
@@ -68,6 +100,9 @@ export function occursOn(
     case "weekdays":
       return dow >= 1 && dow <= 5;
     case "weekly":
+      // The array is the rule when it has anything in it; the single
+      // value is what rows written before multi-day existed still use.
+      if (days.length > 0) return days.includes(dow);
       return dow === (value ?? 1);
     case "monthly":
       return dom === clampToMonth(dayKey, value ?? 1);
@@ -95,6 +130,7 @@ export function nextOccurrence(
   recurrence: Recurrence,
   value: number | null,
   until: string | null = null,
+  days: number[] = [],
 ): string | null {
   if (recurrence === "none") return null;
   // Nothing comes after the end, so there is no point walking the year.
@@ -106,7 +142,30 @@ export function nextOccurrence(
     cursor.setUTCDate(cursor.getUTCDate() + 1);
     const key = cursor.toISOString().slice(0, 10);
     if (until && key > until) return null;
-    if (occursOn(key, recurrence, value, until)) return key;
+    if (occursOn(key, recurrence, value, until, days)) return key;
   }
   return null;
+}
+
+/**
+ * Reads the picker's "1,2,3" into weekdays.
+ *
+ * Anything unrecognisable is dropped rather than rejected: a malformed
+ * day list should cost you that day, not the whole save. Duplicates
+ * collapse and the result is sorted, so two posts of the same set are
+ * the same set.
+ */
+export function parseWeekdays(raw: string | null | undefined): number[] {
+  if (!raw) return [];
+  const days = new Set<number>();
+  for (const piece of raw.split(",")) {
+    const text = piece.trim();
+    // Number("") is 0, which is a valid weekday — so a trailing comma
+    // would silently add Sunday to the routine. The empty piece has to
+    // be dropped before it is ever converted.
+    if (text === "") continue;
+    const n = Number(text);
+    if (Number.isInteger(n) && n >= 0 && n <= 6) days.add(n);
+  }
+  return [...days].sort((a, b) => a - b);
 }

@@ -23,6 +23,7 @@ export type TaskSummary = Pick<
   | "dueOn"
   | "recurrence"
   | "recurrenceValue"
+  | "recurrenceDays"
 >;
 
 const SUMMARY = {
@@ -36,6 +37,7 @@ const SUMMARY = {
   // Needed to describe a routine as "weekly, Sunday" rather than just
   // "weekly" wherever a summary is shown.
   recurrenceValue: true,
+  recurrenceDays: true,
 } as const;
 
 export async function listTasksForDay(
@@ -78,6 +80,7 @@ export type CreateTaskData = {
   dueOn?: Date;
   recurrence?: Task["recurrence"];
   recurrenceValue?: number;
+  recurrenceDays?: number[];
   /** The last day the routine runs, or null for open-ended. */
   recurrenceUntil?: Date | null;
   timezone: string;
@@ -100,6 +103,7 @@ export async function createTask(
       dueOn: data.dueOn,
       recurrence: data.recurrence ?? "none",
       recurrenceValue: data.recurrenceValue,
+      recurrenceDays: data.recurrenceDays ?? [],
       recurrenceUntil: data.recurrenceUntil ?? null,
       createdForDate: dayKeyToDate(dayKey),
     },
@@ -218,6 +222,7 @@ export type TaskPanel = {
   areaColour: string | null;
   recurrence: string;
   recurrenceValue: number | null;
+  recurrenceDays: number[];
   recurrenceUntil: Date | null;
   /** The block this task sits in, if it has been given a time. */
   block: { id: string; startsAt: Date; endsAt: Date } | null;
@@ -248,6 +253,7 @@ export async function getTaskPanel(
       areaId: true,
       recurrence: true,
       recurrenceValue: true,
+      recurrenceDays: true,
       recurrenceUntil: true,
       area: { select: { name: true, colour: true } },
       tags: {
@@ -280,6 +286,7 @@ export async function getTaskPanel(
     areaColour: task.area?.colour ?? null,
     recurrence: task.recurrence,
     recurrenceValue: task.recurrenceValue,
+    recurrenceDays: task.recurrenceDays,
     recurrenceUntil: task.recurrenceUntil,
     block: task.events[0] ?? null,
     fromNote: note?.body ?? null,
@@ -299,6 +306,7 @@ export async function updateTaskFields(
     dueOn?: Date | null;
     recurrence?: Recurrence;
     recurrenceValue?: number | null;
+    recurrenceDays?: number[];
     recurrenceUntil?: Date | null;
   },
 ): Promise<boolean> {

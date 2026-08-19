@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { resolveUntil, isUntilPreset } from "@/lib/until";
+import { parseWeekdays } from "@/lib/recurrence";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
 import {
@@ -69,6 +70,10 @@ export async function createTask(formData: FormData): Promise<ActionResult> {
 
   await createTaskRow(user.id, {
     ...parsed.data,
+    recurrenceDays:
+      parsed.data.recurrence === "weekly"
+        ? parseWeekdays(formData.get("recurrenceDays")?.toString())
+        : [],
     recurrenceUntil: untilKey ? new Date(`${untilKey}T00:00:00.000Z`) : null,
     timezone: settings.timezone,
     dayEndsAtHour: settings.dayEndsAtHour,

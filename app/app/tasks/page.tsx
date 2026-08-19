@@ -84,6 +84,7 @@ export default async function TasksPage({
     dueOn: panel.dueOn ? panel.dueOn.toISOString().slice(0, 10) : "",
     recurrence: panel.recurrence,
     recurrenceValue: panel.recurrenceValue,
+    recurrenceDays: panel.recurrenceDays,
     recurrenceUntil: panel.recurrenceUntil
       ? panel.recurrenceUntil.toISOString().slice(0, 10)
       : null,

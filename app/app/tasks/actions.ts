@@ -8,6 +8,7 @@ import { getTask, updateTaskFields } from "@/lib/repositories/tasks";
 import { areaBelongsTo } from "@/lib/repositories/areas";
 import { setTagsOn } from "@/lib/repositories/tags";
 import { parseTagInput } from "@/lib/tags";
+import { parseWeekdays } from "@/lib/recurrence";
 import { dayKeyFor } from "@/lib/day";
 import {
   resolveUntil,
@@ -124,6 +125,9 @@ const detailsSchema = z.object({
     .refine((v) => v === null || /^\d{4}-\d{2}-\d{2}$/.test(v), "Pick a date."),
   recurrence: z.enum(["none", "daily", "weekdays", "weekly", "monthly"]),
   recurrenceValue: z.coerce.number().int().min(0).max(31).optional(),
+  // "1,2,3" from the picker. Parsed rather than coerced because an
+  // empty string means "no days", not "day zero".
+  recurrenceDays: z.string().optional(),
   // A comma-separated list of names, not ids: a tag you have just
   // invented has no id yet, and the server is what turns names into rows.
   tags: z.string().max(400).optional(),
@@ -144,6 +148,7 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
     dueOn: formData.get("dueOn") ?? undefined,
     recurrence: formData.get("recurrence") ?? "none",
     recurrenceValue: formData.get("recurrenceValue") ?? undefined,
+    recurrenceDays: formData.get("recurrenceDays") ?? undefined,
     tags: formData.get("tags") ?? undefined,
     until: formData.get("until") ?? undefined,
     untilDate: formData.get("untilDate") ?? undefined,
@@ -177,7 +182,13 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
           parsed.data.untilDate,
         );
 
+  const weekdays =
+    parsed.data.recurrence === "weekly"
+      ? parseWeekdays(parsed.data.recurrenceDays)
+      : [];
+
   const updated = await updateTaskFields(user.id, parsed.data.id, {
+    recurrenceDays: weekdays,
     recurrenceUntil: untilKey ? new Date(`${untilKey}T00:00:00.000Z`) : null,
     areaId: parsed.data.areaId,
     notes: parsed.data.notes ?? null,
