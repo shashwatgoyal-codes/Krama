@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { dayKeyToDate } from "@/lib/day";
 import { occursOn } from "@/lib/recurrence";
+import type { RoutineTemplate } from "@/lib/projection";
 
 /**
  * Materialises today's instances of recurring tasks.
@@ -82,4 +83,44 @@ export async function materialiseRecurring(
   });
 
   return result.count;
+}
+
+/**
+ * The routine templates that could appear on a calendar range.
+ *
+ * Only templates — instances are ordinary tasks and already have real
+ * blocks if they were scheduled. Only ones with a time, since a routine
+ * without one cannot be placed on a grid drawn in hours.
+ */
+export async function listRoutineTemplates(
+  userId: string,
+): Promise<RoutineTemplate[]> {
+  const rows = await db.task.findMany({
+    where: {
+      userId,
+      recurrence: { not: "none" },
+      recurrenceParentId: null,
+      routineStartMinute: { not: null },
+      status: { not: "dropped" },
+    },
+    select: {
+      id: true,
+      title: true,
+      points: true,
+      areaId: true,
+      recurrence: true,
+      recurrenceValue: true,
+      recurrenceDays: true,
+      recurrenceUntil: true,
+      routineStartMinute: true,
+      routineMinutes: true,
+    },
+  });
+
+  return rows.map((r) => ({
+    ...r,
+    recurrenceUntil: r.recurrenceUntil
+      ? r.recurrenceUntil.toISOString().slice(0, 10)
+      : null,
+  }));
 }

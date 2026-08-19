@@ -7,6 +7,8 @@ import {
   scheduledTaskIdsBetween,
 } from "@/lib/repositories/events";
 import { listOpenTasks } from "@/lib/repositories/tasks";
+import { listRoutineTemplates } from "@/lib/repositories/recurring";
+import { projectRoutines, minuteLabel } from "@/lib/projection";
 import { dayKeyFor, shiftDayKey } from "@/lib/day";
 import {
   weekDays,
@@ -77,12 +79,13 @@ export default async function CalendarPage({
     settings.timezone,
   );
 
-  const [blocks, open, scheduledHere] = await Promise.all([
+  const [blocks, open, scheduledHere, routines] = await Promise.all([
     listBlocksBetween(user.id, from, to),
     listOpenTasks(user.id),
     // Scoped to what's on screen. Anything visible in the grid must not
     // also be sitting in the "unscheduled" list next to it.
     scheduledTaskIdsBetween(user.id, from, to),
+    listRoutineTemplates(user.id),
   ]);
 
   /** Which of `days` a block sits on, by calendar date in the user's zone. */
@@ -132,6 +135,41 @@ export default async function CalendarPage({
       },
     ];
   });
+
+  /**
+   * Routines drawn where they fall, without rows behind them.
+   *
+   * A day that already holds a real block for the same routine is left
+   * alone, so a scheduled occurrence is never shown twice — once as
+   * itself and once as a ghost of itself.
+   */
+  const occupied = new Set<string>();
+  for (const b of blocks) {
+    if (!b.taskId) continue;
+    const index = columnOf(b.startsAt);
+    if (index >= 0) occupied.add(`${b.taskId}:${days[index]}`);
+  }
+
+  const projected = projectRoutines(routines, days, occupied);
+
+  for (const p of projected) {
+    const dayIndex = days.indexOf(p.dayKey);
+    if (dayIndex === -1) continue;
+    const offsetMinutes = p.startMinute - START_HOUR * 60;
+    if (offsetMinutes < 0) continue;
+
+    gridBlocks.push({
+      id: p.key,
+      title: p.title,
+      dayIndex,
+      offsetMinutes,
+      durationMinutes: p.minutes,
+      clock: minuteLabel(p.startMinute),
+      duration: formatDuration(p.minutes),
+      done: false,
+      projected: true,
+    });
+  }
 
   const monthCells: MonthCell[] = days.map((dayKey, index) => ({
     dayKey,

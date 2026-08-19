@@ -12,6 +12,7 @@ import {
 import { dayKeyFor } from "@/lib/day";
 import { describeRecurrence } from "@/lib/recurrence";
 import { listTags } from "@/lib/repositories/tags";
+import { minuteLabel, DEFAULT_ROUTINE_MINUTES } from "@/lib/projection";
 import { formatClock, minutesBetween } from "@/lib/time";
 import AddTask from "@/components/AddTask";
 import TaskDetail, { type TaskPanelView } from "@/components/tasks/TaskDetail";
@@ -85,6 +86,11 @@ export default async function TasksPage({
     recurrence: panel.recurrence,
     recurrenceValue: panel.recurrenceValue,
     recurrenceDays: panel.recurrenceDays,
+    routineTime:
+      panel.routineStartMinute === null
+        ? ""
+        : minuteLabel(panel.routineStartMinute),
+    routineMinutes: panel.routineMinutes ?? DEFAULT_ROUTINE_MINUTES,
     recurrenceUntil: panel.recurrenceUntil
       ? panel.recurrenceUntil.toISOString().slice(0, 10)
       : null,

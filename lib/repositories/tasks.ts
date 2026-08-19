@@ -81,6 +81,8 @@ export type CreateTaskData = {
   recurrence?: Task["recurrence"];
   recurrenceValue?: number;
   recurrenceDays?: number[];
+  routineStartMinute?: number | null;
+  routineMinutes?: number | null;
   /** The last day the routine runs, or null for open-ended. */
   recurrenceUntil?: Date | null;
   timezone: string;
@@ -104,6 +106,8 @@ export async function createTask(
       recurrence: data.recurrence ?? "none",
       recurrenceValue: data.recurrenceValue,
       recurrenceDays: data.recurrenceDays ?? [],
+      routineStartMinute: data.routineStartMinute ?? null,
+      routineMinutes: data.routineMinutes ?? null,
       recurrenceUntil: data.recurrenceUntil ?? null,
       createdForDate: dayKeyToDate(dayKey),
     },
@@ -224,6 +228,8 @@ export type TaskPanel = {
   recurrenceValue: number | null;
   recurrenceDays: number[];
   recurrenceUntil: Date | null;
+  routineStartMinute: number | null;
+  routineMinutes: number | null;
   /** The block this task sits in, if it has been given a time. */
   block: { id: string; startsAt: Date; endsAt: Date } | null;
   /** The note it was captured from, if any. */
@@ -255,6 +261,8 @@ export async function getTaskPanel(
       recurrenceValue: true,
       recurrenceDays: true,
       recurrenceUntil: true,
+      routineStartMinute: true,
+      routineMinutes: true,
       area: { select: { name: true, colour: true } },
       tags: {
         select: { id: true, name: true, colour: true },
@@ -288,6 +296,8 @@ export async function getTaskPanel(
     recurrenceValue: task.recurrenceValue,
     recurrenceDays: task.recurrenceDays,
     recurrenceUntil: task.recurrenceUntil,
+    routineStartMinute: task.routineStartMinute,
+    routineMinutes: task.routineMinutes,
     block: task.events[0] ?? null,
     fromNote: note?.body ?? null,
     tags: task.tags,
@@ -308,6 +318,8 @@ export async function updateTaskFields(
     recurrenceValue?: number | null;
     recurrenceDays?: number[];
     recurrenceUntil?: Date | null;
+    routineStartMinute?: number | null;
+    routineMinutes?: number | null;
   },
 ): Promise<boolean> {
   const { count } = await db.task.updateMany({

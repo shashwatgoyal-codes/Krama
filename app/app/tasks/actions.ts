@@ -9,6 +9,7 @@ import { areaBelongsTo } from "@/lib/repositories/areas";
 import { setTagsOn } from "@/lib/repositories/tags";
 import { parseTagInput } from "@/lib/tags";
 import { parseWeekdays } from "@/lib/recurrence";
+import { parseMinute } from "@/lib/projection";
 import { dayKeyFor } from "@/lib/day";
 import {
   resolveUntil,
@@ -128,6 +129,8 @@ const detailsSchema = z.object({
   // "1,2,3" from the picker. Parsed rather than coerced because an
   // empty string means "no days", not "day zero".
   recurrenceDays: z.string().optional(),
+  routineTime: z.string().optional(),
+  routineMinutes: z.coerce.number().int().optional(),
   // A comma-separated list of names, not ids: a tag you have just
   // invented has no id yet, and the server is what turns names into rows.
   tags: z.string().max(400).optional(),
@@ -149,6 +152,8 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
     recurrence: formData.get("recurrence") ?? "none",
     recurrenceValue: formData.get("recurrenceValue") ?? undefined,
     recurrenceDays: formData.get("recurrenceDays") ?? undefined,
+    routineTime: formData.get("routineTime") ?? undefined,
+    routineMinutes: formData.get("routineMinutes") || undefined,
     tags: formData.get("tags") ?? undefined,
     until: formData.get("until") ?? undefined,
     untilDate: formData.get("untilDate") ?? undefined,
@@ -187,8 +192,18 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
       ? parseWeekdays(parsed.data.recurrenceDays)
       : [];
 
+  // A time only means something for a routine. Clearing the repeat
+  // clears the time with it, or turning the routine back on later would
+  // resurrect a slot the user had forgotten about.
+  const startMinute =
+    parsed.data.recurrence === "none"
+      ? null
+      : parseMinute(parsed.data.routineTime);
+
   const updated = await updateTaskFields(user.id, parsed.data.id, {
     recurrenceDays: weekdays,
+    routineStartMinute: startMinute,
+    routineMinutes: startMinute === null ? null : (parsed.data.routineMinutes ?? null),
     recurrenceUntil: untilKey ? new Date(`${untilKey}T00:00:00.000Z`) : null,
     areaId: parsed.data.areaId,
     notes: parsed.data.notes ?? null,

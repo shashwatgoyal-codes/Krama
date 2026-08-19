@@ -23,6 +23,8 @@ export type WeekBlock = {
   clock: string;
   duration: string;
   done: boolean;
+  /** Drawn from a routine rather than a stored block. */
+  projected?: boolean;
 };
 
 export type WeekColumn = {
@@ -149,21 +151,30 @@ export default function WeekGrid({
               .map((b) => (
                 <div
                   key={b.id}
-                  draggable
+                  draggable={!b.projected}
                   data-block-id={b.id}
                   onDragStart={(e) => {
                     e.dataTransfer.setData("text/krama-block", b.id);
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   title={`${b.clock} · ${b.duration} · ${b.title}`}
-                  className={
-                    "absolute left-[3px] right-[3px] cursor-grab overflow-hidden rounded-[5px] " +
-                    "border-l-2 px-[7px] py-[5px] text-[11px] leading-[1.3] active:cursor-grabbing " +
-                    (b.done
-                      ? "border-l-ok bg-ok-soft"
-                      : "border-l-acc bg-acc-soft") +
-                    (pending ? " opacity-60" : "")
-                  }
+                    className={
+                      "absolute left-[3px] right-[3px] overflow-hidden rounded-[5px] " +
+                      "border-l-2 px-[7px] py-[5px] text-[11px] leading-[1.3] " +
+                      // A projected routine is drawn as an outline: it is a
+                      // standing commitment, not something put in the diary
+                      // yet. It has no row to drag, so it must not offer the
+                      // grab cursor either.
+                      (b.projected
+                        ? "cursor-default border border-dashed border-ln2 border-l-acc "
+                        : "cursor-grab active:cursor-grabbing ") +
+                      (b.projected
+                        ? ""
+                        : b.done
+                          ? "border-l-ok bg-ok-soft"
+                          : "border-l-acc bg-acc-soft") +
+                      (pending ? " opacity-60" : "")
+                    }
                   style={{
                     top: (b.offsetMinutes / 60) * ROW_HEIGHT + 2,
                     // Never shorter than a readable strip, however brief.

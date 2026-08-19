@@ -34,6 +34,9 @@ export type TaskPanelView = {
   recurrenceDays: number[];
   /** "2026-12-31" or null for a routine with no end. */
   recurrenceUntil: string | null;
+  /** "08:00" — when the routine happens, or "" if it has no set time. */
+  routineTime: string;
+  routineMinutes: number;
   block: {
     id: string;
     /** "2026-08-15" */
@@ -242,6 +245,40 @@ export default function TaskDetail({
           {recurrence !== "none" && (
             <div className="mt-2.5 border-t border-ln pt-2.5">
               <div className="mb-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-fai">
+                At
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="time"
+                  name="routineTime"
+                  defaultValue={task.routineTime}
+                  disabled={pending}
+                  className={`${FIELD} max-w-[110px]`}
+                />
+                <span className="text-[11.5px] text-mut">for</span>
+                <select
+                  name="routineMinutes"
+                  defaultValue={task.routineMinutes}
+                  disabled={pending}
+                  className={`${FIELD} max-w-[120px]`}
+                >
+                  {BLOCK_MINUTES.map((m) => (
+                    <option key={m} value={m}>
+                      {m < 60
+                        ? `${m} minutes`
+                        : m % 60 === 0
+                          ? `${m / 60} hour${m === 60 ? "" : "s"}`
+                          : `${Math.floor(m / 60)}h ${m % 60}m`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-1 text-[11px] text-fai">
+                Given a time, it appears on the calendar on every day it
+                runs — not just the next one.
+              </p>
+
+              <div className="mb-1 mt-2.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-fai">
                 Until
               </div>
               <UntilField

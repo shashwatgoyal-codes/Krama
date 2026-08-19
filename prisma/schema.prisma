@@ -309,6 +309,12 @@ model Task {
   // For monthly: day of month. For weekly it held the single weekday,
   // and still does for rows written before recurrenceDays existed.
   recurrenceValue  Int?
+  /// What time of day a routine happens, as minutes from midnight, and
+  /// for how long. Set on the template, not the instance: the whole
+  /// point is that the calendar can draw next Monday's gym session
+  /// without a row existing for it yet.
+  routineStartMinute Int?
+  routineMinutes     Int?
   /// Which weekdays a weekly routine runs on, 0 = Sunday.
   ///
   /// An array rather than one number because "every day except Sunday"
