@@ -273,10 +273,18 @@ export default function TaskDetail({
                   ))}
                 </select>
               </div>
-              <p className="mt-1 text-[11px] text-fai">
-                Given a time, it appears on the calendar on every day it
-                runs — not just the next one.
-              </p>
+              {task.routineTime ? (
+                <p className="mt-1 text-[11px] text-fai">
+                  It appears on the calendar on every day it runs, not just
+                  the next one.
+                </p>
+              ) : (
+                <p className="mt-1 text-[11px] text-warn">
+                  No time set, so this routine does not appear on the
+                  calendar at all. Give it one and every day it runs shows
+                  up.
+                </p>
+              )}
 
               <div className="mb-1 mt-2.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-fai">
                 Until

@@ -179,6 +179,7 @@ export type TaskDetail = TaskSummary & {
   recurrenceValue: number | null;
   recurrenceParentId: string | null;
   createdForDate: Date;
+  routineStartMinute: number | null;
 };
 
 const DETAIL = {
@@ -186,6 +187,8 @@ const DETAIL = {
   recurrenceValue: true,
   recurrenceParentId: true,
   createdForDate: true,
+  // So the routines list can say which ones the calendar cannot draw.
+  routineStartMinute: true,
 } as const;
 
 /** Backs the Tasks page. Every branch still filters on userId. */

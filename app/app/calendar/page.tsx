@@ -152,11 +152,14 @@ export default async function CalendarPage({
 
   const projected = projectRoutines(routines, days, occupied);
 
+  // Routines that fall before the grid starts are pinned to the first
+  // row rather than dropped. A block at 01:04 used to vanish silently,
+  // which reads as "the calendar is broken" — showing it at the top,
+  // labelled with its real time, at least tells the truth.
   for (const p of projected) {
     const dayIndex = days.indexOf(p.dayKey);
     if (dayIndex === -1) continue;
-    const offsetMinutes = p.startMinute - START_HOUR * 60;
-    if (offsetMinutes < 0) continue;
+    const offsetMinutes = Math.max(0, p.startMinute - START_HOUR * 60);
 
     gridBlocks.push({
       id: p.key,

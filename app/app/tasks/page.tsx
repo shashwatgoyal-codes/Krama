@@ -204,9 +204,24 @@ export default async function TasksPage({
 
                       {t.recurrence !== "none" && (
                         <span className="label-xs flex-none">
-                          {describeRecurrence(t.recurrence, t.recurrenceValue)}
+                          {/* recurrenceDays, or a six-day routine reads
+                              as "Every Monday". */}
+                          {describeRecurrence(
+                            t.recurrence,
+                            t.recurrenceValue,
+                            t.recurrenceDays,
+                          )}
                         </span>
                       )}
+                      {t.recurrence !== "none" &&
+                        t.routineStartMinute === null && (
+                          <span
+                            title="No time set, so it does not appear on the calendar"
+                            className="label-xs flex-none text-warn"
+                          >
+                            no time
+                          </span>
+                        )}
                       {showPoints && (
                         <span className="tabular flex-none text-[11px] text-fai">
                           {t.points}
