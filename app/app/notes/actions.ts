@@ -95,7 +95,12 @@ export async function editNote(formData: FormData): Promise<ActionResult> {
     .safeParse({ id: formData.get("id"), body: formData.get("body") });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
-  await updateNote(user.id, parsed.data.id, { body: parsed.data.body });
+  const areaId = formData.get("areaId")?.toString() || null;
+  await updateNote(user.id, parsed.data.id, {
+    body: parsed.data.body,
+    // Empty means unfiled — a choice, not a missing value.
+    areaId,
+  });
   await setTagsOn(
     user.id,
     "note",

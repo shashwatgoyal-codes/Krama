@@ -23,7 +23,42 @@ export type NoteItem = {
   z: number;
   taskId: string | null;
   tags: TagChip[];
+  areaId: string | null;
+  /** Shown on the note's face, as "OFFICE". Null when unfiled. */
+  areaName: string | null;
+  /** Days since it was written, for the "2D" beside the area. */
+  ageDays: number;
 };
+
+/**
+ * "2D", "14D", "TODAY" — how old a note is, in the shortest form that
+ * still says something.
+ *
+ * A date on a sticky is noise; what you actually want to know is whether
+ * this is something you scribbled this morning or something that has
+ * been sitting there a fortnight.
+ */
+export function ageLabel(days: number): string {
+  if (days <= 0) return "TODAY";
+  if (days === 1) return "1D";
+  if (days < 100) return `${days}D`;
+  return "99D+";
+}
+
+/**
+ * A small, fixed tilt per note.
+ *
+ * Derived from the id rather than random, so a note does not jump to a
+ * new angle every time the board re-renders — which would be charming
+ * once and maddening thereafter.
+ */
+export function tiltOf(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  // Between -2 and 2 degrees. Enough to read as paper, little enough to
+  // still read as text.
+  return ((Math.abs(hash) % 41) - 20) / 10;
+}
 
 /** Tailwind classes per tint, so the mapping lives in one place. */
 export const NOTE_TINT: Record<string, string> = {

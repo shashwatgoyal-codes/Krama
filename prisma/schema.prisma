@@ -319,6 +319,7 @@ model Area {
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks  Task[]
   events Event[]
+  notes  Note[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -447,11 +448,18 @@ model Note {
   /// Set when this note has been turned into a task.
   taskId String?
 
+  /// Which area this note belongs to, shown on its face.
+  ///
+  /// A note with no home is a note you cannot find later, and the board
+  /// is the one place in the app where things accumulate quietly.
+  areaId String?
+
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area? @relation(fields: [areaId], references: [id], onDelete: SetNull)
   tags Tag[]
 
   @@index([userId, archivedAt])

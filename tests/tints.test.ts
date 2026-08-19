@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { TINT_PRESETS, DEFAULT_TINTS, tintPreset, tintCss, NOTE_COLOURS } from "@/lib/notes";
+import { TINT_PRESETS, DEFAULT_TINTS, tintPreset, tintCss, NOTE_COLOURS,
+  ageLabel,
+  tiltOf,
+} from "@/lib/notes";
 import { appearanceSchema } from "@/lib/validation";
 
 describe("tint presets", () => {
@@ -86,5 +89,63 @@ describe("appearanceSchema and tints", () => {
     expect(appearanceSchema.safeParse({
       ...base, noteTints: ["#ff0000", "sky", "rose", "violet", "slate"],
     }).success).toBe(false);
+  });
+});
+
+describe("how old a note is", () => {
+  const cases: [number, string][] = [
+    [0, "TODAY"],
+    [1, "1D"],
+    [2, "2D"],
+    [14, "14D"],
+    [99, "99D"],
+    [100, "99D+"],
+    [999, "99D+"],
+  ];
+
+  for (const [days, expected] of cases) {
+    it(`${days} days reads as ${expected}`, () => {
+      expect(ageLabel(days)).toBe(expected);
+    });
+  }
+
+  it("treats a negative age as today rather than showing nonsense", () => {
+    expect(ageLabel(-1)).toBe("TODAY");
+  });
+
+  it("never returns an empty label across three years", () => {
+    for (let d = 0; d < 1100; d++) {
+      expect(ageLabel(d).length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("the tilt on a note", () => {
+  it("is the same every time for the same note", () => {
+    // Random would re-tilt on every render, which is charming once and
+    // maddening after that.
+    for (const id of ["abc", "cmsxyz001", "n1", ""]) {
+      expect(tiltOf(id)).toBe(tiltOf(id));
+    }
+  });
+
+  it("stays small enough to still read as text", () => {
+    for (let i = 0; i < 500; i++) {
+      const t = tiltOf(`note-${i}`);
+      expect(Math.abs(t)).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it("does not give every note the same angle", () => {
+    const angles = new Set(
+      Array.from({ length: 200 }, (_, i) => tiltOf(`note-${i}`)),
+    );
+    expect(angles.size).toBeGreaterThan(5);
+  });
+
+  it("tilts both ways", () => {
+    const angles = Array.from({ length: 200 }, (_, i) => tiltOf(`n${i}`));
+    expect(angles.some((a) => a > 0)).toBe(true);
+    expect(angles.some((a) => a < 0)).toBe(true);
   });
 });

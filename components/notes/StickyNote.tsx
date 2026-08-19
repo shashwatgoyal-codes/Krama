@@ -1,89 +1,72 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
-  moveNote,
-  recolourNote,
+  NOTE_COLOURS,
+  NOTE_TINT,
+  ageLabel,
+  tiltOf,
+  type NoteItem,
+} from "@/lib/notes";
+import type { TagChip } from "@/lib/tags";
+import TagField from "@/components/tags/TagField";
+import TagChips from "@/components/tags/TagChips";
+import {
   editNote,
+  recolourNote,
   removeNote,
   noteToTask,
 } from "@/app/app/notes/actions";
-import { NOTE_COLOURS, NOTE_TINT, type NoteItem } from "@/lib/notes";
-import TagField from "@/components/tags/TagField";
-import TagChips from "@/components/tags/TagChips";
-import type { TagChip } from "@/lib/tags";
 
+/**
+ * One note.
+ *
+ * Click the text and you are editing it — there is no edit button and no
+ * mode to enter, because a sticky note you have to unlock is not a
+ * sticky note. Everything else lives behind hover so the board reads as
+ * paper rather than as a toolbar.
+ *
+ * The slight tilt is fixed per note, derived from its id, so the board
+ * looks handmade without anything moving when it re-renders.
+ */
 export default function StickyNote({
   note,
+  areas = [],
   allTags = [],
 }: {
   note: NoteItem;
+  areas?: { id: string; name: string }[];
   allTags?: TagChip[];
 }) {
-  const [pos, setPos] = useState({ x: note.x, y: note.y });
   const [editing, setEditing] = useState(false);
-  const [, startTransition] = useTransition();
-  const dragging = useRef<{ dx: number; dy: number } | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [pending, startTransition] = useTransition();
 
-  function onPointerDown(e: React.PointerEvent) {
-    // Only the note body drags; buttons and the textarea handle their own.
-    if ((e.target as HTMLElement).closest("[data-no-drag]")) return;
-    if (editing) return;
-
-    const rect = ref.current!.getBoundingClientRect();
-    dragging.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
-    ref.current!.setPointerCapture(e.pointerId);
-  }
-
-  function onPointerMove(e: React.PointerEvent) {
-    if (!dragging.current) return;
-    const board = ref.current!.parentElement!.getBoundingClientRect();
-    setPos({
-      x: Math.max(0, Math.round(e.clientX - board.left - dragging.current.dx)),
-      y: Math.max(0, Math.round(e.clientY - board.top - dragging.current.dy)),
-    });
-  }
-
-  function onPointerUp(e: React.PointerEvent) {
-    if (!dragging.current) return;
-    dragging.current = null;
-    ref.current!.releasePointerCapture(e.pointerId);
-
-    // Saved on drop, not on every move — one write per gesture.
+  function act(
+    action: (data: FormData) => Promise<{ ok: boolean }>,
+    extra: [string, string][] = [],
+    onDone?: () => void,
+  ) {
+    const data = new FormData();
+    data.set("id", note.id);
+    for (const [k, v] of extra) data.set(k, v);
     startTransition(async () => {
-      const data = new FormData();
-      data.set("id", note.id);
-      data.set("x", String(pos.x));
-      data.set("y", String(pos.y));
-      await moveNote(data);
-    });
-  }
-
-  function act(fn: (f: FormData) => Promise<unknown>, extra?: [string, string]) {
-    startTransition(async () => {
-      const data = new FormData();
-      data.set("id", note.id);
-      if (extra) data.set(extra[0], extra[1]);
-      await fn(data);
+      await action(data);
+      onDone?.();
     });
   }
 
   return (
     <div
-      ref={ref}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      style={{ left: pos.x, top: pos.y, zIndex: note.z }}
+      style={{ rotate: `${tiltOf(note.id)}deg` }}
       className={
-        "group absolute w-[190px] cursor-grab touch-none rounded-[3px] border p-3 shadow-md active:cursor-grabbing " +
-        (NOTE_TINT[note.colour] ?? NOTE_TINT.n1)
+        "group relative flex min-h-[168px] flex-col rounded-[3px] border p-3 shadow-md transition-transform hover:z-10 hover:rotate-0 " +
+        (NOTE_TINT[note.colour] ?? NOTE_TINT.n1) +
+        (pending ? " opacity-60" : "")
       }
     >
       {editing ? (
         <form
-          data-no-drag
           action={(f) => {
             f.set("id", note.id);
             startTransition(async () => {
@@ -91,6 +74,7 @@ export default function StickyNote({
               setEditing(false);
             });
           }}
+          className="flex flex-1 flex-col"
         >
           <textarea
             name="body"
@@ -98,22 +82,39 @@ export default function StickyNote({
             autoFocus
             rows={5}
             maxLength={1000}
-            className="w-full resize-none rounded-sm border border-ln2/40 bg-surf/60 p-1.5 text-[12.5px] leading-snug text-ink focus:outline-none"
+            className="w-full flex-1 resize-none rounded-sm border border-ln2/40 bg-surf/60 p-1.5 text-[12.5px] leading-snug text-ink focus:outline-none"
           />
+
+          <div className="mt-1.5">
+            <select
+              name="areaId"
+              defaultValue={note.areaId ?? ""}
+              className="w-full rounded-sm border border-ln2/40 bg-surf/60 px-1.5 py-1 text-[11px] text-ink focus:outline-none"
+            >
+              <option value="">Unfiled</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="mt-1.5">
             <TagField selected={note.tags} available={allTags} />
           </div>
+
           <div className="mt-1.5 flex gap-1.5">
             <button
               type="submit"
-              className="rounded border border-ink bg-ink px-2 py-1 text-[10.5px] font-semibold text-paper"
+              className="cursor-pointer rounded border border-ink bg-ink px-2 py-1 text-[10.5px] font-semibold text-paper"
             >
               Save
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded border border-ln2 px-2 py-1 text-[10.5px] font-semibold text-mut"
+              className="cursor-pointer rounded border border-ln2 px-2 py-1 text-[10.5px] font-semibold text-mut"
             >
               Cancel
             </button>
@@ -121,9 +122,17 @@ export default function StickyNote({
         </form>
       ) : (
         <>
-          <p className="min-h-[72px] whitespace-pre-wrap break-words text-[12.5px] leading-snug text-ink">
-            {note.body}
-          </p>
+          {/* The body is the control. Clicking it starts editing. */}
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            aria-label="Edit this note"
+            className="flex-1 cursor-text text-left"
+          >
+            <p className="whitespace-pre-wrap break-words text-[12.5px] leading-snug text-ink">
+              {note.body}
+            </p>
+          </button>
 
           {note.tags.length > 0 && (
             <div className="mt-1.5">
@@ -131,55 +140,70 @@ export default function StickyNote({
             </div>
           )}
 
-          {note.taskId && (
-            <span className="mt-1.5 inline-block rounded border border-ok px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-ok">
-              is a task
+          {/* Where it belongs and how long it has been sitting there. */}
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <span className="label-xs truncate">
+              {note.areaName ?? "Unfiled"}
+              <span className="text-fai"> · {ageLabel(note.ageDays)}</span>
             </span>
-          )}
+            {note.taskId && (
+              <span className="label-xs flex-none text-ok">is a task</span>
+            )}
+          </div>
 
-          {/* Controls stay hidden until hover so the board reads as notes,
-              not as a toolbar. Always available to keyboard users. */}
-          <div
-            data-no-drag
-            className="mt-2 flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
-          >
+          {/* Controls stay out of the way until you want them. */}
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center gap-1 opacity-0 transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
             {NOTE_COLOURS.map((c) => (
               <button
                 key={c}
                 type="button"
                 aria-label={`Colour ${c}`}
-                onClick={() => act(recolourNote, ["colour", c])}
+                onClick={() => act(recolourNote, [["colour", c]])}
                 className={`size-3 rounded-full border ${NOTE_TINT[c]} ${
                   note.colour === c ? "ring-1 ring-ink" : ""
                 }`}
               />
             ))}
 
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="ml-auto rounded px-1 text-[10px] font-semibold text-ink/70 hover:text-ink"
-            >
-              Edit
-            </button>
-            {!note.taskId && (
-              <button
-                type="button"
-                onClick={() => act(noteToTask)}
-                title="Make this a task"
-                className="rounded px-1 text-[10px] font-semibold text-ink/70 hover:text-ink"
-              >
-                → Task
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => act(removeNote)}
-              aria-label="Remove note"
-              className="rounded px-1 text-[10px] font-semibold text-ink/70 hover:text-bad"
-            >
-              ✕
-            </button>
+            <span className="ml-auto flex items-center gap-1">
+              {!note.taskId && (
+                <button
+                  type="button"
+                  title="Make this a task"
+                  onClick={() => act(noteToTask)}
+                  className="rounded border border-ln2 bg-surf/70 px-1.5 py-0.5 text-[9.5px] font-semibold text-mut hover:border-acc hover:text-acc"
+                >
+                  → task
+                </button>
+              )}
+              {confirmingRemove ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => act(removeNote)}
+                    className="rounded border border-bad bg-bad px-1.5 py-0.5 text-[9.5px] font-semibold text-paper"
+                  >
+                    Sure?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingRemove(false)}
+                    className="rounded border border-ln2 bg-surf/70 px-1.5 py-0.5 text-[9.5px] font-semibold text-mut"
+                  >
+                    No
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  title="Remove"
+                  onClick={() => setConfirmingRemove(true)}
+                  className="rounded border border-ln2 bg-surf/70 px-1.5 py-0.5 text-[9.5px] font-semibold text-mut hover:border-bad hover:text-bad"
+                >
+                  ×
+                </button>
+              )}
+            </span>
           </div>
         </>
       )}

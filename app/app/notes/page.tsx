@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { pageTitle } from "@/lib/env";
 import { requireUser } from "@/lib/auth/guard";
+import { db } from "@/lib/db";
 import { listNotes } from "@/lib/repositories/notes";
 import NoteBoard from "@/components/notes/NoteBoard";
 import { listTags } from "@/lib/repositories/tags";
@@ -16,5 +17,11 @@ export default async function NotesPage() {
 
   const allTags = await listTags(user.id);
 
-  return <NoteBoard notes={notes} allTags={allTags} />;
+  const areas = await db.area.findMany({
+    where: { userId: user.id },
+    orderBy: [{ order: "asc" }, { name: "asc" }],
+    select: { id: true, name: true },
+  });
+
+  return <NoteBoard notes={notes} areas={areas} allTags={allTags} />;
 }

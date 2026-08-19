@@ -252,3 +252,19 @@
   --display: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
+
+/*
+ * The notes board's paper.
+ *
+ * A faint grid, the way squared paper is faint — enough that the surface
+ * reads as something you write on, not so much that it competes with
+ * what is written. Drawn with gradients rather than an image so it costs
+ * nothing and follows the theme.
+ */
+.board-paper {
+  background-image:
+    linear-gradient(to right, var(--ln) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ln) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}

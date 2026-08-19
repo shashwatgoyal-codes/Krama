@@ -12,15 +12,31 @@ const FIELDS = {
   y: true,
   z: true,
   taskId: true,
+  areaId: true,
+  createdAt: true,
+  area: { select: { name: true } },
   tags: { select: { id: true, name: true, colour: true }, orderBy: { name: "asc" } },
 } as const;
 
 export async function listNotes(userId: string): Promise<NoteItem[]> {
-  return db.note.findMany({
+  const rows = await db.note.findMany({
     where: { userId, archivedAt: null },
     select: FIELDS,
-    orderBy: { z: "asc" },
+    // Newest first. The board no longer depends on where things were
+    // dragged, so the order has to mean something on its own — and the
+    // note you wrote last is the one you are most likely to want.
+    orderBy: { createdAt: "desc" },
   });
+
+  const today = Date.now();
+  return rows.map((n) => ({
+    ...n,
+    areaName: n.area?.name ?? null,
+    ageDays: Math.max(
+      0,
+      Math.floor((today - n.createdAt.getTime()) / 86_400_000),
+    ),
+  }));
 }
 
 /**
@@ -32,6 +48,8 @@ export async function createNote(
   userId: string,
   body: string,
   colour: NoteColour,
+  /** Optional: filing is not required at capture time. */
+  areaId?: string | null,
 ): Promise<NoteItem> {
   const existing = await db.note.findMany({
     where: { userId, archivedAt: null },
@@ -57,16 +75,18 @@ export async function createNote(
 
   const topZ = existing.reduce((max, n) => Math.max(max, n.z), 0);
 
-  return db.note.create({
-    data: { userId, body, colour, x, y, z: topZ + 1 },
+  const created = await db.note.create({
+    data: { userId, body, colour, x, y, z: topZ + 1, areaId },
     select: FIELDS,
   });
+
+  return { ...created, areaName: created.area?.name ?? null, ageDays: 0 };
 }
 
 export async function updateNote(
   userId: string,
   noteId: string,
-  data: Partial<Pick<Note, "body" | "colour" | "x" | "y" | "z">>,
+  data: Partial<Pick<Note, "body" | "colour" | "x" | "y" | "z" | "areaId">>,
 ): Promise<boolean> {
   const result = await db.note.updateMany({
     where: { id: noteId, userId },
