@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { scheduleTaskAt, moveBlockToHour } from "@/app/app/actions";
 
 /**
@@ -36,6 +36,9 @@ export type WeekColumn = {
 
 const ROW_HEIGHT = 44;
 
+/** Where the grid sits when it opens. Early enough for a 07:00 start. */
+const OPEN_AT_HOUR = 7;
+
 export default function WeekGrid({
   columns,
   blocks,
@@ -53,6 +56,17 @@ export default function WeekGrid({
   const [target, setTarget] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const scroller = useRef<HTMLDivElement>(null);
+
+  // Open near the working day rather than at midnight. A 24-hour grid
+  // that starts at 00:00 shows six empty hours and hides the ones people
+  // actually use; every calendar scrolls past them on load.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    el.scrollTop = Math.max(0, (OPEN_AT_HOUR - startHour) * ROW_HEIGHT);
+  }, [startHour]);
 
   const hours = Array.from(
     { length: endHour - startHour },
@@ -142,7 +156,8 @@ export default function WeekGrid({
         </div>
       )}
 
-      {/* body */}
+      {/* body — the whole day, scrolled rather than truncated */}
+      <div ref={scroller} className="max-h-[62vh] overflow-y-auto">
       <div
         className="relative grid"
         style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}
@@ -230,6 +245,7 @@ export default function WeekGrid({
               ))}
           </div>
         ))}
+      </div>
       </div>
 
       {error && (

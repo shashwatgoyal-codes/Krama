@@ -39,8 +39,17 @@ export const metadata: Metadata = {
 };
 
 /** Early enough for a morning routine, late enough for an evening block. */
-const START_HOUR = 7;
-const END_HOUR = 23;
+/**
+ * The whole day, not a window onto part of it.
+ *
+ * This used to run 07:00 to 23:00, which meant an early gym session or
+ * a late block simply did not exist on the grid — and a calendar that
+ * silently omits an event is worse than one that makes you scroll. The
+ * grid scrolls instead, opening near the working day the way every
+ * calendar does.
+ */
+const START_HOUR = 0;
+const END_HOUR = 24;
 
 type View = "day" | "week" | "month";
 
@@ -152,10 +161,6 @@ export default async function CalendarPage({
 
   const projected = projectRoutines(routines, days, occupied);
 
-  // Routines that fall before the grid starts are pinned to the first
-  // row rather than dropped. A block at 01:04 used to vanish silently,
-  // which reads as "the calendar is broken" — showing it at the top,
-  // labelled with its real time, at least tells the truth.
   const allDayBlocks: WeekBlock[] = [];
 
   for (const p of projected) {
@@ -166,7 +171,7 @@ export default async function CalendarPage({
       id: p.key,
       title: p.title,
       dayIndex,
-      offsetMinutes: Math.max(0, p.startMinute - START_HOUR * 60),
+      offsetMinutes: p.startMinute - START_HOUR * 60,
       durationMinutes: p.minutes,
       clock: minuteLabel(p.startMinute),
       duration: formatDuration(p.minutes),
