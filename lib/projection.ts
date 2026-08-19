@@ -47,6 +47,15 @@ export type ProjectedBlock = {
   areaId: string | null;
   /** Always true — the flag exists so the UI can say so. */
   projected: true;
+  /**
+   * The routine has no time of its own, so it belongs in the all-day
+   * band rather than at an hour on the grid.
+   *
+   * Inventing a time would put it somewhere it does not belong and read
+   * as fact; leaving it off the calendar entirely was worse, because a
+   * standing commitment you cannot see is one you forget.
+   */
+  allDay: boolean;
 };
 
 /** How long a routine block runs when no length was chosen. */
@@ -67,10 +76,10 @@ export function projectRoutines(
   const out: ProjectedBlock[] = [];
 
   for (const template of templates) {
-    // A routine with no time cannot be placed on a grid drawn in hours.
-    // It still appears in the task list; it simply has no slot.
-    if (template.routineStartMinute === null) continue;
     if (template.recurrence === "none") continue;
+
+    // No time means all-day, not invisible.
+    const allDay = template.routineStartMinute === null;
 
     for (const dayKey of days) {
       if (occupied.has(`${template.id}:${dayKey}`)) continue;
@@ -89,11 +98,12 @@ export function projectRoutines(
         templateId: template.id,
         title: template.title,
         dayKey,
-        startMinute: template.routineStartMinute,
+        startMinute: template.routineStartMinute ?? 0,
         minutes: template.routineMinutes ?? DEFAULT_ROUTINE_MINUTES,
         points: template.points,
         areaId: template.areaId,
         projected: true,
+        allDay,
       });
     }
   }

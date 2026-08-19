@@ -71,9 +71,19 @@ describe("projectRoutines — the gym case", () => {
 describe("projectRoutines — what it refuses to draw", () => {
   const days = range("2026-08-17", 7);
 
-  it("skips a routine with no time, since a grid needs one", () => {
+  it("still draws a routine with no time, marked all-day", () => {
+    // It used to be skipped, which meant a repeating task with no hour
+    // set simply did not exist as far as the calendar was concerned.
+    // Something that happens every Tuesday is on Tuesday whether or not
+    // you have decided when.
     const out = projectRoutines([template({ routineStartMinute: null })], days);
-    expect(out).toEqual([]);
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.every((b) => b.allDay)).toBe(true);
+  });
+
+  it("marks a routine that has a time as not all-day", () => {
+    const out = projectRoutines([template()], days);
+    expect(out.every((b) => b.allDay)).toBe(false);
   });
 
   it("skips a task that does not repeat", () => {

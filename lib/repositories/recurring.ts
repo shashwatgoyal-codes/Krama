@@ -89,8 +89,13 @@ export async function materialiseRecurring(
  * The routine templates that could appear on a calendar range.
  *
  * Only templates — instances are ordinary tasks and already have real
- * blocks if they were scheduled. Only ones with a time, since a routine
- * without one cannot be placed on a grid drawn in hours.
+ * blocks if they were scheduled.
+ *
+ * Untimed routines are included. They used to be filtered out here,
+ * which is what made a repeating task with no hour set simply not exist
+ * as far as the calendar was concerned. They belong in the all-day band
+ * instead: something that happens every Tuesday is on Tuesday whether or
+ * not you have decided when.
  */
 export async function listRoutineTemplates(
   userId: string,
@@ -100,7 +105,6 @@ export async function listRoutineTemplates(
       userId,
       recurrence: { not: "none" },
       recurrenceParentId: null,
-      routineStartMinute: { not: null },
       status: { not: "dropped" },
     },
     select: {

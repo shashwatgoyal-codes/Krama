@@ -39,11 +39,14 @@ const ROW_HEIGHT = 44;
 export default function WeekGrid({
   columns,
   blocks,
+  allDay = [],
   startHour,
   endHour,
 }: {
   columns: WeekColumn[];
   blocks: WeekBlock[];
+  /** Routines with no time of their own, shown above the hours. */
+  allDay?: WeekBlock[];
   startHour: number;
   endHour: number;
 }) {
@@ -105,6 +108,39 @@ export default function WeekGrid({
           </div>
         ))}
       </div>
+
+      {/* All-day band. A routine with no time still happens on the day,
+          so it belongs on the calendar — just not at an hour it never
+          claimed. Empty rows are not drawn at all, so the grid keeps its
+          height when nothing is untimed. */}
+      {allDay.length > 0 && (
+        <div
+          className="grid border-b border-ln bg-surf2"
+          style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}
+        >
+          <div className="border-r border-ln px-1.5 py-1 text-right font-mono text-[9px] tracking-[0.08em] text-fai">
+            ALL DAY
+          </div>
+          {columns.map((col, index) => (
+            <div
+              key={col.dayKey}
+              className="min-h-[24px] border-r border-ln px-1 py-1"
+            >
+              {allDay
+                .filter((b) => b.dayIndex === index)
+                .map((b) => (
+                  <div
+                    key={b.id}
+                    title={`${b.title} — no time set`}
+                    className="mb-0.5 truncate rounded-[4px] border border-dashed border-ln2 border-l-2 border-l-acc px-[6px] py-[2px] text-[10.5px] text-ink"
+                  >
+                    {b.title}
+                  </div>
+                ))}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* body */}
       <div

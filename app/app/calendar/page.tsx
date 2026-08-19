@@ -156,22 +156,28 @@ export default async function CalendarPage({
   // row rather than dropped. A block at 01:04 used to vanish silently,
   // which reads as "the calendar is broken" — showing it at the top,
   // labelled with its real time, at least tells the truth.
+  const allDayBlocks: WeekBlock[] = [];
+
   for (const p of projected) {
     const dayIndex = days.indexOf(p.dayKey);
     if (dayIndex === -1) continue;
-    const offsetMinutes = Math.max(0, p.startMinute - START_HOUR * 60);
 
-    gridBlocks.push({
+    const entry: WeekBlock = {
       id: p.key,
       title: p.title,
       dayIndex,
-      offsetMinutes,
+      offsetMinutes: Math.max(0, p.startMinute - START_HOUR * 60),
       durationMinutes: p.minutes,
       clock: minuteLabel(p.startMinute),
       duration: formatDuration(p.minutes),
       done: false,
       projected: true,
-    });
+    };
+
+    // A routine with no hour of its own goes in the all-day band rather
+    // than at a time nobody chose.
+    if (p.allDay) allDayBlocks.push(entry);
+    else gridBlocks.push(entry);
   }
 
   const monthCells: MonthCell[] = days.map((dayKey, index) => ({
@@ -179,18 +185,32 @@ export default async function CalendarPage({
     dayNumber: String(new Date(`${dayKey}T00:00:00.000Z`).getUTCDate()),
     inMonth: isInMonth(dayKey, anchor),
     isToday: dayKey === todayKey,
-    blocks: blocks
-      .filter((b) => columnOf(b.startsAt) === index)
-      .map((b) => ({
-        id: b.id,
-        title: b.title,
-        clock: formatClock(
-          b.startsAt,
-          settings.timezone,
-          settings.timeFormat as "12" | "24",
-        ),
-        done: b.taskDone,
-      })),
+    // Real blocks and projected routines together. The month view read
+    // only the stored ones, so a routine that showed all week in the week
+    // view was absent from the month — the same calendar disagreeing with
+    // itself depending on which button you pressed.
+    blocks: [
+      ...blocks
+        .filter((b) => columnOf(b.startsAt) === index)
+        .map((b) => ({
+          id: b.id,
+          title: b.title,
+          clock: formatClock(
+            b.startsAt,
+            settings.timezone,
+            settings.timeFormat as "12" | "24",
+          ),
+          done: b.taskDone,
+        })),
+      ...projected
+        .filter((p) => p.dayKey === dayKey)
+        .map((p) => ({
+          id: p.key,
+          title: p.title,
+          clock: p.allDay ? "" : minuteLabel(p.startMinute),
+          done: false,
+        })),
+    ],
   }));
 
   const waiting = open
@@ -289,6 +309,7 @@ export default async function CalendarPage({
             <WeekGrid
               columns={columns}
               blocks={gridBlocks}
+              allDay={allDayBlocks}
               startHour={START_HOUR}
               endHour={END_HOUR}
             />
