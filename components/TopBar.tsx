@@ -16,6 +16,7 @@ const NAV = [
   { href: "/app/notes", label: "Notes" },
   { href: "/app/calendar", label: "Calendar" },
   { href: "/app/explore", label: "Explore" },
+  { href: "/app/rewards", label: "Rewards" },
 ];
 
 export default function TopBar({

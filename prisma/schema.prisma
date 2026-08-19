@@ -42,8 +42,10 @@ model User {
   areas    Area[]
   tasks    Task[]
   notes    Note[]
-  tags     Tag[]
-  ledger   PointEntry[]
+  tags        Tag[]
+  ledger      PointEntry[]
+  rewards     Reward[]
+  redemptions Redemption[]
 
   @@map("users")
 }
@@ -223,6 +225,56 @@ model Profile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("profiles")
+}
+
+/// Something worth working toward.
+///
+/// Points accumulated with nothing to spend them on, which makes them a
+/// number rather than a reward. A reward is whatever you decide it is —
+/// a film, a day off, a thing you have been putting off buying — priced
+/// in the points you already earn.
+model Reward {
+  id     String @id @default(cuid())
+  userId String
+
+  name  String
+  /// What it costs. Whole points, because half a point is not a thing.
+  cost  Int
+  /// Optional: what claiming it actually means.
+  notes String?
+
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redemptions Redemption[]
+
+  @@index([userId, archivedAt])
+  @@map("rewards")
+}
+
+/// A reward actually claimed.
+///
+/// Append-only, like the point ledger and for the same reason: the
+/// balance has to be reconstructible from the record, and a row you can
+/// quietly edit is a balance you cannot trust. The cost is copied in
+/// rather than read through the relation, so repricing a reward later
+/// never rewrites what you paid for it at the time.
+model Redemption {
+  id       String @id @default(cuid())
+  userId   String
+  rewardId String
+
+  name String
+  cost Int
+
+  redeemedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, redeemedAt])
+  @@map("redemptions")
 }
 
 // ---------------------------------------------------------------- content
