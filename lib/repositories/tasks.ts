@@ -328,3 +328,37 @@ export async function updateTaskFields(
   });
   return count > 0;
 }
+
+/**
+ * Scheduling a repeating task sets the routine's own time.
+ *
+ * This is what makes a recurring event behave the way a calendar has
+ * taught everyone to expect: put it at 14:00 on Tuesday and it is at
+ * 14:00 on every Tuesday, not only that one.
+ *
+ * Two concepts used to do this job — a block, which is one occurrence,
+ * and a routine time, which drives the rest — and you had to know about
+ * both for a repeat to show up. Now the first sets the second, so the
+ * obvious action produces the obvious result.
+ *
+ * Instances are deliberately excluded. Moving one Tuesday's session
+ * should move that Tuesday, not silently reschedule the whole series;
+ * that is what editing the routine itself is for.
+ */
+export async function syncRoutineTimeFromBlock(
+  userId: string,
+  taskId: string,
+  startMinute: number,
+  minutes: number,
+): Promise<boolean> {
+  const { count } = await db.task.updateMany({
+    where: {
+      id: taskId,
+      userId,
+      recurrence: { not: "none" },
+      recurrenceParentId: null,
+    },
+    data: { routineStartMinute: startMinute, routineMinutes: minutes },
+  });
+  return count > 0;
+}

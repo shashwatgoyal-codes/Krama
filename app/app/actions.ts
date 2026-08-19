@@ -11,12 +11,19 @@ import {
   getTask,
   setTaskStatus,
   deleteTask as deleteTaskRow,
+  syncRoutineTimeFromBlock,
 } from "@/lib/repositories/tasks";
 import { awardPoints, reverseAward } from "@/lib/scoring/award";
 import { dayKeyFor } from "@/lib/day";
 import { z } from "zod";
 import { POINTS } from "@/lib/points";
-import { nextFreeSlot, zonedTimeToInstant } from "@/lib/time";
+import {
+  nextFreeSlot,
+  zonedTimeToInstant,
+  hourIn,
+  formatClock,
+  minutesBetween,
+} from "@/lib/time";
 import {
   listDayBlocks,
   createBlock,
@@ -206,6 +213,15 @@ export async function scheduleTask(formData: FormData): Promise<ActionResult> {
     areaId: task.areaId ?? undefined,
   });
 
+  // A repeat put on the plan is on the plan every time it runs.
+  await syncRoutineTimeFromBlock(
+    user.id,
+    task.id,
+    hourIn(slot.start, settings.timezone) * 60 +
+      Number(formatClock(slot.start, settings.timezone).slice(3, 5)),
+    minutesBetween(slot.start, slot.end),
+  );
+
   revalidatePath("/app");
   revalidatePath("/app/calendar");
   return { ok: true };
@@ -250,6 +266,14 @@ export async function scheduleTaskAt(
     taskId: task.id,
     areaId: task.areaId ?? undefined,
   });
+
+  // Dropping a repeat on a slot sets the time for the whole series.
+  await syncRoutineTimeFromBlock(
+    user.id,
+    task.id,
+    parsed.data.hour * 60,
+    defaultMinutes(task.points),
+  );
 
   revalidatePath("/app");
   revalidatePath("/app/calendar");

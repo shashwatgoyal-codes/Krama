@@ -4,7 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
-import { getTask, updateTaskFields } from "@/lib/repositories/tasks";
+import {
+  getTask,
+  updateTaskFields,
+  syncRoutineTimeFromBlock,
+} from "@/lib/repositories/tasks";
 import { areaBelongsTo } from "@/lib/repositories/areas";
 import { setTagsOn } from "@/lib/repositories/tags";
 import { parseTagInput } from "@/lib/tags";
@@ -88,6 +92,14 @@ export async function scheduleAt(formData: FormData): Promise<ActionResult> {
     taskId: task.id,
     areaId: task.areaId ?? undefined,
   });
+
+  // A repeat scheduled at a time is at that time every time it runs.
+  await syncRoutineTimeFromBlock(
+    user.id,
+    task.id,
+    parsed.data.hour * 60 + parsed.data.minute,
+    parsed.data.durationMinutes,
+  );
 
   touched();
   return { ok: true };
