@@ -18,6 +18,8 @@ import { materialiseRecurring } from "./recurring";
 const MAX_CATCHUP_DAYS = 7;
 
 export type MaintenanceResult = {
+  /** Routine days that passed unfinished and were closed as missed. */
+  routinesMissed: number;
   rolledForward: number;
   routinesCaughtUp: number;
 };
@@ -49,6 +51,26 @@ export async function runDayMaintenance(
     rolledForward = count;
   }
 
+  // A routine day you missed is missed, not owing.
+  //
+  // Rollover deliberately leaves routine instances where they are, but
+  // nothing then closed them, so every day you skipped left an open row
+  // dated in the past — one per day, forever, all with the same title.
+  // That is what made a daily routine look like a dozen identical tasks.
+  //
+  // Dropped rather than deleted: it happened, you did not do it, and the
+  // history is worth keeping even though the work is not.
+  const { count: missed } = await db.task.updateMany({
+    where: {
+      userId,
+      status: "open",
+      createdForDate: { lt: dayKeyToDate(todayKey) },
+      recurrenceParentId: { not: null },
+    },
+    data: { status: "dropped" },
+  });
+  const routinesMissed = missed;
+
   if (settings.catchUpRoutines) {
     // Walk the missed days oldest-first so the instances land in the
     // order they were actually due.
@@ -60,7 +82,7 @@ export async function runDayMaintenance(
     }
   }
 
-  return { rolledForward, routinesCaughtUp };
+  return { rolledForward, routinesCaughtUp, routinesMissed };
 }
 
 /**

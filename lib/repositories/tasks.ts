@@ -178,13 +178,31 @@ export async function listTasks(
 ): Promise<TaskDetail[]> {
   const today = dayKeyToDate(todayKey);
 
+  /**
+   * A recurring template is a rule, not a piece of work.
+   *
+   * It used to appear in every list beside the days it had produced, so
+   * a daily routine running for a week showed as eight near-identical
+   * rows — the rule, then each day of it — and only one of them was the
+   * one to tick. Rules live under Routines; the work lives everywhere
+   * else.
+   */
+  const notATemplate = {
+    NOT: { AND: [{ recurrence: { not: "none" as const } }, { recurrenceParentId: null }] },
+  };
+
   const where = {
-    all: { userId, status: { not: "dropped" as const } },
-    today: { userId, createdForDate: today },
-    upcoming: { userId, status: "open" as const, createdForDate: { gt: today } },
+    all: { userId, status: { not: "dropped" as const }, ...notATemplate },
+    today: { userId, createdForDate: today, ...notATemplate },
+    upcoming: {
+      userId,
+      status: "open" as const,
+      createdForDate: { gt: today },
+      ...notATemplate,
+    },
     // Templates only — instances are ordinary tasks.
     recurring: { userId, recurrence: { not: "none" as const }, recurrenceParentId: null },
-    done: { userId, status: "done" as const },
+    done: { userId, status: "done" as const, ...notATemplate },
   }[filter];
 
   return db.task.findMany({
@@ -204,12 +222,20 @@ export async function countTasks(
   todayKey: string,
 ): Promise<Record<TaskFilter, number>> {
   const today = dayKeyToDate(todayKey);
+  // The same exclusion the lists use. A chip that counts templates and a
+  // list that hides them disagree, and the number is what you trust.
+  const notATemplate = {
+    NOT: { AND: [{ recurrence: { not: "none" as const } }, { recurrenceParentId: null }] },
+  };
+
   const [all, todayCount, upcoming, recurring, done] = await Promise.all([
-    db.task.count({ where: { userId, status: { not: "dropped" } } }),
-    db.task.count({ where: { userId, createdForDate: today } }),
-    db.task.count({ where: { userId, status: "open", createdForDate: { gt: today } } }),
+    db.task.count({ where: { userId, status: { not: "dropped" }, ...notATemplate } }),
+    db.task.count({ where: { userId, createdForDate: today, ...notATemplate } }),
+    db.task.count({
+      where: { userId, status: "open", createdForDate: { gt: today }, ...notATemplate },
+    }),
     db.task.count({ where: { userId, recurrence: { not: "none" }, recurrenceParentId: null } }),
-    db.task.count({ where: { userId, status: "done" } }),
+    db.task.count({ where: { userId, status: "done", ...notATemplate } }),
   ]);
   return { all, today: todayCount, upcoming, recurring, done };
 }
