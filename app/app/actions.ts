@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { resolveUntil, isUntilPreset } from "@/lib/until";
 import { parseWeekdays } from "@/lib/recurrence";
+import { parseMinute, DEFAULT_ROUTINE_MINUTES } from "@/lib/projection";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
 import {
@@ -75,6 +76,17 @@ export async function createTask(formData: FormData): Promise<ActionResult> {
         ? parseWeekdays(formData.get("recurrenceDays")?.toString())
         : [],
     recurrenceUntil: untilKey ? new Date(`${untilKey}T00:00:00.000Z`) : null,
+    // Without a time a routine never reaches the calendar, which is the
+    // whole reason for setting one up. Only a repeat gets one — a
+    // one-off task is scheduled by dragging it, not by a rule.
+    routineStartMinute:
+      parsed.data.recurrence === "none"
+        ? null
+        : parseMinute(formData.get("routineTime")?.toString()),
+    routineMinutes:
+      parsed.data.recurrence === "none"
+        ? null
+        : Number(formData.get("routineMinutes")) || DEFAULT_ROUTINE_MINUTES,
     timezone: settings.timezone,
     dayEndsAtHour: settings.dayEndsAtHour,
   });

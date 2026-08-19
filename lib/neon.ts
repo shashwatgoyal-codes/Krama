@@ -2,8 +2,13 @@
  * Neon hands out two connection strings, but they are the same URL with
  * one difference: the pooled host contains "-pooler".
  *
- *   pooled  postgresql://user:pw@ep-abc-123-pooler.ap-south-1.aws.neon.tech/db
- *   direct  postgresql://user:pw@ep-abc-123.ap-south-1.aws.neon.tech/db
+ *   pooled  host is  ep-<name>-pooler.<region>.aws.neon.<tld>
+ *   direct  host is  ep-<name>.<region>.aws.neon.<tld>
+ *
+ * Written as a shape rather than a full connection string on purpose:
+ * a realistic-looking one in a comment sets off secret scanners, and an
+ * alert that is always a false alarm teaches everyone to ignore the one
+ * that is not.
  *
  * So only one needs to be configured — the other is derived. That also
  * removes a whole class of mistake: pasting the pooled string into the

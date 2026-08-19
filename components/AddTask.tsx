@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { createTask } from "@/app/app/actions";
 import UntilField from "@/components/tasks/UntilField";
+import { BLOCK_MINUTES } from "@/lib/time";
 import WeekdayPicker from "@/components/tasks/WeekdayPicker";
 
 const REPEATS = [
@@ -117,6 +118,41 @@ export default function AddTask({
           <div className="mt-1">
             <WeekdayPicker selected={[new Date().getDay()]} disabled={pending} />
           </div>
+        </div>
+      )}
+
+      {repeat !== "none" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="label-xs">At</span>
+          {/* Pre-filled rather than blank. A routine with no time never
+              reaches the calendar, and "why isn't it showing" is a worse
+              first experience than a time you have to correct. */}
+          <input
+            type="time"
+            name="routineTime"
+            defaultValue="09:00"
+            disabled={pending}
+            aria-label="What time the routine happens"
+            className="rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+          />
+          <span className="text-[11px] text-mut">for</span>
+          <select
+            name="routineMinutes"
+            defaultValue={60}
+            disabled={pending}
+            aria-label="How long the routine lasts"
+            className="rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+          >
+            {BLOCK_MINUTES.map((m) => (
+              <option key={m} value={m}>
+                {m < 60
+                  ? `${m}m`
+                  : m % 60 === 0
+                    ? `${m / 60}h`
+                    : `${Math.floor(m / 60)}h ${m % 60}m`}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

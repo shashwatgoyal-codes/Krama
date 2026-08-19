@@ -1,10 +1,20 @@
 import { describe, it, expect } from "vitest";
+
+/**
+ * Fixtures use example.invalid — a domain RFC 2606 reserves so that it
+ * can never resolve — rather than a realistic Neon host.
+ *
+ * A convincing fake connection string sets off secret scanners, and an
+ * alert that is always a false alarm trains everyone to ignore the one
+ * that is not. Nothing here should be mistakable for a real credential,
+ * by a person or by a scanner.
+ */
 import { toDirectUrl, toPooledUrl, isPooled, withVerifiedSsl } from "@/lib/neon";
 
 const POOLED =
-  "postgresql://krama_owner:npg_secret@ep-still-frost-a1b2c3-pooler.ap-south-1.aws.neon.tech/krama?sslmode=require";
+  "postgresql://example_user:example_password@ep-example-123-pooler.example.invalid/krama?sslmode=require";
 const DIRECT =
-  "postgresql://krama_owner:npg_secret@ep-still-frost-a1b2c3.ap-south-1.aws.neon.tech/krama?sslmode=require";
+  "postgresql://example_user:example_password@ep-example-123.example.invalid/krama?sslmode=require";
 
 describe("deriving one Neon URL from the other", () => {
   it("turns a pooled URL into a direct one", () => {
@@ -32,10 +42,10 @@ describe("deriving one Neon URL from the other", () => {
 
   it("doesn't mangle a password containing dots", () => {
     const withDots =
-      "postgresql://user:pa.ss.word@ep-abc-123.ap-south-1.aws.neon.tech/db";
+      "postgresql://example_user:pa.ss.word@ep-example-123.example.invalid/db";
     const pooled = toPooledUrl(withDots);
     expect(pooled).toContain("pa.ss.word");
-    expect(pooled).toContain("ep-abc-123-pooler.ap-south-1");
+    expect(pooled).toContain("ep-example-123-pooler.example.invalid");
   });
 
   it("survives an empty value rather than throwing", () => {
@@ -50,7 +60,7 @@ describe("withVerifiedSsl", () => {
     // pg treats `require` as verify-full today and will stop doing so in
     // v9, silently dropping certificate verification on the same URL.
     const out = withVerifiedSsl(
-      "postgresql://u:p@ep-x-pooler.aws.neon.tech/db?sslmode=require",
+      "postgresql://u:p@ep-example-123-pooler.example.invalid/db?sslmode=require",
     );
     expect(out).toContain("sslmode=verify-full");
     expect(out).not.toContain("sslmode=require");
