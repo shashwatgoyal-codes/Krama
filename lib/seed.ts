@@ -1,15 +1,16 @@
 /**
- * What a brand-new account starts with.
+ * What a brand-new account starts with: three areas to file work under,
+ * and nothing else.
  *
- * An empty planner is a planner you close again — there is nothing to
- * look at and nothing to finish, so the first session ends before it
- * starts. These are the few things that make the app show what it is
- * for on day one: three areas to file work under, and one routine that
- * is already on the calendar.
+ * The gym routine below is deliberately NOT seeded. It was, briefly, and
+ * that was wrong: a routine is a personal commitment, and inventing
+ * somebody else's is presumptuous however well-meant. An empty planner
+ * is a weaker first impression than a full one, but a planner that has
+ * already decided you go to the gym is worse.
  *
- * The gym session is deliberately worth the top of the scale. It is the
- * kind of thing you do not feel like doing and are glad to have done,
- * which is exactly what the points are for.
+ * It stays here as a shape — the thing to copy when adding a routine to
+ * one account on purpose, and what the projection tests are written
+ * against.
  */
 
 export const DEFAULT_AREAS = [
@@ -21,6 +22,7 @@ export const DEFAULT_AREAS = [
 /** Every day but Sunday. */
 export const GYM_DAYS = [1, 2, 3, 4, 5, 6];
 
+/** Not seeded. See the note above. */
 export const GYM_ROUTINE = {
   title: "Gym session",
   points: 30,

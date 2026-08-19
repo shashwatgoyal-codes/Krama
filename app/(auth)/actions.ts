@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { DEFAULT_AREAS, GYM_ROUTINE } from "@/lib/seed";
+import { DEFAULT_AREAS } from "@/lib/seed";
 import { hashPassword, verifyPassword, checkPassword } from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
 import {
@@ -69,24 +69,6 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
       passwordHash: await hashPassword(password),
       profile: { create: {} },
       areas: { create: DEFAULT_AREAS.map((a) => ({ ...a })) },
-      // One routine already on the calendar, so the first thing a new
-      // account shows is what the app is for rather than an empty grid.
-      tasks: {
-        create: [
-          {
-            title: GYM_ROUTINE.title,
-            notes: GYM_ROUTINE.notes,
-            points: GYM_ROUTINE.points,
-            recurrence: GYM_ROUTINE.recurrence,
-            recurrenceDays: GYM_ROUTINE.recurrenceDays,
-            routineStartMinute: GYM_ROUTINE.routineStartMinute,
-            routineMinutes: GYM_ROUTINE.routineMinutes,
-            createdForDate: new Date(
-              new Date().toISOString().slice(0, 10) + "T00:00:00.000Z",
-            ),
-          },
-        ],
-      },
     },
     select: { id: true },
   });
