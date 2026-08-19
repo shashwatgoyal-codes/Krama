@@ -110,7 +110,16 @@ describe("every write is scoped to the signed-in user", () => {
 
   it("deleteTask filters on userId as well as id", async () => {
     await deleteTask(USER, "tsk_1");
-    expect(calls[0].method).toBe("deleteMany");
+    // It looks the task up before removing it, so it can tell whether it
+    // is a routine and take the routine's days with it. Every one of
+    // those queries has to be scoped, not just the delete — a lookup
+    // that trusts the id alone leaks whether another account's task
+    // exists.
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(call.args.where).toMatchObject({ userId: USER });
+    }
+    expect(calls.some((c) => c.method === "deleteMany")).toBe(true);
     expect(calls[0].args.where).toMatchObject({ id: "tsk_1", userId: USER });
   });
 });

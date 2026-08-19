@@ -156,9 +156,13 @@ export async function deleteTask(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Unknown task." };
 
   const removed = await deleteTaskRow(user.id, parsed.data.id);
-  if (!removed) return { ok: false, error: "That task no longer exists." };
+  if (!removed.deleted) {
+    return { ok: false, error: "That task no longer exists." };
+  }
 
   revalidatePath("/app");
+  revalidatePath("/app/tasks");
+  revalidatePath("/app/calendar");
   return { ok: true };
 }
 

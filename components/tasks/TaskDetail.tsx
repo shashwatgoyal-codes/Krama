@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
-import { toggleTask } from "@/app/app/actions";
+import { toggleTask, deleteTask } from "@/app/app/actions";
 import { scheduleAt, clearSchedule, saveDetails } from "@/app/app/tasks/actions";
 import { BLOCK_MINUTES } from "@/lib/time";
 import TagField from "@/components/tags/TagField";
@@ -87,6 +87,7 @@ export default function TaskDetail({
   allTags: TagChip[];
 }) {
   const [scheduling, setScheduling] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [recurrence, setRecurrence] = useState(task.recurrence);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -449,7 +450,52 @@ export default function TaskDetail({
               Unschedule
             </Button>
           )}
+
+          {/* Deleting is asked twice, because it takes a routine's whole
+              set of days with it and there is no undo. Points already
+              earned are safe either way — the ledger keeps its own
+              record. */}
+          {confirmingDelete ? (
+            <>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  const data = new FormData();
+                  data.set("id", task.id);
+                  run(deleteTask, data, () => setConfirmingDelete(false));
+                }}
+                className="cursor-pointer rounded-[9px] border border-bad bg-bad px-[13px] py-[7px] text-[12px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-45"
+              >
+                {pending ? "Deleting…" : "Delete for good"}
+              </button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Keep it
+              </Button>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setConfirmingDelete(true)}
+              className="cursor-pointer rounded-[9px] border border-ln2 px-[13px] py-[7px] text-[12px] font-semibold text-mut transition-colors hover:border-bad hover:text-bad disabled:cursor-not-allowed"
+            >
+              Delete
+            </button>
+          )}
         </div>
+      )}
+
+      {confirmingDelete && (
+        <p className="mt-2 max-w-[46ch] text-[11.5px] leading-relaxed text-mut">
+          {task.recurrence !== "none"
+            ? "This removes the routine and every day it has produced. Points you already earned stay — the score is kept separately."
+            : "This cannot be undone. Points you already earned stay — the score is kept separately."}
+        </p>
       )}
 
       {error && (

@@ -153,12 +153,46 @@ export async function setTaskStatus(
   return getTask(userId, taskId);
 }
 
+/**
+ * Removes a task, and a routine's instances along with it.
+ *
+ * recurrenceParentId is a plain column rather than a foreign key, so
+ * deleting a template on its own would leave its instances pointing at
+ * an id that no longer exists — days that still appear in lists, still
+ * claim to be part of a routine, and can never be regenerated because
+ * the rule is gone.
+ *
+ * Points already earned are untouched. The ledger records what happened
+ * and does not reference the task row, so deleting the task removes the
+ * plan, not the history — which is the whole reason the ledger is
+ * append-only and separate.
+ *
+ * Calendar blocks go with it: the Event relation cascades, because a
+ * block for a task that no longer exists is an appointment with nothing.
+ */
 export async function deleteTask(
   userId: string,
   taskId: string,
-): Promise<boolean> {
-  const result = await db.task.deleteMany({ where: { id: taskId, userId } });
-  return result.count > 0;
+): Promise<{ deleted: boolean; instances: number }> {
+  const target = await db.task.findFirst({
+    where: { id: taskId, userId },
+    select: { id: true, recurrence: true, recurrenceParentId: true },
+  });
+  if (!target) return { deleted: false, instances: 0 };
+
+  const isTemplate =
+    target.recurrence !== "none" && target.recurrenceParentId === null;
+
+  let instances = 0;
+  if (isTemplate) {
+    const { count } = await db.task.deleteMany({
+      where: { userId, recurrenceParentId: target.id },
+    });
+    instances = count;
+  }
+
+  const { count } = await db.task.deleteMany({ where: { id: taskId, userId } });
+  return { deleted: count > 0, instances };
 }
 
 /** Points already earned on a given day — feeds the soft daily cap. */
