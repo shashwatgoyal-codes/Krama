@@ -1,0 +1,467 @@
+// Krama schema.
+//
+// Prisma 7 no longer takes connection URLs here. The app connects through
+// a driver adapter (see lib/db.ts) pointed at Neon's *pooled* endpoint;
+// migrations use the *direct* endpoint, configured in prisma.config.ts.
+// That split matters: the pooled endpoint runs transaction pooling, which
+// migrations can't work through.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------- identity
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  /// A small avatar, kept in the row rather than in object storage —
+  /// there is no bucket configured, and one 200KB image per account is
+  /// not what Postgres struggles with. Capped hard on the way in.
+  avatar     Bytes?
+  /// The type sniffed from the file's own bytes, never the browser's
+  /// claim. Serving back what was declared is how an "image" becomes
+  /// an HTML page.
+  avatarType String?
+  avatarAt   DateTime?
+
+  profile  Profile?
+  sessions Session[]
+  codes    VerificationCode[]
+  events   Event[]
+  links    Link[]
+  areas    Area[]
+  tasks    Task[]
+  notes    Note[]
+  tags        Tag[]
+  ledger      PointEntry[]
+  rewards     Reward[]
+  redemptions Redemption[]
+
+  @@map("users")
+}
+
+/// Something worth coming back to. The point of Explore is that a link
+/// you saved is a thing you decided to do something about — so `why`
+/// matters more than the title, and `taskId` is where it stops being a
+/// bookmark you never revisit.
+model Link {
+  id     String @id @default(cuid())
+  userId String
+  taskId String?
+
+  url         String
+  title       String
+  description String?
+  imageUrl    String?
+  /// Host it came from, e.g. "linkedin.com". Drives the filters.
+  source      String
+  /// The user's own note: why this was worth keeping.
+  why         String?
+
+  savedAt    DateTime  @default(now())
+  readAt     DateTime?
+  archivedAt DateTime?
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  tags Tag[]
+
+  @@index([userId, archivedAt])
+  @@index([userId, savedAt])
+  @@map("links")
+}
+
+/// A block of time. Created either directly, or by dragging a task onto
+/// the plan — in which case taskId is set and completing the block
+/// completes the task, which is the whole point of the chain.
+model Event {
+  id     String  @id @default(cuid())
+  userId String
+  taskId String?
+  areaId String?
+
+  title    String
+  startsAt DateTime
+  endsAt   DateTime
+  allDay   Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  area Area? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  tags Tag[]
+
+  @@index([userId, startsAt])
+  @@index([taskId])
+  @@map("events")
+}
+
+enum VerificationPurpose {
+  password_reset
+  email_verify
+}
+
+/// One-time codes, stored only as an HMAC keyed with SESSION_SECRET.
+/// The attempt counter lives here rather than in memory so the ceiling
+/// survives a restart — an in-process counter would reset itself for an
+/// attacker simply by waiting for a deploy.
+model VerificationCode {
+  id       String              @id @default(cuid())
+  userId   String
+  purpose  VerificationPurpose
+  codeHash String
+
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  // Only ever the SHA-256 of the token. The token itself lives in the
+  // user's cookie and is never stored anywhere.
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------- profile
+
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  totalPoints Int    @default(0)
+  level       Int    @default(1)
+  streakDays  Int    @default(0)
+  pace        Int    @default(0)
+  timezone    String @default("Asia/Kolkata")
+
+  // When the day rolls over. Work finished before this hour counts
+  // toward the previous day.
+  dayEndsAtHour Int @default(4)
+
+  // How many finished things keep the streak alive. One by default:
+  // the streak measures whether you showed up, not how much you did.
+  dailyFloor Int @default(1)
+  dailyCap   Int @default(150)
+
+  // A day's worth of work, used as the yardstick for pace. Its own
+  // number rather than dailyFloor × 20: once you set your own points
+  // per task there is no fixed worth to multiply by, and the floor
+  // answers a different question ("did you show up") than pace does
+  // ("how much did you do").
+  dailyTargetPoints Int @default(60)
+
+  // "hidden" | "normal" | "everywhere"
+  scoringVisibility String @default("normal")
+  // Days that never break a streak. 0 = Sunday.
+  restDays          Int[]  @default([0, 6])
+
+  // --- Profile tab -------------------------------------------------
+  /// 1 = Monday, 0 = Sunday. Drives the calendar's first column.
+  weekStartsOn Int    @default(1)
+  /// "24" | "12"
+  timeFormat   String @default("24")
+  /// Shown as "last changed N months ago", never the password itself.
+  passwordChangedAt DateTime?
+
+  // --- Rhythm tab --------------------------------------------------
+  /// "HH:MM" in the user's zone, or null for no nudge. The defaults are
+  /// the ones the design shows: a reminder you have to go and switch on
+  /// is a reminder almost nobody switches on.
+  morningReminder String? @default("08:30")
+  eveningReminder String? @default("21:00")
+  /// How far back something may be logged and still count for half.
+  backdateLimitDays  Int     @default(2)
+  /// Unfinished work moves forward instead of disappearing.
+  rolloverUnfinished Boolean @default(true)
+  /// Off means a missed routine is skipped, not stacked up.
+  catchUpRoutines    Boolean @default(false)
+
+  // --- Appearance tab ----------------------------------------------
+  /// "comfortable" | "compact"
+  density      String  @default("comfortable")
+  reduceMotion Boolean @default(false)
+  /// "krama" = Cal Sans + Inter, "system" = the OS stack.
+  interfaceFont String @default("krama")
+  /// Five preset names, one per sticky tint. See lib/notes.ts.
+  noteTints     String[] @default(["amber", "sky", "rose", "violet", "slate"])
+  /// Palette token for the single accent hue. See lib/appearance.ts.
+  accent       String  @default("amber")
+
+  /// Where a new task lands when no area is chosen.
+  defaultAreaId String?
+
+  lastActiveOn DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+/// Something worth working toward.
+///
+/// Points accumulated with nothing to spend them on, which makes them a
+/// number rather than a reward. A reward is whatever you decide it is —
+/// a film, a day off, a thing you have been putting off buying — priced
+/// in the points you already earn.
+model Reward {
+  id     String @id @default(cuid())
+  userId String
+
+  name  String
+  /// What it costs. Whole points, because half a point is not a thing.
+  cost  Int
+  /// Optional: what claiming it actually means.
+  notes String?
+
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redemptions Redemption[]
+
+  @@index([userId, archivedAt])
+  @@map("rewards")
+}
+
+/// A reward actually claimed.
+///
+/// Append-only, like the point ledger and for the same reason: the
+/// balance has to be reconstructible from the record, and a row you can
+/// quietly edit is a balance you cannot trust. The cost is copied in
+/// rather than read through the relation, so repricing a reward later
+/// never rewrites what you paid for it at the time.
+model Redemption {
+  id       String @id @default(cuid())
+  userId   String
+  rewardId String
+
+  name String
+  cost Int
+
+  redeemedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, redeemedAt])
+  @@map("redemptions")
+}
+
+// ---------------------------------------------------------------- content
+
+/// Free-form, cross-cutting labels. Areas are the few big buckets; tags
+/// are everything else, and they mean the same thing on a task, a note,
+/// an event or a saved link.
+model Tag {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  /// Same palette as areas — "mut" is the plain grey most tags stay.
+  colour String @default("mut")
+  /// Touched whenever the tag is applied, so unused ones can be found.
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// One label system shared by every content type, which is the whole
+  /// point of tags — an "interviews" tag that only works on links is
+  /// four tag systems wearing one name.
+  tasks  Task[]
+  notes  Note[]
+  events Event[]
+  links  Link[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
+
+model Area {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  colour String @default("acc")
+  points Int    @default(0)
+  order  Int    @default(0)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks  Task[]
+  events Event[]
+  notes  Note[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("areas")
+}
+
+enum TaskStatus {
+  open
+  done
+  dropped
+}
+
+enum Recurrence {
+  none
+  daily
+  weekdays
+  weekly
+  monthly
+}
+
+model Task {
+  id     String @id @default(cuid())
+  userId String
+  areaId String?
+
+  title  String
+  notes  String?
+  status TaskStatus @default(open)
+
+  // Points the task is worth. Kept narrow on purpose — see AGENTS.md.
+  points Int @default(20)
+
+  dueOn       DateTime?
+  completedAt DateTime?
+  // The day this task belongs to, in the user's timezone. Drives the
+  // backdating rule; not the same as createdAt.
+  createdForDate DateTime
+
+  recurrence       Recurrence @default(none)
+  // For monthly: day of month. For weekly it held the single weekday,
+  // and still does for rows written before recurrenceDays existed.
+  recurrenceValue  Int?
+  /// What time of day a routine happens, as minutes from midnight, and
+  /// for how long. Set on the template, not the instance: the whole
+  /// point is that the calendar can draw next Monday's gym session
+  /// without a row existing for it yet.
+  routineStartMinute Int?
+  routineMinutes     Int?
+  /// Which weekdays a weekly routine runs on, 0 = Sunday.
+  ///
+  /// An array rather than one number because "every day except Sunday"
+  /// is a thing people actually want and a single weekday cannot say
+  /// it. Empty means fall back to recurrenceValue, so rows written
+  /// before this existed keep working.
+  recurrenceDays   Int[]      @default([])
+  /// The last day this routine runs, or null for open-ended. Stored as
+  /// a day rather than an instant: "until the end of March" is a date
+  /// someone chose, not a moment, and a timezone should not be able to
+  /// move it.
+  recurrenceUntil  DateTime?
+  // Instances point back at the template they came from.
+  recurrenceParentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area   Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  events Event[]
+  links  Link[]
+  tags   Tag[]
+
+  @@index([userId, status])
+  @@index([userId, createdForDate])
+  @@index([recurrenceParentId])
+  @@map("tasks")
+}
+
+// ---------------------------------------------------------------- scoring
+
+enum PointSource {
+  task
+  habit
+  manual
+}
+
+/// Append-only. A database trigger rejects UPDATE and DELETE — every
+/// score in the app is recomputed from these rows, never edited.
+model PointEntry {
+  id         String      @id @default(cuid())
+  userId     String
+  sourceType PointSource
+  sourceId   String?
+
+  points     Int
+  multiplier Float @default(1)
+  // The day it counted toward, after the day-boundary rule is applied.
+  countedFor DateTime
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, countedFor])
+  @@map("point_ledger")
+}
+
+// ---------------------------------------------------------------- notes
+
+/// A sticky note on a board. Position is stored so the board looks the
+/// same when you come back — where you put something is part of what it
+/// means.
+model Note {
+  id     String @id @default(cuid())
+  userId String
+
+  body   String
+  /// One of five tints, desaturated to sit inside the palette.
+  colour String @default("n1")
+
+  x Int @default(0)
+  y Int @default(0)
+  /// Stacking order, so the note you last touched sits on top.
+  z Int @default(0)
+
+  /// Set when this note has been turned into a task.
+  taskId String?
+
+  /// Which area this note belongs to, shown on its face.
+  ///
+  /// A note with no home is a note you cannot find later, and the board
+  /// is the one place in the app where things accumulate quietly.
+  areaId String?
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  tags Tag[]
+
+  @@index([userId, archivedAt])
+  @@map("notes")
+}

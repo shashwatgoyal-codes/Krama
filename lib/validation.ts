@@ -1,0 +1,252 @@
+import { z } from "zod";
+import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth/password";
+import { BLOCK_MINUTES } from "./time";
+import { ACCENT_VALUES, DENSITIES } from "./appearance";
+import { TINT_PRESETS } from "./notes";
+
+/**
+ * Every server action validates its input through one of these before
+ * touching the database. Zod strips unknown keys, so a crafted form post
+ * can't smuggle in fields the action didn't ask for.
+ */
+
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Enter your email address.")
+  .max(254, "That email address is too long.")
+  .email("That doesn't look like an email address.");
+
+export const passwordSchema = z
+  .string()
+  .min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters.`)
+  .max(MAX_PASSWORD_LENGTH, `Keep it under ${MAX_PASSWORD_LENGTH} characters.`);
+
+export const signUpSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "What should we call you?")
+    .max(80, "That name is a bit long."),
+  email: emailSchema,
+  password: passwordSchema,
+});
+
+export const signInSchema = z.object({
+  email: emailSchema,
+  // Not the full password rules — an old account may predate them, and
+  // rejecting a valid password on the sign-in form would be maddening.
+  password: z.string().min(1, "Enter your password."),
+});
+
+export const createTaskSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Give the task a name.")
+    .max(200, "Keep the title under 200 characters."),
+  notes: z.string().trim().max(2000).optional(),
+  areaId: z.string().cuid().optional(),
+  points: z.number().int().min(1).max(30).optional(),
+  dueOn: z.coerce.date().optional(),
+  recurrence: z
+    .enum(["none", "daily", "weekdays", "weekly", "monthly"])
+    .default("none"),
+  recurrenceValue: z.number().int().min(0).max(31).optional(),
+});
+
+export const taskIdSchema = z.object({ id: z.string().cuid() });
+
+/** Spaces and dashes are forgiven — people copy codes untidily. */
+const otpSchema = z
+  .string()
+  .transform((v) => v.replace(/\D/g, ""))
+  .pipe(
+    z
+      .string()
+      .length(6, "The code is six digits.")
+      .regex(/^\d+$/, "The code is six digits."),
+  );
+
+export const requestResetSchema = z.object({ email: emailSchema });
+
+export const resetPasswordSchema = z.object({
+  email: emailSchema,
+  code: otpSchema,
+  password: passwordSchema,
+});
+
+export const verifyEmailSchema = z.object({ code: otpSchema });
+
+export const scheduleAtSchema = z.object({
+  id: z.string().cuid(),
+  dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
+  hour: z.coerce.number().int().min(0).max(23),
+  minute: z.coerce.number().int().min(0).max(59),
+  durationMinutes: z.coerce
+    .number()
+    .int()
+    .refine(
+      (m) => (BLOCK_MINUTES as readonly number[]).includes(m),
+      "Pick one of the offered lengths.",
+    ),
+});
+
+/** Rejects anything the platform doesn't recognise as an IANA zone. */
+export function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const nameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "What should we call you?")
+    .max(80, "That name is a bit long."),
+});
+
+const restDaysSchema = z
+  .array(z.coerce.number().int().min(0).max(6))
+  .max(6, "Leave at least one day that counts — otherwise nothing does.")
+  // A duplicate day in the form post shouldn't become a duplicate row.
+  .transform((days) => [...new Set(days)].sort((a, b) => a - b));
+
+/** The Profile tab: who you are and the time settings everything derives from. */
+export const profileTabSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "What should we call you?")
+    .max(80, "That name is a bit long."),
+  timezone: z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+  // Capped at noon: a "day" that ends in the evening isn't a late night,
+  // it's a different day, and allowing it would quietly corrupt every
+  // date the scoring engine derives.
+  dayEndsAtHour: z.coerce.number().int().min(0).max(12),
+  weekStartsOn: z.coerce.number().int().refine((d) => d === 0 || d === 1),
+  timeFormat: z.enum(["12", "24"]),
+});
+
+export const dayScheduleSchema = z.object({
+  timezone: z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+  restDays: restDaysSchema,
+  // Capped at noon: a "day" that ends in the evening isn't a late night,
+  // it's a different day, and allowing it would quietly corrupt every
+  // date the scoring engine derives.
+  dayEndsAtHour: z.coerce
+    .number()
+    .int()
+    .min(0, "Pick an hour between midnight and noon.")
+    .max(12, "Pick an hour between midnight and noon."),
+});
+
+/** "HH:MM" in the user's own zone, or empty for no nudge. */
+const reminderSchema = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.length ? v : null))
+  .refine(
+    (v) => v === null || /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
+    "Use a time like 08:30.",
+  );
+
+/** The Rhythm tab: when the app expects you, and when it leaves you alone. */
+export const rhythmSchema = z.object({
+  dailyFloor: z.coerce
+    .number()
+    .int()
+    .min(1, "The floor needs to be at least one action.")
+    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+  dailyTargetPoints: z.coerce
+    .number()
+    .int()
+    .min(1, "A day's work has to be worth at least a point.")
+    .max(500, "Above 500 a day, pace stops telling you anything."),
+  restDays: restDaysSchema,
+  morningReminder: reminderSchema,
+  eveningReminder: reminderSchema,
+  // Zero means "today only". Thirty is already generous enough that a
+  // streak stops meaning much beyond it.
+  backdateLimitDays: z.coerce.number().int().min(0).max(30),
+  rolloverUnfinished: z.coerce.boolean(),
+  catchUpRoutines: z.coerce.boolean(),
+});
+
+/** The Appearance tab. */
+export const appearanceSchema = z.object({
+  accent: z.enum(ACCENT_VALUES),
+  interfaceFont: z.enum(["krama", "system"]),
+  // Exactly five, each a known preset. A short list would leave a note
+  // colour undefined; a long one would silently ignore the extras.
+  noteTints: z.array(z.string()).length(5).refine(
+    (t) => t.every((v) => TINT_PRESETS.some((p) => p.value === v)),
+    "That isn't one of the tints.",
+  ),
+  density: z.enum(DENSITIES),
+  reduceMotion: z.coerce.boolean(),
+  showPointsOnTasks: z.coerce.boolean(),
+});
+
+export const scoringSchema = z.object({
+  dailyFloor: z.coerce
+    .number()
+    .int()
+    .min(1, "The floor needs to be at least one action.")
+    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+  dailyTargetPoints: z.coerce
+    .number()
+    .int()
+    .min(1, "A day's work has to be worth at least a point.")
+    .max(500, "Above 500 a day, pace stops telling you anything."),
+  dailyCap: z.coerce
+    .number()
+    .int()
+    .min(20, "A cap under 20 would slow you down almost immediately.")
+    .max(1000, "Keep the cap under 1000."),
+  scoringVisibility: z.enum(["hidden", "normal", "everywhere"]),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password."),
+  newPassword: passwordSchema,
+});
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Enter your password to confirm."),
+  confirm: z.literal("DELETE", {
+    error: "Type DELETE exactly to confirm.",
+  }),
+});
+
+export type SignUpInput = z.infer<typeof signUpSchema>;
+export type SignInInput = z.infer<typeof signInSchema>;
+export type CreateTaskInput = z.infer<typeof createTaskSchema>;
+
+/** Shape every server action returns, so forms can render errors uniformly. */
+export type ActionResult<T = undefined> =
+  | { ok: true; data?: T }
+  | { ok: false; error: string; field?: string };
+
+/** Turns a Zod failure into the first message a person should see. */
+export function firstIssue(error: z.ZodError): {
+  error: string;
+  field?: string;
+} {
+  const issue = error.issues[0];
+  return {
+    error: issue?.message ?? "That didn't look right.",
+    field: issue?.path[0]?.toString(),
+  };
+}
