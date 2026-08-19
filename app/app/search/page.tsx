@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/guard";
 import { search } from "@/lib/repositories/search";
@@ -8,7 +9,7 @@ import TagChips from "@/components/tags/TagChips";
 import SearchBox from "@/components/search/SearchBox";
 
 export const metadata: Metadata = {
-  title: "Search · Krama",
+  title: pageTitle("Search"),
   robots: { index: false, follow: false },
 };
 

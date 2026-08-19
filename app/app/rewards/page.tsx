@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import { requireUser } from "@/lib/auth/guard";
 import {
   listRewards,
@@ -10,7 +11,7 @@ import { describeReward, nextGoal, daysAway } from "@/lib/rewards";
 import RewardList from "@/components/rewards/RewardList";
 
 export const metadata: Metadata = {
-  title: "Rewards · Krama",
+  title: pageTitle("Rewards"),
   robots: { index: false, follow: false },
 };
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/guard";
 import { getSettings } from "@/lib/repositories/profile";
@@ -34,7 +35,7 @@ import MonthGrid, { type MonthCell } from "@/components/calendar/MonthGrid";
 import WaitingItem from "@/components/plan/WaitingItem";
 
 export const metadata: Metadata = {
-  title: "Calendar · Krama",
+  title: pageTitle("Calendar"),
   robots: { index: false, follow: false },
 };
 

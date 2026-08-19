@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import AuthShell from "@/components/auth/AuthShell";
 import AuthForm from "@/components/auth/AuthForm";
 import Field from "@/components/auth/Field";
@@ -8,7 +9,7 @@ import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
 import { redirectIfSignedIn } from "@/lib/auth/redirect-if-signed-in";
 
 export const metadata: Metadata = {
-  title: "Create an account · Krama",
+  title: pageTitle("Create an account"),
   robots: { index: false, follow: false },
 };
 

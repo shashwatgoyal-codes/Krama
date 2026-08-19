@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import { requireUser } from "@/lib/auth/guard";
 import { getProfileOverview } from "@/lib/repositories/profile";
 import { zoneGroups } from "@/lib/timezones";
@@ -38,7 +39,7 @@ import {
 } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Profile · Krama",
+  title: pageTitle("Profile"),
   robots: { index: false, follow: false },
 };
 

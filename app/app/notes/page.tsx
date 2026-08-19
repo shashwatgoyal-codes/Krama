@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import { requireUser } from "@/lib/auth/guard";
 import { listNotes } from "@/lib/repositories/notes";
 import NoteBoard from "@/components/notes/NoteBoard";
 import { listTags } from "@/lib/repositories/tags";
 
 export const metadata: Metadata = {
-  title: "Notes · Krama",
+  title: pageTitle("Notes"),
   robots: { index: false, follow: false },
 };
 

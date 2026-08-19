@@ -5,6 +5,9 @@ import {
   ENV_LABEL,
   ENV_STYLE,
   ENVIRONMENTS,
+  appName,
+  pageTitle,
+  type AppEnv,
 } from "@/lib/env";
 
 const original = process.env.APP_ENV;
@@ -60,5 +63,58 @@ describe("badge presentation", () => {
   it("gives each environment a visually distinct style", () => {
     const styles = ENVIRONMENTS.map((e) => ENV_STYLE[e]);
     expect(new Set(styles).size).toBe(styles.length);
+  });
+});
+
+describe("what the app calls itself per environment", () => {
+  const original = process.env.APP_ENV;
+  afterEach(() => {
+    if (original === undefined) delete process.env.APP_ENV;
+    else process.env.APP_ENV = original;
+  });
+
+  it("is plain Krama in production", () => {
+    expect(appName("prod")).toBe("Krama");
+  });
+
+  const suffixed: [AppEnv, string][] = [
+    ["dev", "krama.dev"],
+    ["qa", "krama.qa"],
+    ["stage", "krama.stage"],
+  ];
+
+  for (const [env, expected] of suffixed) {
+    it(`names ${env} ${expected}`, () => {
+      expect(appName(env)).toBe(expected);
+    });
+  }
+
+  it("gives every environment a distinct name", () => {
+    const names = ENVIRONMENTS.map((e) => appName(e));
+    expect(new Set(names).size).toBe(ENVIRONMENTS.length);
+  });
+
+  it("matches the hostname it deploys to, so tab and URL agree", () => {
+    for (const env of ENVIRONMENTS) {
+      if (env === "prod") continue;
+      expect(appName(env)).toBe(`krama.${env}`);
+    }
+  });
+
+  it("builds a page title against the environment", () => {
+    expect(pageTitle("Tasks", "prod")).toBe("Tasks · Krama");
+    expect(pageTitle("Tasks", "stage")).toBe("Tasks · krama.stage");
+  });
+
+  it("reads the environment from APP_ENV when none is given", () => {
+    process.env.APP_ENV = "stage";
+    expect(appName()).toBe("krama.stage");
+    process.env.APP_ENV = "prod";
+    expect(appName()).toBe("Krama");
+  });
+
+  it("falls back to dev's name for an unrecognised APP_ENV", () => {
+    process.env.APP_ENV = "nonsense";
+    expect(appName()).toBe("krama.dev");
   });
 });

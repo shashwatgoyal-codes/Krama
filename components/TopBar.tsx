@@ -8,6 +8,7 @@ import {
   ENV_STYLE,
   shouldShowEnvBadge,
   type AppEnv,
+  appName,
 } from "@/lib/env";
 
 const NAV = [
@@ -34,7 +35,7 @@ export default function TopBar({
   return (
     <header className="flex h-12 flex-none items-center gap-3.5 border-b border-ln bg-surf px-4">
       <span className="font-display text-[14.5px] font-semibold tracking-[-0.015em]">
-        Krama
+        {appName(env)}
       </span>
 
       {shouldShowEnvBadge(env) && (

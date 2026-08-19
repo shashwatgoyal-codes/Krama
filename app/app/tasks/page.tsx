@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import { requireUser } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/repositories/profile";
@@ -18,7 +19,7 @@ import AddTask from "@/components/AddTask";
 import TaskDetail, { type TaskPanelView } from "@/components/tasks/TaskDetail";
 
 export const metadata: Metadata = {
-  title: "Tasks · Krama",
+  title: pageTitle("Tasks"),
   robots: { index: false, follow: false },
 };
 

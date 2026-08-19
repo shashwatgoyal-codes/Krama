@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import AuthShell from "@/components/auth/AuthShell";
 import ResetFlow from "@/components/auth/ResetFlow";
 import { redirectIfSignedIn } from "@/lib/auth/redirect-if-signed-in";
 
 export const metadata: Metadata = {
-  title: "Reset your password · Krama",
+  title: pageTitle("Reset your password"),
   robots: { index: false, follow: false },
 };
 

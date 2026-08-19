@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { appName } from "@/lib/env";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Krama",
+  title: appName(),
   description:
     "A planner that keeps your routines, notes and days in one place — and rewards showing up.",
 };

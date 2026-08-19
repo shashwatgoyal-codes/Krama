@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
@@ -7,7 +8,7 @@ import VerifyEmailForm from "@/components/auth/VerifyEmailForm";
 import { sendVerification } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Confirm your email · Krama",
+  title: pageTitle("Confirm your email"),
   robots: { index: false, follow: false },
 };
 

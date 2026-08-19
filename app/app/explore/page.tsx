@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { pageTitle } from "@/lib/env";
 import { requireUser } from "@/lib/auth/guard";
 import TagChips from "@/components/tags/TagChips";
 import { listLinks, countLinks, type LinkFilter } from "@/lib/repositories/links";
@@ -7,7 +8,7 @@ import SaveLinkBar from "@/components/explore/SaveLinkBar";
 import LinkDetail, { type LinkDetailView } from "@/components/explore/LinkDetail";
 
 export const metadata: Metadata = {
-  title: "Explore · Krama",
+  title: pageTitle("Explore"),
   robots: { index: false, follow: false },
 };
 
