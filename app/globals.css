@@ -1,217 +1,270 @@
+@import "tailwindcss";
+
 /* ============================================================
-   Krama — design tokens and base styles
-   Three-state theme: bare :root is light, prefers-color-scheme
-   handles system dark, [data-theme] wins over both.
+   Krama — design tokens
+   Raw values live on :root and flip with the theme. They're then
+   mapped into Tailwind's namespace with `@theme inline`, so a
+   utility like `bg-surf` emits var(--surf) rather than a frozen
+   colour — one set of utilities works in both themes with no
+   `dark:` variants anywhere.
    ============================================================ */
 
-:root{
-  --paper:#F6F7F9; --surf:#FFFFFF; --surf2:#FAFBFC;
-  --ink:#0F1115; --ink2:#2C3038; --mut:#5E636D; --fai:#979CA6;
-  --ln:#E6E8EC; --ln2:#D4D7DD;
+:root {
+  --paper: #f6f7f9;
+  --surf: #ffffff;
+  --surf2: #fafbfc;
+  --ink: #0f1115;
+  --ink2: #2c3038;
+  --mut: #5e636d;
+  --fai: #979ca6;
+  --ln: #e6e8ec;
+  --ln2: #d4d7dd;
 
-  --acc:#B45309; --accS:#FDF1E3; --onAcc:#FFFFFF;
-  --ok:#0E7490;  --okS:#E4F5F9;
-  --bad:#BE123C; --badS:#FDECEF;
-  --warn:#A16207; --warnS:#FEF6E3;
+  --acc: #b45309;
+  --acc-soft: #fdf1e3;
+  --on-acc: #ffffff;
+  --ok: #0e7490;
+  --ok-soft: #e4f5f9;
+  --bad: #be123c;
+  --bad-soft: #fdecef;
+  --warn: #a16207;
+  --warn-soft: #fef6e3;
 
   /* sticky-note tints, desaturated to sit inside the palette */
-  --n1:#FDF0DC; --n1b:#E0B268;
-  --n2:#E2F4F8; --n2b:#8FC5D4;
-  --n3:#FBE8EC; --n3b:#DFA1AF;
-  --n4:#E8EBF4; --n4b:#A8B0CA;
-  --n5:#F1F2F4; --n5b:#C3C7CE;
-
-  --display:"Cal Sans",-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;
-  --sans:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
-  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
-
-  --r-sm:6px; --r-md:9px; --r-lg:12px; --r-xl:16px;
+  --n1: #fdf0dc;
+  --n1b: #e0b268;
+  --n2: #e2f4f8;
+  --n2b: #8fc5d4;
+  --n3: #fbe8ec;
+  --n3b: #dfa1af;
+  --n4: #e8ebf4;
+  --n4b: #a8b0ca;
+  --n5: #f1f2f4;
+  --n5b: #c3c7ce;
 }
 
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --paper:#0B0C0F; --surf:#131519; --surf2:#0F1114;
-    --ink:#F0F2F5; --ink2:#D3D7DE; --mut:#9096A1; --fai:#656B76;
-    --ln:#1E2126; --ln2:#2D313A;
-    --acc:#EFA850; --accS:#241A0E; --onAcc:#231705;
-    --ok:#3AC7E0;  --okS:#0E2830;
-    --bad:#F2647F; --badS:#2C121A;
-    --warn:#E0B44A; --warnS:#241D0C;
-    --n1:#2B2011; --n1b:#7A5C2A;
-    --n2:#0F2830; --n2b:#2F6E80;
-    --n3:#2C1620; --n3b:#7A4457;
-    --n4:#171B29; --n4b:#454F73;
-    --n5:#1A1C21; --n5b:#3A3F49;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0b0c0f;
+    --surf: #131519;
+    --surf2: #0f1114;
+    --ink: #f0f2f5;
+    --ink2: #d3d7de;
+    --mut: #9096a1;
+    --fai: #656b76;
+    --ln: #1e2126;
+    --ln2: #2d313a;
+    --acc: #efa850;
+    --acc-soft: #241a0e;
+    --on-acc: #231705;
+    --ok: #3ac7e0;
+    --ok-soft: #0e2830;
+    --bad: #f2647f;
+    --bad-soft: #2c121a;
+    --warn: #e0b44a;
+    --warn-soft: #241d0c;
+    --n1: #2b2011;
+    --n1b: #7a5c2a;
+    --n2: #0f2830;
+    --n2b: #2f6e80;
+    --n3: #2c1620;
+    --n3b: #7a4457;
+    --n4: #171b29;
+    --n4b: #454f73;
+    --n5: #1a1c21;
+    --n5b: #3a3f49;
   }
 }
-:root[data-theme="dark"]{
-  --paper:#0B0C0F; --surf:#131519; --surf2:#0F1114;
-  --ink:#F0F2F5; --ink2:#D3D7DE; --mut:#9096A1; --fai:#656B76;
-  --ln:#1E2126; --ln2:#2D313A;
-  --acc:#EFA850; --accS:#241A0E; --onAcc:#231705;
-  --ok:#3AC7E0;  --okS:#0E2830;
-  --bad:#F2647F; --badS:#2C121A;
-  --warn:#E0B44A; --warnS:#241D0C;
-  --n1:#2B2011; --n1b:#7A5C2A;
-  --n2:#0F2830; --n2b:#2F6E80;
-  --n3:#2C1620; --n3b:#7A4457;
-  --n4:#171B29; --n4b:#454F73;
-  --n5:#1A1C21; --n5b:#3A3F49;
+
+:root[data-theme="dark"] {
+  --paper: #0b0c0f;
+  --surf: #131519;
+  --surf2: #0f1114;
+  --ink: #f0f2f5;
+  --ink2: #d3d7de;
+  --mut: #9096a1;
+  --fai: #656b76;
+  --ln: #1e2126;
+  --ln2: #2d313a;
+  --acc: #efa850;
+  --acc-soft: #241a0e;
+  --on-acc: #231705;
+  --ok: #3ac7e0;
+  --ok-soft: #0e2830;
+  --bad: #f2647f;
+  --bad-soft: #2c121a;
+  --warn: #e0b44a;
+  --warn-soft: #241d0c;
+  --n1: #2b2011;
+  --n1b: #7a5c2a;
+  --n2: #0f2830;
+  --n2b: #2f6e80;
+  --n3: #2c1620;
+  --n3b: #7a4457;
+  --n4: #171b29;
+  --n4b: #454f73;
+  --n5: #1a1c21;
+  --n5b: #3a3f49;
 }
 
-/* ---------------- base ---------------- */
-*{ box-sizing:border-box; }
-html,body{ padding:0; margin:0; }
-body{
-  background:var(--paper); color:var(--ink);
-  font-family:var(--sans); font-size:14px; line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-}
-a{ color:inherit; text-decoration:none; }
-button{ font-family:inherit; }
-:focus-visible{ outline:2px solid var(--acc); outline-offset:2px; border-radius:4px; }
-@media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+/* ---------- expose the tokens to Tailwind ---------- */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surf: var(--surf);
+  --color-surf2: var(--surf2);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-mut: var(--mut);
+  --color-fai: var(--fai);
+  --color-ln: var(--ln);
+  --color-ln2: var(--ln2);
 
-.mono{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
-.num{ font-variant-numeric:tabular-nums; }
-.lab{
-  font-family:var(--mono); font-size:10px; letter-spacing:.13em;
-  text-transform:uppercase; color:var(--fai); font-weight:600;
-}
+  --color-acc: var(--acc);
+  --color-acc-soft: var(--acc-soft);
+  --color-on-acc: var(--on-acc);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
 
-/* ---------------- app shell ---------------- */
-.shell{ min-height:100vh; display:flex; flex-direction:column; }
+  --color-n1: var(--n1);
+  --color-n1b: var(--n1b);
+  --color-n2: var(--n2);
+  --color-n2b: var(--n2b);
+  --color-n3: var(--n3);
+  --color-n3b: var(--n3b);
+  --color-n4: var(--n4);
+  --color-n4b: var(--n4b);
+  --color-n5: var(--n5);
+  --color-n5b: var(--n5b);
 
-.topbar{
-  height:48px; flex:none; display:flex; align-items:center; gap:14px;
-  padding:0 16px; background:var(--surf); border-bottom:1px solid var(--ln);
-}
-.mark{ font-family:var(--display); font-size:14.5px; font-weight:600; letter-spacing:-.015em; }
-.tnav{ display:flex; gap:3px; }
-.tnav a{
-  font-size:12.5px; color:var(--mut); padding:5px 10px;
-  border-radius:var(--r-sm); font-weight:500; transition:background .15s,color .15s;
-}
-.tnav a:hover{ color:var(--ink); background:var(--surf2); }
-.tnav a[aria-current="page"]{ color:var(--acc); background:var(--accS); font-weight:650; }
-.tright{ margin-left:auto; display:flex; align-items:center; gap:10px; }
-.kbd{
-  font-family:var(--mono); font-size:10px; border:1px solid var(--ln2);
-  border-radius:4px; padding:2px 5px; color:var(--fai);
-}
-.av{
-  width:26px; height:26px; border-radius:50%; flex:none; display:grid; place-items:center;
-  background:var(--acc); color:var(--onAcc); font-size:11px; font-weight:700;
-}
-.iconbtn{
-  width:30px; height:30px; border-radius:var(--r-sm); border:1px solid var(--ln2);
-  background:transparent; color:var(--mut); cursor:pointer;
-  display:grid; place-items:center; transition:.15s;
-}
-.iconbtn:hover{ color:var(--acc); border-color:var(--acc); }
-
-/* ---------------- two-pane ---------------- */
-.two{ flex:1; display:grid; grid-template-columns:1.45fr 1fr; min-height:0; }
-@media (max-width:840px){ .two{ grid-template-columns:1fr; } }
-.pl{ border-right:1px solid var(--ln); padding:18px 20px; background:var(--surf); min-width:0; }
-.pr{ padding:18px; background:var(--surf2); min-width:0; }
-.ph{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px; }
-.ph .t{ font-family:var(--display); font-size:16px; font-weight:600; letter-spacing:-.02em; }
-.ph .t.sm{ font-size:13.5px; }
-
-/* ---------------- buttons ---------------- */
-.btn{
-  font-size:12.5px; font-weight:600; cursor:pointer; padding:7px 13px;
-  border-radius:var(--r-md); border:1px solid var(--ln2);
-  background:var(--surf); color:var(--ink2); transition:.15s;
-}
-.btn:hover{ border-color:var(--acc); color:var(--acc); }
-.btn.pri{ background:var(--ink); border-color:var(--ink); color:var(--paper); }
-.btn.pri:hover{ background:var(--ink2); border-color:var(--ink2); color:var(--paper); }
-.btn.sm{ font-size:11.5px; padding:5px 10px; }
-.btn:disabled{ opacity:.45; cursor:not-allowed; }
-
-.chip{
-  font-family:var(--mono); font-size:10px; letter-spacing:.05em; text-transform:uppercase;
-  padding:3px 7px; border-radius:var(--r-sm); background:var(--surf2);
-  border:1px solid var(--ln); color:var(--mut); white-space:nowrap;
-}
-.chip.a{ background:var(--accS); border-color:var(--acc); color:var(--acc); }
-.chip.o{ background:var(--okS); border-color:var(--ok); color:var(--ok); }
-
-/* ---------------- time blocks ---------------- */
-.blk{ display:flex; gap:11px; padding:8px 0; }
-.tcol{ width:54px; flex:none; text-align:right; }
-.tcol .s{ font-family:var(--mono); font-size:11px; color:var(--ink2); font-weight:600; }
-.tcol .d{ font-family:var(--mono); font-size:9.5px; color:var(--fai); margin-top:1px; }
-.cd{
-  flex:1; border-left:2px solid var(--acc); background:var(--accS);
-  border-radius:0 var(--r-md) var(--r-md) 0; padding:8px 11px;
-}
-.cd.done{ border-left-color:var(--ok); background:var(--okS); }
-.cd.idle{ border-left-color:var(--ln2); background:var(--surf2); }
-.cd .ti{ font-size:13px; font-weight:600; }
-.cd .mt{ font-size:11px; color:var(--mut); margin-top:2px; }
-.drop{
-  margin-top:8px; border:1px dashed var(--ln2); border-radius:var(--r-md);
-  padding:12px; text-align:center;
+  --font-display: "Cal Sans", -apple-system, BlinkMacSystemFont,
+    "SF Pro Display", system-ui, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
-/* ---------------- task rows ---------------- */
-.tasks{ display:flex; flex-direction:column; gap:6px; }
-.task{
-  display:flex; align-items:center; gap:10px; padding:9px 11px;
-  background:var(--surf); border:1px solid var(--ln); border-radius:var(--r-md);
-  cursor:pointer; text-align:left; width:100%; transition:border-color .15s, background .15s;
-}
-.task:hover{ border-color:var(--acc); }
-.task .tt{ flex:1; font-size:13px; min-width:0; color:var(--ink); }
-.task.done{ background:var(--okS); border-color:var(--ok); }
-.task.done .tt{ color:var(--mut); text-decoration:line-through; }
-.tick{
-  width:17px; height:17px; border-radius:5px; flex:none;
-  border:1.5px solid var(--ln2); display:grid; place-items:center; transition:.15s;
-}
-.tick svg{ width:10px; height:10px; opacity:0; transition:opacity .15s; }
-.task.done .tick{ background:var(--ok); border-color:var(--ok); }
-.task.done .tick svg{ opacity:1; }
-.pts{
-  font-family:var(--mono); font-size:11.5px; font-weight:600;
-  color:var(--acc); font-variant-numeric:tabular-nums; white-space:nowrap;
-}
-.task.done .pts{ color:var(--ok); }
+/* ---------- base ---------- */
+@layer base {
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
 
-/* ---------------- pace meter ---------------- */
-.meter{ height:3px; background:var(--ln); border-radius:2px; overflow:hidden; }
-.meter i{ display:block; height:100%; background:var(--acc); transition:width .6s cubic-bezier(.16,1,.3,1); }
-.pacebar{
-  display:flex; align-items:center; gap:12px; margin-top:16px;
-  padding-top:13px; border-top:1px solid var(--ln);
+  :focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
-/* ---------------- empty states ---------------- */
-.empty{
-  border:1px dashed var(--ln2); border-radius:var(--r-lg);
-  padding:26px 22px; text-align:center;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
-.empty .et{ font-size:13.5px; font-weight:600; color:var(--ink); }
-.empty .ed{ font-size:12.5px; color:var(--mut); margin-top:4px; max-width:44ch; margin-inline:auto; }
-.empty .btn{ margin-top:14px; }
 
-/* ---------------- forms ---------------- */
-.inp{
-  width:100%; border:1px solid var(--ln2); border-radius:var(--r-md);
-  background:var(--surf); padding:8px 11px; font-size:13px;
-  color:var(--ink); font-family:var(--sans);
+/* ---------- theme toggle icon ----------
+   Which icon shows is a pure function of the current theme, so CSS
+   decides it. That keeps the button stateless and means the server and
+   client can never disagree about what to render. */
+.theme-toggle .icon-sun {
+  display: none;
 }
-.inp::placeholder{ color:var(--fai); }
-.inp:focus{ outline:none; border-color:var(--acc); box-shadow:0 0 0 3px var(--accS); }
+.theme-toggle .icon-moon {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun {
+    display: block;
+  }
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon {
+    display: none;
+  }
+}
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+  display: block;
+}
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+  display: none;
+}
+:root[data-theme="light"] .theme-toggle .icon-sun {
+  display: none;
+}
+:root[data-theme="light"] .theme-toggle .icon-moon {
+  display: block;
+}
 
-/* ---------------- public landing ---------------- */
-.land{ max-width:660px; margin:0 auto; padding:clamp(60px,12vh,140px) 24px; }
-.land h1{
-  font-family:var(--display); font-size:clamp(2.2rem,5vw,3.2rem);
-  letter-spacing:-.035em; line-height:1.03; margin:0; font-weight:600;
+/* ---------- the two things utilities express badly ---------- */
+@utility label-xs {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--fai);
+  font-weight: 600;
 }
-.land p{ color:var(--mut); font-size:1.02rem; margin:18px 0 0; max-width:52ch; }
-.land .cta{ margin-top:30px; display:flex; gap:10px; }
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- density
+   Compact tightens every list row. Applied from a data attribute on the
+   app shell rather than by swapping class names in each component, so a
+   setting nobody remembers can't leave half the app on the old spacing. */
+[data-density="compact"] .row-pad { padding-block: 0.3rem; }
+[data-density="compact"] .row-gap { gap: 0.25rem; }
+
+/* ------------------------------------------------------------ reduced motion
+   Honours the user's own choice as well as the OS one. Both are stated
+   here so neither can be forgotten at a call site. */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------- interface font
+   "system" drops the app's pairing for whatever the OS uses. A webfont
+   is a download and a rendering difference, and some people would
+   rather not have either. */
+[data-font="system"] {
+  --display: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+/*
+ * The notes board's paper.
+ *
+ * A faint grid, the way squared paper is faint — enough that the surface
+ * reads as something you write on, not so much that it competes with
+ * what is written. Drawn with gradients rather than an image so it costs
+ * nothing and follows the theme.
+ */
+.board-paper {
+  background-image:
+    linear-gradient(to right, var(--ln) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ln) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}

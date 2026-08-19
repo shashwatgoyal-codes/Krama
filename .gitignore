@@ -42,3 +42,13 @@ next-env.d.ts
 
 # keep the template, ignore real secrets
 !.env.example
+
+# Emails written to disk when RESEND_API_KEY is unset
+.mail/
+
+# iCloud Drive duplicates. This project sits under ~/Documents, which is
+# synced, and iCloud makes "file 2.ts" copies when it sees concurrent
+# writes — git writing while the watcher reads is enough. Twenty of them
+# were committed by accident before this rule existed, and one aborted a
+# branch checkout. The real fix is moving the repo somewhere unsynced.
+* [0-9].*
