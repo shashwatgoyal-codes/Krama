@@ -33,7 +33,17 @@ export default function TopBar({
   const pathname = usePathname();
 
   return (
-    <header className="flex h-12 flex-none items-center gap-3.5 border-b border-ln bg-surf px-4">
+    /*
+     * Two rows on a phone, one on anything wider.
+     *
+     * Six destinations plus search, theme and an avatar do not fit in
+     * 375px, and forcing them into one row pushed the whole page to
+     * 682px wide — every screen scrolled sideways, not just the header.
+     * The nav gets its own scrolling strip below the brand instead, so
+     * nothing is unreachable and nothing drags the page with it.
+     */
+    <header className="flex-none border-b border-ln bg-surf">
+      <div className="flex h-12 items-center gap-3.5 px-4">
       <span className="font-display text-[14.5px] font-semibold tracking-[-0.015em]">
         {appName(env)}
       </span>
@@ -47,7 +57,8 @@ export default function TopBar({
         </span>
       )}
 
-      <nav className="flex gap-[3px]">
+      {/* Wide screens keep the nav inline. */}
+      <nav className="hidden gap-[3px] md:flex">
         {NAV.map((item) => {
           const active = pathname === item.href;
           return (
@@ -113,6 +124,30 @@ export default function TopBar({
           )}
         </Link>
       </div>
+      </div>
+
+      {/* Narrow screens get the nav on its own line, scrolling sideways
+          rather than dragging the whole page with it. */}
+      <nav className="scrollbar-none flex gap-[3px] overflow-x-auto border-t border-ln px-3 py-1.5 md:hidden">
+        {NAV.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={
+                "flex-none rounded-md px-2.5 py-1 text-[12.5px] transition-colors " +
+                (active
+                  ? "bg-acc-soft font-semibold text-acc"
+                  : "font-medium text-mut hover:bg-surf2 hover:text-ink")
+              }
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
     </header>
   );
 }

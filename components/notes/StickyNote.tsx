@@ -60,7 +60,10 @@ export default function StickyNote({
     <div
       style={{ rotate: `${tiltOf(note.id)}deg` }}
       className={
-        "group relative flex min-h-[168px] flex-col rounded-[3px] border p-3 shadow-md transition-transform hover:z-10 hover:rotate-0 " +
+        // Short on a phone, where a note spans the width and a fixed
+        // height leaves a hole under one line of text. Taller once the
+        // notes sit in columns and need to look like a board.
+        "group relative flex min-h-[104px] flex-col rounded-[3px] border p-3 shadow-md transition-transform hover:z-10 hover:rotate-0 sm:min-h-[168px] " +
         (NOTE_TINT[note.colour] ?? NOTE_TINT.n1) +
         (pending ? " opacity-60" : "")
       }
