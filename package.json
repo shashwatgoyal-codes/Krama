@@ -10,7 +10,8 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest",
     "test:integration": "vitest run --project integration",
-    "test:all": "vitest run"
+    "test:all": "vitest run",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",
