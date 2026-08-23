@@ -52,3 +52,6 @@ next-env.d.ts
 # were committed by accident before this rule existed, and one aborted a
 # branch checkout. The real fix is moving the repo somewhere unsynced.
 * [0-9].*
+
+# Editor/agent scratch — never belongs in the repo.
+.claude/
