@@ -4,6 +4,7 @@ import { pageTitle } from "@/lib/env";
 import AuthShell from "@/components/auth/AuthShell";
 import AuthForm from "@/components/auth/AuthForm";
 import Field from "@/components/auth/Field";
+import PasswordField from "@/components/auth/PasswordField";
 import { signIn } from "../actions";
 import { redirectIfSignedIn } from "@/lib/auth/redirect-if-signed-in";
 
@@ -66,10 +67,9 @@ export default async function LoginPage() {
           required
           placeholder="you@example.com"
         />
-        <Field
+        <PasswordField
           label="Password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           action={
