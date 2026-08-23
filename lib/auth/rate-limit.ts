@@ -1,19 +1,35 @@
 /**
- * Sign-in throttling.
+ * Sign-in and password-reset throttling — the decision, not the storage.
  *
- * In-memory on purpose: this app runs as a single instance for a handful
- * of people, and an in-process map costs nothing. If it ever runs on
- * more than one instance, move this to a Postgres table — a per-instance
- * limiter is worse than none, because it quietly multiplies the allowance.
+ * These functions are pure: hand them a stored attempt and the current
+ * time, get back a verdict or the next attempt to store. Storage lives
+ * in lib/repositories/auth-attempts.ts, against a Postgres table.
+ *
+ * It used to be a Map in this module, which was fine while the app was
+ * one long-running process and wrong the moment it wasn't. On a
+ * serverless host each request can land on a fresh instance with a fresh
+ * empty Map, so "five attempts" silently becomes five per instance — a
+ * limit that reads as enforced, is not, and says nothing in the logs
+ * either way. A per-instance limiter is worse than no limiter, because
+ * only one of the two is honest about what it does.
+ *
+ * The split is deliberate: this half is exhaustively unit-tested without
+ * a database, and the half that talks to Postgres is small enough to
+ * read in one go.
  */
 
 export const MAX_ATTEMPTS = 5;
 export const LOCKOUT_MS = 15 * 60 * 1000;
-const WINDOW_MS = 15 * 60 * 1000;
+export const WINDOW_MS = 15 * 60 * 1000;
 
-type Bucket = { count: number; firstAt: number; lockedUntil?: number };
-
-const buckets = new Map<string, Bucket>();
+/** What is stored per throttle key. */
+export type Attempt = {
+  count: number;
+  /** Epoch ms at which the current window opened. */
+  firstAt: number;
+  /** Epoch ms until which this key is locked out, or null. */
+  lockedUntil: number | null;
+};
 
 export type LimitResult = {
   allowed: boolean;
@@ -21,44 +37,56 @@ export type LimitResult = {
   retryAfterMs: number;
 };
 
-export function checkRateLimit(key: string, now = Date.now()): LimitResult {
-  const bucket = buckets.get(key);
+const FRESH: LimitResult = {
+  allowed: true,
+  remaining: MAX_ATTEMPTS - 1,
+  retryAfterMs: 0,
+};
 
-  if (!bucket) return { allowed: true, remaining: MAX_ATTEMPTS - 1, retryAfterMs: 0 };
-
-  if (bucket.lockedUntil && bucket.lockedUntil > now) {
-    return { allowed: false, remaining: 0, retryAfterMs: bucket.lockedUntil - now };
-  }
-
-  // Window expired — start fresh.
-  if (now - bucket.firstAt > WINDOW_MS) {
-    buckets.delete(key);
-    return { allowed: true, remaining: MAX_ATTEMPTS - 1, retryAfterMs: 0 };
-  }
-
-  const remaining = MAX_ATTEMPTS - bucket.count;
-  return { allowed: remaining > 0, remaining: Math.max(0, remaining - 1), retryAfterMs: 0 };
+/** Has this window closed, so the attempt should be forgotten? */
+export function isStale(attempt: Attempt, now: number): boolean {
+  return now - attempt.firstAt > WINDOW_MS;
 }
 
-/** Call after a failed attempt. Locks out once the allowance is spent. */
-export function recordFailure(key: string, now = Date.now()): void {
-  const bucket = buckets.get(key);
+/** Whether to allow the attempt, given what is on record. */
+export function decide(attempt: Attempt | null, now: number): LimitResult {
+  if (!attempt) return FRESH;
 
-  if (!bucket || now - bucket.firstAt > WINDOW_MS) {
-    buckets.set(key, { count: 1, firstAt: now });
-    return;
+  if (attempt.lockedUntil !== null && attempt.lockedUntil > now) {
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterMs: attempt.lockedUntil - now,
+    };
   }
 
-  bucket.count += 1;
-  if (bucket.count >= MAX_ATTEMPTS) bucket.lockedUntil = now + LOCKOUT_MS;
+  if (isStale(attempt, now)) return FRESH;
+
+  const left = MAX_ATTEMPTS - attempt.count;
+  return {
+    allowed: left > 0,
+    // What will be left *after* this one, so the caller can warn.
+    remaining: Math.max(0, left - 1),
+    retryAfterMs: 0,
+  };
 }
 
-/** Call after a successful sign-in. */
-export function clearAttempts(key: string): void {
-  buckets.delete(key);
+/** What to store after a failed attempt. */
+export function afterFailure(attempt: Attempt | null, now: number): Attempt {
+  if (!attempt || isStale(attempt, now)) {
+    return { count: 1, firstAt: now, lockedUntil: null };
+  }
+
+  const count = attempt.count + 1;
+  return {
+    count,
+    firstAt: attempt.firstAt,
+    lockedUntil: count >= MAX_ATTEMPTS ? now + LOCKOUT_MS : null,
+  };
 }
 
-/** Test seam. */
-export function resetRateLimiter(): void {
-  buckets.clear();
+/** "Try again in 3 minutes." Rounded up, so it never reads as zero. */
+export function retryMessage(retryAfterMs: number): string {
+  const minutes = Math.max(1, Math.ceil(retryAfterMs / 60_000));
+  return `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
 }

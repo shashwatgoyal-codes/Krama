@@ -135,6 +135,26 @@ model VerificationCode {
   @@map("verification_codes")
 }
 
+/// Sign-in and password-reset throttling.
+///
+/// This lives in Postgres rather than in a process-local Map because the
+/// app is deployed to a serverless host, where every request may land on
+/// a fresh instance. A per-instance limiter is worse than none: it looks
+/// like a limit of five while actually allowing five per instance, and
+/// nothing in the logs says so.
+model AuthAttempt {
+  /// Scope of the throttle, e.g. "signin:someone@example.com".
+  key         String    @id
+  count       Int       @default(0)
+  /// Start of the current window. Attempts older than the window are
+  /// forgotten rather than accumulating forever.
+  firstAt     DateTime
+  lockedUntil DateTime?
+
+  @@index([lockedUntil])
+  @@map("auth_attempts")
+}
+
 model Session {
   id        String   @id @default(cuid())
   userId    String

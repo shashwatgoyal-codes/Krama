@@ -7,12 +7,13 @@ import {
   MAX_PASSWORD_LENGTH,
 } from "@/lib/auth/password";
 import {
-  checkRateLimit,
-  recordFailure,
-  clearAttempts,
-  resetRateLimiter,
+  decide,
+  afterFailure,
+  isStale,
+  WINDOW_MS,
   MAX_ATTEMPTS,
   LOCKOUT_MS,
+  type Attempt,
 } from "@/lib/auth/rate-limit";
 import {
   SESSION_COOKIE,
@@ -96,66 +97,111 @@ describe("hashPassword and verifyPassword", () => {
   }, 20_000);
 });
 
+function limiter() {
+  const store = new Map<string, Attempt>();
+  return {
+    check: (key: string, now = Date.now()) => decide(store.get(key) ?? null, now),
+    fail: (key: string, now = Date.now()) =>
+      store.set(key, afterFailure(store.get(key) ?? null, now)),
+    clear: (key: string) => store.delete(key),
+    read: (key: string) => store.get(key) ?? null,
+  };
+}
+
 describe("rate limiting", () => {
+  let rl: ReturnType<typeof limiter>;
   beforeEach(() => {
-    resetRateLimiter();
+    rl = limiter();
   });
 
   it("allows a fresh key", () => {
-    expect(checkRateLimit("fresh@example.com").allowed).toBe(true);
+    expect(rl.check("fresh@example.com").allowed).toBe(true);
   });
 
   it("allows exactly the stated number of failures before locking", () => {
     const key = "user@example.com";
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
-      expect(checkRateLimit(key).allowed).toBe(true);
-      recordFailure(key);
+      expect(rl.check(key).allowed).toBe(true);
+      rl.fail(key);
     }
-    expect(checkRateLimit(key).allowed).toBe(false);
+    expect(rl.check(key).allowed).toBe(false);
   });
 
   it("keeps separate counts per key, so one user cannot lock out another", () => {
     const victim = "victim@example.com";
-    for (let i = 0; i < MAX_ATTEMPTS + 3; i++) recordFailure("attacker");
-    expect(checkRateLimit(victim).allowed).toBe(true);
-    expect(checkRateLimit("attacker").allowed).toBe(false);
+    for (let i = 0; i < MAX_ATTEMPTS + 3; i++) rl.fail("attacker");
+    expect(rl.check(victim).allowed).toBe(true);
+    expect(rl.check("attacker").allowed).toBe(false);
   });
 
   it("forgets the failures once the lockout has passed", () => {
     const key = "user@example.com";
     const start = 1_000_000;
-    for (let i = 0; i < MAX_ATTEMPTS + 1; i++) recordFailure(key, start);
-    expect(checkRateLimit(key, start).allowed).toBe(false);
-    expect(checkRateLimit(key, start + LOCKOUT_MS + 1).allowed).toBe(true);
+    for (let i = 0; i < MAX_ATTEMPTS + 1; i++) rl.fail(key, start);
+    expect(rl.check(key, start).allowed).toBe(false);
+    expect(rl.check(key, start + LOCKOUT_MS + 1).allowed).toBe(true);
   });
 
   it("is still locked one millisecond before the window closes", () => {
     const key = "user@example.com";
     const start = 2_000_000;
-    for (let i = 0; i < MAX_ATTEMPTS + 1; i++) recordFailure(key, start);
-    expect(checkRateLimit(key, start + LOCKOUT_MS - 1).allowed).toBe(false);
+    for (let i = 0; i < MAX_ATTEMPTS + 1; i++) rl.fail(key, start);
+    expect(rl.check(key, start + LOCKOUT_MS - 1).allowed).toBe(false);
   });
 
   it("clears on a successful sign-in", () => {
     const key = "user@example.com";
-    for (let i = 0; i < MAX_ATTEMPTS + 1; i++) recordFailure(key);
-    expect(checkRateLimit(key).allowed).toBe(false);
-    clearAttempts(key);
-    expect(checkRateLimit(key).allowed).toBe(true);
+    for (let i = 0; i < MAX_ATTEMPTS + 1; i++) rl.fail(key);
+    expect(rl.check(key).allowed).toBe(false);
+    rl.clear(key);
+    expect(rl.check(key).allowed).toBe(true);
   });
 
   it("holds up across many distinct keys", () => {
     for (let i = 0; i < 100; i++) {
       const key = `user${i}@example.com`;
-      for (let n = 0; n < MAX_ATTEMPTS + 1; n++) recordFailure(key);
-      expect(checkRateLimit(key).allowed).toBe(false);
+      for (let n = 0; n < MAX_ATTEMPTS + 1; n++) rl.fail(key);
+      expect(rl.check(key).allowed).toBe(false);
     }
-    expect(checkRateLimit("someone-else").allowed).toBe(true);
+    expect(rl.check("someone-else").allowed).toBe(true);
   });
 
   it("locks out for a window long enough to matter but short enough to survive", () => {
     expect(LOCKOUT_MS).toBeGreaterThanOrEqual(60_000);
     expect(LOCKOUT_MS).toBeLessThanOrEqual(60 * 60_000);
+  });
+
+  it("starts a new window rather than resuming an abandoned one", () => {
+    // Someone who failed twice yesterday should get a full allowance
+    // today, not three attempts.
+    const key = "user@example.com";
+    const start = 3_000_000;
+    rl.fail(key, start);
+    rl.fail(key, start);
+    rl.fail(key, start + WINDOW_MS + 1);
+    expect(rl.read(key)!.count).toBe(1);
+    expect(rl.check(key, start + WINDOW_MS + 1).allowed).toBe(true);
+  });
+
+  it("treats an attempt as stale exactly one ms past the window", () => {
+    const a: Attempt = { count: 3, firstAt: 0, lockedUntil: null };
+    expect(isStale(a, WINDOW_MS)).toBe(false);
+    expect(isStale(a, WINDOW_MS + 1)).toBe(true);
+  });
+
+  it("counts down the attempts it says are remaining", () => {
+    const key = "user@example.com";
+    for (let i = 0; i < MAX_ATTEMPTS - 1; i++) {
+      expect(rl.check(key).remaining).toBe(MAX_ATTEMPTS - 1 - i);
+      rl.fail(key);
+    }
+    expect(rl.check(key).remaining).toBe(0);
+  });
+
+  it("reports no retry delay while attempts are still allowed", () => {
+    const key = "user@example.com";
+    rl.fail(key);
+    expect(rl.check(key).retryAfterMs).toBe(0);
   });
 });
 
