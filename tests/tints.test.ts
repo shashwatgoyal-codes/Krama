@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { TINT_PRESETS, DEFAULT_TINTS, tintPreset, tintCss, NOTE_COLOURS,
+import {
+  TINT_PRESETS,
+  DEFAULT_TINTS,
+  tintPreset,
+  tintCss,
+  NOTE_COLOURS,
   ageLabel,
   tiltOf,
+  noteTitle,
+  notePreview,
 } from "@/lib/notes";
 import { appearanceSchema } from "@/lib/validation";
 
@@ -147,5 +154,51 @@ describe("the tilt on a note", () => {
     const angles = Array.from({ length: 200 }, (_, i) => tiltOf(`n${i}`));
     expect(angles.some((a) => a > 0)).toBe(true);
     expect(angles.some((a) => a < 0)).toBe(true);
+  });
+});
+
+describe("a note's title and preview", () => {
+  it("uses the first line as the title", () => {
+    expect(noteTitle("Call the bank\nabout the transfer")).toBe("Call the bank");
+  });
+
+  it("skips leading blank lines", () => {
+    expect(noteTitle("\n\n  Actual first line")).toBe("Actual first line");
+  });
+
+  it("names an empty note rather than leaving it blank in the list", () => {
+    for (const body of ["", "   ", "\n\n"]) {
+      expect(noteTitle(body)).toBe("New note");
+    }
+  });
+
+  it("truncates a very long first line", () => {
+    expect(noteTitle("x".repeat(200)).length).toBeLessThanOrEqual(80);
+  });
+
+  it("previews everything after the first line, flattened", () => {
+    expect(notePreview("Title\nsecond line\nthird line")).toBe(
+      "second line third line",
+    );
+  });
+
+  it("has no preview when there is only one line", () => {
+    expect(notePreview("Just the one line")).toBe("");
+    expect(notePreview("")).toBe("");
+  });
+
+  it("collapses runs of whitespace in the preview", () => {
+    expect(notePreview("T\n\n  a    b  \n c ")).toBe("a b c");
+  });
+
+  it("never returns more than the preview length", () => {
+    expect(notePreview("T\n" + "y".repeat(400)).length).toBeLessThanOrEqual(120);
+  });
+
+  it("handles a note that is only a title, however odd", () => {
+    for (const body of ["a", "a\n", "a\n\n\n"]) {
+      expect(noteTitle(body)).toBe("a");
+      expect(notePreview(body)).toBe("");
+    }
   });
 });
