@@ -17,6 +17,27 @@ jobs:
     name: Typecheck, lint, test, build
     runs-on: ubuntu-latest
 
+    # A throwaway Postgres for the integration suite.
+    #
+    # Those tests were written against a real database and then could not
+    # run here, which makes them a suite that only protects the machine
+    # they were written on. A service container costs nothing and needs no
+    # secret: it is empty, local to the job, and thrown away with it.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: krama
+          POSTGRES_PASSWORD: krama
+          POSTGRES_DB: krama_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -37,8 +58,24 @@ jobs:
       - name: Lint
         run: npx eslint .
 
-      - name: Test
-        run: npx vitest run
+      - name: Unit tests
+        run: npm test
+
+      # The schema has to exist before anything queries it. Uses the
+      # service container above, never a real environment: a suite that
+      # can reach production data is one bad WHERE clause from deleting
+      # some of it.
+      - name: Prepare the test database
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://krama:krama@localhost:5432/krama_test?sslmode=disable
+          DIRECT_URL: postgresql://krama:krama@localhost:5432/krama_test?sslmode=disable
+
+      - name: Integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://krama:krama@localhost:5432/krama_test?sslmode=disable
+          DIRECT_URL: postgresql://krama:krama@localhost:5432/krama_test?sslmode=disable
 
       # Proves the app compiles without any secrets. If this ever starts
       # needing DATABASE_URL, something is reaching the database at build

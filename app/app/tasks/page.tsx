@@ -150,9 +150,34 @@ export default async function TasksPage({
         </nav>
 
         {tasks.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-ln2 px-5 py-8 text-center text-[12.5px] leading-relaxed text-mut">
-            {EMPTY[filter]}
-          </p>
+          <div className="rounded-xl border border-dashed border-ln2 px-5 py-8 text-center">
+            <p className="text-[12.5px] leading-relaxed text-mut">
+              {EMPTY[filter]}
+            </p>
+            {/*
+             * An empty list is not an empty account if routines exist.
+             *
+             * Routines live under their own filter, so "All" can say
+             * nothing is here while a routine goes on producing work and
+             * filling the calendar. Someone who cleared every task they
+             * could see would reasonably conclude the calendar was
+             * broken — that is exactly what happened.
+             */}
+            {filter !== "recurring" && counts.recurring > 0 && (
+              <p className="mt-2 text-[11.5px] leading-relaxed text-mut">
+                You still have{" "}
+                <Link
+                  href="/app/tasks?f=recurring"
+                  className="font-semibold text-acc underline-offset-2 hover:underline"
+                >
+                  {counts.recurring}{" "}
+                  {counts.recurring === 1 ? "routine" : "routines"}
+                </Link>
+                . They keep making work and showing on the calendar until you
+                delete them.
+              </p>
+            )}
+          </div>
         ) : (
           groups.map((group) => {
             const done = group.items.filter((t) => t.status === "done").length;

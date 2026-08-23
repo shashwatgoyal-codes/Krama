@@ -145,6 +145,15 @@
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  /*
+   * Devanagari, for the one word that is set in it. A system stack for
+   * the same reason every other family here is one: nothing in this app
+   * fetches a font over the network, and pulling one down for a single
+   * word on three screens would be the most expensive glyph in it.
+   */
+  --font-deva: "Kohinoor Devanagari", "Devanagari Sangam MN", "Nirmala UI",
+    "Noto Sans Devanagari", "Mangal", serif;
 }
 
 /* ---------- base ---------- */
