@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { appName } from "@/lib/env";
 
 export default function Landing() {
   return (
     <main className="mx-auto max-w-[660px] px-6 py-[clamp(60px,12vh,140px)]">
+      {/* The product name, not a slogan. The page still needs a heading —
+          it is the one public, indexed page — but it does not need a
+          tagline to have one. */}
       <h1 className="font-display text-[clamp(2.2rem,5vw,3.2rem)] font-semibold leading-[1.03] tracking-[-0.035em]">
-        One step, then the next.
+        {appName()}
       </h1>
       <p className="mt-[18px] max-w-[52ch] text-[1.02rem] text-mut">
         Krama holds your tasks, notes, calendar and the things you save — and

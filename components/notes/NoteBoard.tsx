@@ -1,26 +1,36 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { NOTE_COLOURS, NOTE_TINT, type NoteItem } from "@/lib/notes";
+import { useMemo, useRef, useState, useTransition } from "react";
+import {
+  NOTE_COLOURS,
+  NOTE_TINT,
+  ageLabel,
+  noteTitle,
+  notePreview,
+  type NoteItem,
+} from "@/lib/notes";
 import type { TagChip } from "@/lib/tags";
-import StickyNote from "./StickyNote";
-import { createNote } from "@/app/app/notes/actions";
+import TagField from "@/components/tags/TagField";
+import {
+  createNote,
+  editNote,
+  recolourNote,
+  removeNote,
+  noteToTask,
+} from "@/app/app/notes/actions";
 
 /**
- * The board.
+ * Notes: a list of what you have written, and the one you are reading.
  *
- * Notes flow into a grid rather than sitting where they were dropped.
- * Dragging was the original idea and it is the wrong primary gesture:
- * arranging a board is work, and the one screen that exists to catch a
- * thought quickly should not ask you to do any. Newest first, so the
- * thing you just wrote is where you left it.
+ * The board came first and was the wrong shape. A wall of sticky notes
+ * looks like note-taking without supporting it: everything is truncated
+ * to fit a square, nothing is comfortable to write more than a line in,
+ * and finding an old one means scanning a mosaic. The apps people
+ * actually keep notes in all settled on the same arrangement, and it is
+ * this one.
  *
- * The positions are still stored. Nothing is lost if scattering ever
- * comes back as a view.
- *
- * Tidy is gone with the mess it existed to clean up. A button that
- * squares up a board which is never crooked is a button that does
- * nothing, and the app has had enough of those.
+ * Selection is local rather than in the URL, because switching notes
+ * should be instant and a round trip to the server is not.
  */
 export default function NoteBoard({
   notes,
@@ -31,241 +41,253 @@ export default function NoteBoard({
   areas: { id: string; name: string }[];
   allTags?: TagChip[];
 }) {
-  const [colour, setColour] = useState<string>(NOTE_COLOURS[0]);
-  const [draft, setDraft] = useState("");
-  const [byColour, setByColour] = useState<string | null>(null);
-  const [byTag, setByTag] = useState<string | null>(null);
-  const [byArea, setByArea] = useState<string | null>(null);
-  const [filtering, setFiltering] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  const shown = useMemo(
-    () =>
-      notes.filter((n) => {
-        if (byColour && n.colour !== byColour) return false;
-        if (byArea && n.areaId !== byArea) return false;
-        if (byTag && !n.tags.some((t) => t.id === byTag)) return false;
-        return true;
-      }),
-    [notes, byColour, byArea, byTag],
+  const [selectedId, setSelectedId] = useState<string | null>(
+    notes[0]?.id ?? null,
   );
+  const [query, setQuery] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const editor = useRef<HTMLTextAreaElement>(null);
 
-  const filtered = Boolean(byColour || byTag || byArea);
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return notes;
+    return notes.filter((n) => n.body.toLowerCase().includes(q));
+  }, [notes, query]);
 
-  function submit() {
-    const body = draft.trim();
-    if (!body) return;
-    setError(null);
+  /**
+   * The selection, resolved at render rather than synced in an effect.
+   *
+   * Deleting the open note or filtering it away should land you on
+   * something rather than on nothing, and falling back here means the
+   * list is never briefly pointing at a note that is not in it.
+   */
+  const selected =
+    shown.find((n) => n.id === selectedId) ?? shown[0] ?? null;
+
+  function act(
+    action: (data: FormData) => Promise<{ ok: boolean; error?: string }>,
+    extra: [string, string][],
+  ) {
     const data = new FormData();
-    data.set("body", body);
-    data.set("colour", colour);
+    for (const [k, v] of extra) data.set(k, v);
+    setError(null);
+    startTransition(async () => {
+      const result = await action(data);
+      if (!result.ok && result.error) setError(result.error);
+    });
+  }
+
+  function newNote() {
+    // Pressing + twice should not leave a trail of blank notes. If there
+    // is already an empty one, that is the new note — open it instead of
+    // making a second identical nothing.
+    const blank = notes.find((n) => n.body.trim() === "");
+    if (blank) {
+      setQuery("");
+      setSelectedId(blank.id);
+      setTimeout(() => editor.current?.focus(), 60);
+      return;
+    }
+
+    const data = new FormData();
+    data.set("body", "");
+    data.set("colour", NOTE_COLOURS[0]);
+    setError(null);
     startTransition(async () => {
       const result = await createNote(data);
-      if (result.ok) setDraft("");
-      else setError(result.error);
+      if (!result.ok) {
+        setError(result.error ?? "Couldn't add that.");
+        return;
+      }
+      if (result.data) setSelectedId(result.data);
+      setQuery("");
+      setTimeout(() => editor.current?.focus(), 60);
     });
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-ln bg-surf px-4 py-2.5">
-        <div className="flex min-w-[220px] flex-1 items-center gap-2">
+    <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] md:grid-cols-[minmax(240px,300px)_1fr] md:grid-rows-1">
+      {/* the list */}
+      <aside className="flex min-h-0 flex-col border-b border-ln md:border-b-0 md:border-r">
+        <div className="flex items-center gap-2 border-b border-ln px-3 py-2">
           <input
-            value={draft}
-            disabled={pending}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder="Write a note…"
-            aria-label="New note"
-            className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-[11px] py-1.5 text-[13px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search notes"
+            aria-label="Search notes"
+            className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-2.5 py-1.5 text-[12.5px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
           />
           <button
             type="button"
-            disabled={pending || !draft.trim()}
-            onClick={submit}
-            className="flex-none cursor-pointer rounded-[9px] border border-ink bg-ink px-3 py-1.5 text-[12.5px] font-semibold text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={newNote}
+            disabled={pending}
+            title="New note"
+            aria-label="New note"
+            className="flex-none cursor-pointer rounded-[9px] border border-ink bg-ink px-2.5 py-1.5 text-[13px] font-semibold leading-none text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:opacity-50"
           >
-            + Note
+            +
           </button>
         </div>
 
-        {/* the colour it will be written on */}
-        <div className="flex flex-none items-center gap-1">
-          {NOTE_COLOURS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={`Write on the ${c} note`}
-              aria-pressed={colour === c}
-              onClick={() => setColour(c)}
-              className={
-                `size-[18px] rounded-[4px] border ${NOTE_TINT[c]} cursor-pointer transition-transform ` +
-                (colour === c ? "ring-2 ring-ink" : "hover:scale-110")
-              }
-            />
-          ))}
-        </div>
-
-        <span className="label-xs tabular flex-none">
-          {filtered ? `${shown.length} of ${notes.length}` : `${notes.length}`}{" "}
-          {notes.length === 1 && !filtered ? "NOTE" : "NOTES"}
-        </span>
-
-        <div className="ml-auto flex flex-none items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setFiltering((f) => !f)}
-            aria-pressed={filtering || filtered}
-            className={
-              "cursor-pointer rounded-[9px] border px-3 py-1.5 text-[12px] font-semibold transition-colors " +
-              (filtered
-                ? "border-acc bg-acc-soft text-acc"
-                : "border-ln2 text-mut hover:border-acc hover:text-acc")
-            }
-          >
-            Filter
-          </button>
-        </div>
-      </div>
-
-      {/* filters */}
-      {(filtering || filtered) && (
-        <div className="flex flex-wrap items-center gap-3 border-b border-ln bg-surf2 px-4 py-2">
-          <Row label="Colour">
-            {NOTE_COLOURS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                aria-label={`Only ${c} notes`}
-                aria-pressed={byColour === c}
-                onClick={() => setByColour(byColour === c ? null : c)}
-                className={
-                  `size-[16px] rounded-[4px] border ${NOTE_TINT[c]} cursor-pointer ` +
-                  (byColour === c ? "ring-2 ring-ink" : "opacity-70 hover:opacity-100")
-                }
-              />
-            ))}
-          </Row>
-
-          {areas.length > 0 && (
-            <Row label="Area">
-              {areas.map((a) => (
-                <Chip
-                  key={a.id}
-                  on={byArea === a.id}
-                  onClick={() => setByArea(byArea === a.id ? null : a.id)}
-                >
-                  {a.name}
-                </Chip>
-              ))}
-            </Row>
-          )}
-
-          {allTags.length > 0 && (
-            <Row label="Tag">
-              {allTags.slice(0, 10).map((t) => (
-                <Chip
-                  key={t.id}
-                  on={byTag === t.id}
-                  onClick={() => setByTag(byTag === t.id ? null : t.id)}
-                >
-                  {t.name}
-                </Chip>
-              ))}
-            </Row>
-          )}
-
-          {filtered && (
-            <button
-              type="button"
-              onClick={() => {
-                setByColour(null);
-                setByTag(null);
-                setByArea(null);
-              }}
-              className="ml-auto cursor-pointer text-[11.5px] font-semibold text-mut underline-offset-2 hover:text-ink hover:underline"
-            >
-              Clear
-            </button>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {shown.length === 0 ? (
+            <p className="px-3 py-8 text-center text-[12px] leading-relaxed text-mut">
+              {notes.length === 0
+                ? "No notes yet. Press + and start writing."
+                : "Nothing matches that."}
+            </p>
+          ) : (
+            <ul className="divide-y divide-ln">
+              {shown.map((note) => {
+                const on = note.id === selectedId;
+                return (
+                  <li key={note.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(note.id)}
+                      aria-current={on ? "true" : undefined}
+                      className={
+                        "w-full cursor-pointer px-3 py-2.5 text-left transition-colors " +
+                        (on ? "bg-acc-soft" : "hover:bg-surf2")
+                      }
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          aria-hidden
+                          className={`size-2 flex-none rounded-full border ${NOTE_TINT[note.colour] ?? NOTE_TINT.n1}`}
+                        />
+                        <span
+                          className={
+                            "min-w-0 flex-1 truncate text-[12.5px] " +
+                            (on ? "font-semibold text-acc" : "font-semibold text-ink")
+                          }
+                        >
+                          {noteTitle(note.body)}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex items-baseline gap-1.5 pl-3.5">
+                        <span className="label-xs flex-none">
+                          {ageLabel(note.ageDays)}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[11.5px] text-mut">
+                          {notePreview(note.body) || "No additional text"}
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
-      )}
+      </aside>
 
-      {error && (
-        <p role="alert" className="px-4 py-1.5 text-[11.5px] text-bad">
-          {error}
-        </p>
-      )}
-
-      {/* the notes */}
-      <div className="board-paper min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        {shown.length === 0 ? (
-          <p className="mx-auto mt-16 max-w-[38ch] text-center text-[12.5px] leading-relaxed text-mut">
-            {notes.length === 0
-              ? "Nothing here yet. Write the thought down before you lose it — sorting it out can wait."
-              : "No notes match that filter."}
+      {/* the note */}
+      <section className="flex min-h-0 flex-col">
+        {!selected ? (
+          <p className="mx-auto mt-20 max-w-[34ch] px-4 text-center text-[12.5px] leading-relaxed text-mut">
+            Nothing selected. Press + to write something down.
           </p>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4">
-            {shown.map((note) => (
-              <StickyNote
-                key={note.id}
-                note={note}
-                areas={areas}
-                allTags={allTags}
-              />
-            ))}
-          </div>
+          <form
+            key={selected.id}
+            action={(f) => {
+              f.set("id", selected.id);
+              setError(null);
+              startTransition(async () => {
+                const result = await editNote(f);
+                if (!result.ok && result.error) setError(result.error);
+              });
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <textarea
+              ref={editor}
+              name="body"
+              defaultValue={selected.body}
+              maxLength={1000}
+              placeholder="Write here. The first line becomes the title."
+              className="min-h-0 flex-1 resize-none bg-transparent px-5 py-4 text-[13.5px] leading-relaxed text-ink placeholder:text-fai focus:outline-none"
+            />
+
+            <div className="flex flex-wrap items-center gap-3 border-t border-ln px-4 py-2.5">
+              <select
+                name="areaId"
+                defaultValue={selected.areaId ?? ""}
+                className="rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none"
+              >
+                <option value="">Unfiled</option>
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex items-center gap-1">
+                {NOTE_COLOURS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`Colour ${c}`}
+                    aria-pressed={selected.colour === c}
+                    onClick={() =>
+                      act(recolourNote, [
+                        ["id", selected.id],
+                        ["colour", c],
+                      ])
+                    }
+                    className={
+                      `size-4 rounded-full border ${NOTE_TINT[c]} cursor-pointer ` +
+                      (selected.colour === c ? "ring-2 ring-ink" : "opacity-70 hover:opacity-100")
+                    }
+                  />
+                ))}
+              </div>
+
+              <div className="min-w-[160px] flex-1">
+                <TagField selected={selected.tags} available={allTags} />
+              </div>
+
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="cursor-pointer rounded-[9px] border border-ink bg-ink px-3 py-1.5 text-[12px] font-semibold text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:opacity-50"
+                >
+                  {pending ? "Saving…" : "Save"}
+                </button>
+                {!selected.taskId && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => act(noteToTask, [["id", selected.id]])}
+                    className="cursor-pointer rounded-[9px] border border-ln2 px-3 py-1.5 text-[12px] font-semibold text-mut transition-colors hover:border-acc hover:text-acc disabled:opacity-50"
+                  >
+                    Make a task
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={pending}
+                  aria-label="Delete this note"
+                  onClick={() => act(removeNote, [["id", selected.id]])}
+                  className="cursor-pointer rounded-[9px] border border-ln2 px-3 py-1.5 text-[12px] font-semibold text-mut transition-colors hover:border-bad hover:text-bad disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </form>
         )}
-      </div>
-    </div>
-  );
-}
 
-function Row({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="label-xs">{label}</span>
-      {children}
+        {error && (
+          <p role="alert" className="px-4 pb-2 text-[11.5px] text-bad">
+            {error}
+          </p>
+        )}
+      </section>
     </div>
-  );
-}
-
-function Chip({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className={
-        "cursor-pointer rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors " +
-        (on
-          ? "border-acc bg-acc-soft text-acc"
-          : "border-ln2 text-mut hover:border-acc hover:text-acc")
-      }
-    >
-      {children}
-    </button>
   );
 }

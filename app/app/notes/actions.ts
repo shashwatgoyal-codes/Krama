@@ -24,11 +24,11 @@ import { firstIssue, type ActionResult } from "@/lib/validation";
 const colourSchema = z.enum(NOTE_COLOURS);
 
 const createSchema = z.object({
-  body: z
-    .string()
-    .trim()
-    .min(1, "Write something first.")
-    .max(1000, "Keep a note under 1000 characters."),
+  // Empty is allowed here and nowhere else. Pressing + should give you
+  // somewhere to write, not a complaint that you have not written yet —
+  // the note is created so the cursor has a home, and the list shows it
+  // as "New note" until it has a first line.
+  body: z.string().trim().max(1000, "Keep a note under 1000 characters."),
   colour: colourSchema.default("n1"),
 });
 
@@ -41,7 +41,9 @@ const moveSchema = z.object({
 
 const idSchema = z.object({ id: z.string().cuid() });
 
-export async function createNote(formData: FormData): Promise<ActionResult> {
+export async function createNote(
+  formData: FormData,
+): Promise<ActionResult<string>> {
   const user = await requireUserOrThrow();
   const parsed = createSchema.safeParse({
     body: formData.get("body"),
@@ -49,9 +51,15 @@ export async function createNote(formData: FormData): Promise<ActionResult> {
   });
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
-  await createNoteRow(user.id, parsed.data.body, parsed.data.colour);
+  const created = await createNoteRow(
+    user.id,
+    parsed.data.body,
+    parsed.data.colour,
+  );
   revalidatePath("/app/notes");
-  return { ok: true };
+  // The id comes back so the page can open what it just made. Pressing +
+  // and landing on the note you were already reading is not what + means.
+  return { ok: true, data: created.id };
 }
 
 export async function moveNote(formData: FormData): Promise<ActionResult> {

@@ -268,3 +268,12 @@
   background-size: 28px 28px;
   background-position: -1px -1px;
 }
+
+/* A scrolling strip should not also show a scrollbar; on a phone the bar
+   is thicker than the thing it is scrolling. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
