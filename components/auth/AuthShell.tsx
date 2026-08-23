@@ -40,7 +40,35 @@ export default function AuthShell({
       </div>
 
       <aside className="hidden flex-col justify-center border-l border-ln bg-surf2 px-7 py-8 md:flex">
-        <div className="mx-auto w-full max-w-[320px]">{aside}</div>
+        <div className="mx-auto w-full max-w-[320px]">
+          {/*
+            The name, in the script it comes from. It sits here rather
+            than beside the wordmark on the left because at logo size it
+            reads as a subtitle — small enough to be filed away as
+            chrome and never looked at again. This panel is already the
+            one arguing for the product, so the word gets the top of
+            that argument at a size where the letterforms are visible,
+            and the gloss underneath does the explaining.
+
+            Three screens only: sign in, sign up, forgot. Not the
+            header, and not the empty states — a word you meet on every
+            screen stops being read by the second week.
+          */}
+          <p className="font-deva text-[30px] leading-none tracking-[0.02em]">
+            <span className="sr-only">Krama, </span>
+            <span aria-hidden="true">क्रम</span>
+          </p>
+          {/* text-mut, not text-fai: the faint token lands at 3.5:1 on
+              this panel, and a gloss nobody can read is worse than no
+              gloss at all — it is the only thing telling you what the
+              name means. */}
+          <p className="mt-1.5 text-[11px] tracking-[0.04em] text-mut">
+            Krama — <em>step, sequence, order</em>
+          </p>
+          <div className="my-4 h-px bg-ln" />
+
+          {aside}
+        </div>
       </aside>
     </main>
   );

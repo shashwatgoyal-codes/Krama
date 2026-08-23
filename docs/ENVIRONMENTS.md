@@ -13,7 +13,9 @@ dev  →  qa  →  stage  →  prod
 | `stage` | Final rehearsal — prod-like          | Only via promotion       |
 | `prod`  | The live app                         | Only via promotion       |
 
-`main` exists because GitHub created it. It tracks `prod`.
+`prod` is the repository's default branch. `main` was deleted once `prod`
+took that role — a second branch tracking the same commits was only ever
+somewhere to push to by accident.
 
 ## Promoting
 
@@ -31,12 +33,21 @@ forcing anything.
 ## What CI does
 
 `.github/workflows/ci.yml` runs on every push and pull request to these
-branches: `tsc --noEmit`, `eslint`, `vitest run`, and a full `next build`.
+branches: `tsc --noEmit`, `eslint`, the unit tests, `prisma migrate deploy`
+against a throwaway Postgres service container, the integration tests against
+that database, and a full `next build`.
+
+The unit and integration runs are separate steps on purpose, so a red build
+names which kind broke instead of showing one X.
 
 It runs **without any secrets**. That is deliberate and worth preserving — the
 Prisma client is constructed lazily, so nothing touches a database at build
-time. If CI ever starts failing for a missing `DATABASE_URL`, the real problem
-is that something now queries during the build.
+time. If the *build* ever starts failing for a missing `DATABASE_URL`, the real
+problem is that something now queries during the build.
+
+The database CI does use is a `postgres:16-alpine` service container created
+fresh for each run, with a throwaway password in plain sight in the workflow.
+It exists for the length of the job and holds nothing.
 
 ## The database
 

@@ -30,30 +30,28 @@ export const ENV_LABEL: Record<AppEnv, string> = {
 };
 
 /**
- * What the app calls itself in each environment.
+ * What the app calls itself.
  *
- * Production is simply Krama. Everything else carries a suffix, so a
- * screenshot, a bookmark or a browser tab says which one you are in
- * without you having to check the address bar — the badge is only
- * visible while you are looking at the page.
+ * The same word everywhere. The name is the product, not the server it
+ * happens to be running on — a suffix in the tab told you something the
+ * badge beside it already says, and made three of the four environments
+ * look like a different, lesser app.
  *
- * The lower-case form matches the hostnames these deploy to
- * (krama.stage, krama.qa), so the name in the tab and the name in the
- * URL are the same word.
+ * Which environment you are in is still visible: ENV_LABEL renders as a
+ * coloured badge next to the name on everything but production.
  */
 export const ENV_NAME: Record<AppEnv, string> = {
-  dev: "krama.dev",
-  qa: "krama.qa",
-  stage: "krama.stage",
+  dev: "Krama",
+  qa: "Krama",
+  stage: "Krama",
   prod: "Krama",
 };
 
-/** The product name for this deployment, for titles and the top bar. */
 export function appName(env: AppEnv = appEnv()): string {
   return ENV_NAME[env];
 }
 
-/** "Tasks · krama.stage" — one title builder, so they cannot drift. */
+/** "Tasks · Krama" — one title builder, so they cannot drift. */
 export function pageTitle(page: string, env: AppEnv = appEnv()): string {
   return `${page} · ${appName(env)}`;
 }
