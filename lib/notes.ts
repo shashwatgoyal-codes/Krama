@@ -120,3 +120,29 @@ export function tintCss(chosen: string[]): string {
     :root[data-theme="light"] [data-tints] { ${vars("light")} }
   `;
 }
+
+
+/**
+ * The first line of a note, which is its title.
+ *
+ * Notes have no title field and should not: making someone name a
+ * thought before writing it down is how thoughts go unwritten. The
+ * first line does the job, the way it does in every notes app worth
+ * using.
+ */
+export function noteTitle(body: string): string {
+  const first = body.split("\n").find((l) => l.trim().length > 0);
+  return first?.trim().slice(0, 80) ?? "New note";
+}
+
+/** Everything after the first line, flattened, for the list preview. */
+export function notePreview(body: string): string {
+  const lines = body.split("\n");
+  const firstIndex = lines.findIndex((l) => l.trim().length > 0);
+  const rest = lines
+    .slice(firstIndex + 1)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return rest.slice(0, 120);
+}

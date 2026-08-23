@@ -19,12 +19,12 @@ const COPY: Record<
   password_reset: {
     subject: "Your Krama password reset code",
     heading: "Reset your password",
-    lead: "Someone asked to reset the password on this account. If that wasn't you, you can ignore this email and nothing will change.",
+    lead: "Use the code below to set a new password. It is valid for a short time and can be used once. If you did not request this, no action is needed — the code will expire on its own.",
   },
   email_verify: {
-    subject: "Confirm your email for Krama",
-    heading: "Confirm your email",
-    lead: "Enter the code below to confirm this address belongs to you.",
+    subject: "Confirm your Krama email address",
+    heading: "Confirm your email address",
+    lead: "Use the code below to confirm this address. Once confirmed, you will be able to reset your password if you ever need to.",
   },
 };
 
