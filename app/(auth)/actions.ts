@@ -10,7 +10,9 @@ import {
   checkRateLimit,
   recordFailure,
   clearAttempts,
-} from "@/lib/auth/rate-limit";
+  purgeStaleAttempts,
+} from "@/lib/repositories/auth-attempts";
+import { retryMessage } from "@/lib/auth/rate-limit";
 import {
   signUpSchema,
   signInSchema,
@@ -93,13 +95,9 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
   const { email, password } = parsed.data;
   const key = await requestKey(email);
 
-  const limit = checkRateLimit(key);
+  const limit = await checkRateLimit(key);
   if (!limit.allowed) {
-    const minutes = Math.ceil(limit.retryAfterMs / 60000);
-    return {
-      ok: false,
-      error: `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
-    };
+    return { ok: false, error: retryMessage(limit.retryAfterMs) };
   }
 
   const user = await db.user.findUnique({
@@ -115,11 +113,14 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
   const valid = await verifyPassword(hash, password);
 
   if (!user || !valid) {
-    recordFailure(key);
+    await recordFailure(key);
     return { ok: false, error: BAD_CREDENTIALS };
   }
 
-  clearAttempts(key);
+  await clearAttempts(key);
+  // Cheap here and nowhere else: a successful sign-in is rare enough that
+  // the sweep costs nothing, and frequent enough to keep the table small.
+  void purgeStaleAttempts().catch(() => {});
   const h = await headers();
   await createSession(user.id, h.get("user-agent") ?? undefined);
   redirect("/app");

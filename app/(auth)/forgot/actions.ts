@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { hashPassword, checkPassword } from "@/lib/auth/password";
 import { destroyAllSessions, createSession } from "@/lib/auth/session";
-import { checkRateLimit, recordFailure } from "@/lib/auth/rate-limit";
+import { checkRateLimit, recordFailure } from "@/lib/repositories/auth-attempts";
 import { sendCode } from "@/lib/otp/dispatch";
 import { consumeCode } from "@/lib/repositories/verification";
 import {
@@ -41,10 +41,10 @@ export async function requestReset(
 
   // Throttled even for addresses with no account, or the throttle itself
   // becomes the oracle the identical wording was meant to close.
-  if (!checkRateLimit(key).allowed) {
+  if (!(await checkRateLimit(key)).allowed) {
     return { ok: false, error: "Too many requests. Try again in a few minutes." };
   }
-  recordFailure(key);
+  await recordFailure(key);
 
   const user = await db.user.findUnique({
     where: { email },
@@ -74,7 +74,7 @@ export async function resetPassword(formData: FormData): Promise<ActionResult> {
   const { email, code, password } = parsed.data;
   const key = await limiterKey(email);
 
-  if (!checkRateLimit(key).allowed) {
+  if (!(await checkRateLimit(key)).allowed) {
     return { ok: false, error: "Too many attempts. Try again in a few minutes." };
   }
 
@@ -93,13 +93,13 @@ export async function resetPassword(formData: FormData): Promise<ActionResult> {
   const WRONG = "That code isn't right, or it has expired. Request a new one.";
 
   if (!user) {
-    recordFailure(key);
+    await recordFailure(key);
     return { ok: false, error: WRONG, field: "code" };
   }
 
   const result = await consumeCode(user.id, "password_reset", code);
   if (!result.ok) {
-    recordFailure(key);
+    await recordFailure(key);
     return {
       ok: false,
       field: "code",

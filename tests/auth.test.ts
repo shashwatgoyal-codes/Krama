@@ -15,12 +15,12 @@ import {
   SESSION_TTL_DAYS,
 } from "@/lib/auth/token";
 import {
-  checkRateLimit,
-  recordFailure,
-  clearAttempts,
-  resetRateLimiter,
+  decide,
+  afterFailure,
+  retryMessage,
   MAX_ATTEMPTS,
   LOCKOUT_MS,
+  type Attempt,
 } from "@/lib/auth/rate-limit";
 import { signUpSchema, signInSchema, emailSchema } from "@/lib/validation";
 
@@ -122,42 +122,71 @@ describe("session tokens", () => {
   });
 });
 
+/**
+ * The limiter's storage now lives in Postgres, so these exercise the pure
+ * decision core against an in-test store. Same assertions as before the
+ * move — the point of splitting the module was that this stayed testable
+ * without a database.
+ */
+function limiter() {
+  const store = new Map<string, Attempt>();
+  return {
+    check: (key: string, now = Date.now()) => decide(store.get(key) ?? null, now),
+    fail: (key: string, now = Date.now()) =>
+      store.set(key, afterFailure(store.get(key) ?? null, now)),
+    clear: (key: string) => store.delete(key),
+  };
+}
+
 describe("sign-in rate limiting", () => {
-  beforeEach(resetRateLimiter);
+  let rl: ReturnType<typeof limiter>;
+  beforeEach(() => {
+    rl = limiter();
+  });
 
   it("allows the first attempt", () => {
-    expect(checkRateLimit("ip:someone@example.com").allowed).toBe(true);
+    expect(rl.check("ip:someone@example.com").allowed).toBe(true);
   });
 
   it("locks out after the allowance is spent", () => {
     const key = "ip:someone@example.com";
-    for (let i = 0; i < MAX_ATTEMPTS; i++) recordFailure(key);
-    const result = checkRateLimit(key);
+    for (let i = 0; i < MAX_ATTEMPTS; i++) rl.fail(key);
+    const result = rl.check(key);
     expect(result.allowed).toBe(false);
     expect(result.retryAfterMs).toBeGreaterThan(0);
     expect(result.retryAfterMs).toBeLessThanOrEqual(LOCKOUT_MS);
   });
 
   it("keeps one person's lockout away from another's", () => {
-    for (let i = 0; i < MAX_ATTEMPTS; i++) recordFailure("ip:victim@example.com");
-    expect(checkRateLimit("ip:victim@example.com").allowed).toBe(false);
-    expect(checkRateLimit("ip:someone-else@example.com").allowed).toBe(true);
+    for (let i = 0; i < MAX_ATTEMPTS; i++) rl.fail("ip:victim@example.com");
+    expect(rl.check("ip:victim@example.com").allowed).toBe(false);
+    expect(rl.check("ip:someone-else@example.com").allowed).toBe(true);
   });
 
   it("clears the count after a successful sign-in", () => {
     const key = "ip:someone@example.com";
-    recordFailure(key);
-    recordFailure(key);
-    clearAttempts(key);
-    expect(checkRateLimit(key).allowed).toBe(true);
+    rl.fail(key);
+    rl.fail(key);
+    rl.clear(key);
+    expect(rl.check(key).allowed).toBe(true);
   });
 
   it("lets the lockout lapse once the window passes", () => {
     const key = "ip:someone@example.com";
     const t0 = 1_000_000;
-    for (let i = 0; i < MAX_ATTEMPTS; i++) recordFailure(key, t0);
-    expect(checkRateLimit(key, t0).allowed).toBe(false);
-    expect(checkRateLimit(key, t0 + LOCKOUT_MS + 1000).allowed).toBe(true);
+    for (let i = 0; i < MAX_ATTEMPTS; i++) rl.fail(key, t0);
+    expect(rl.check(key, t0).allowed).toBe(false);
+    expect(rl.check(key, t0 + LOCKOUT_MS + 1000).allowed).toBe(true);
+  });
+
+  it("never tells someone to try again in zero minutes", () => {
+    // Rounded up, because "try again in 0 minutes" is not an instruction.
+    for (const ms of [1, 999, 60_000, 60_001, LOCKOUT_MS]) {
+      expect(retryMessage(ms)).not.toContain("0 minute");
+      expect(retryMessage(ms)).toMatch(/\d+ minutes?\./);
+    }
+    expect(retryMessage(60_000)).toContain("1 minute.");
+    expect(retryMessage(120_000)).toContain("2 minutes.");
   });
 });
 
