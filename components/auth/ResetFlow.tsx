@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import Field from "./Field";
+import PasswordField from "@/components/auth/PasswordField";
 import CodeField from "./CodeField";
 import { requestReset, resetPassword } from "@/app/(auth)/forgot/actions";
 
@@ -90,10 +91,9 @@ export default function ResetFlow() {
         <form action={submit} noValidate>
           <fieldset disabled={pending}>
             <CodeField />
-            <Field
+            <PasswordField
               label="New password"
               name="password"
-              type="password"
               autoComplete="new-password"
               required
               minLength={10}

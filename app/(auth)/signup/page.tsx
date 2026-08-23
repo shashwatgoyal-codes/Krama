@@ -4,6 +4,7 @@ import { pageTitle } from "@/lib/env";
 import AuthShell from "@/components/auth/AuthShell";
 import AuthForm from "@/components/auth/AuthForm";
 import Field from "@/components/auth/Field";
+import PasswordField from "@/components/auth/PasswordField";
 import { signUp } from "../actions";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
 import { redirectIfSignedIn } from "@/lib/auth/redirect-if-signed-in";
@@ -71,10 +72,9 @@ export default async function SignUpPage() {
           required
           placeholder="you@example.com"
         />
-        <Field
+        <PasswordField
           label="Password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={MIN_PASSWORD_LENGTH}
