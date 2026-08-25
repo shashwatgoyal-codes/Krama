@@ -165,10 +165,13 @@ model AdminRole {
   @@map("admin_roles")
 }
 
+/// The only level that exists as a row.
+///
+/// `standard` is the absence of a row, so a new account is powerless by
+/// default rather than by remembering to write the right value.
+/// `superadmin` comes from SUPER_ADMIN_EMAIL and is never stored, so the
+/// top of the ladder cannot be reached by writing to the database.
 enum AdminLevel {
-  /// Read-only: metadata and aggregates, no actions.
-  support
-  /// Can act on accounts. Cannot grant admin access.
   admin
 
   @@map("admin_level")

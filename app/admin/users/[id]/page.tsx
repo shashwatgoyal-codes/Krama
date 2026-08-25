@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminDbConfigured } from "@/lib/admin/db";
 import { accountDetail } from "@/lib/admin/queries";
-import { canActOnAccounts } from "@/lib/admin/levels";
+import { canActOn, LEVEL_LABEL, LEVEL_BLURB } from "@/lib/admin/levels";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +36,23 @@ export default async function AccountPage({
 
       <h1 className="mt-2 font-display text-[17px] font-semibold">{account.name}</h1>
       <p className="text-[12.5px] text-mut">{account.email}</p>
+      <p className="mt-1 text-[11.5px] text-fai">{LEVEL_BLURB[account.level]}</p>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="rounded-xl border border-ln bg-surf p-4">
           <h2 className="label-xs text-mut">Account</h2>
           <div className="mt-2">
             <Row label="Account ID" value={account.id} />
+            <Row label="Role" value={LEVEL_LABEL[account.level]} />
+            {account.level === "admin" && (
+              <>
+                <Row
+                  label="Admin since"
+                  value={account.grantedAt ? account.grantedAt.toISOString().slice(0, 10) : "unknown"}
+                />
+                <Row label="Granted by" value={account.grantedBy ?? "unknown"} />
+              </>
+            )}
             <Row label="Status" value={account.verified ? "Verified" : "Unverified"} />
             <Row label="Joined" value={account.joined.toISOString().slice(0, 10)} />
             <Row
@@ -82,16 +93,23 @@ export default async function AccountPage({
 
         <div className="rounded-xl border border-ln bg-surf p-4">
           <h2 className="label-xs text-mut">Actions</h2>
-          {canActOnAccounts(actor.level) ? (
+          {canActOn(actor.level, account.level) ? (
             <p className="mt-2 text-[12px] leading-relaxed text-mut">
               None yet. Suspend, force a password reset and request content
               access all land here — each one needing a written reason, each one
               recorded in the audit log under your name. They are deliberately
               not shipped before that log exists.
             </p>
+          ) : account.level === "superadmin" ? (
+            <p className="mt-2 text-[12px] leading-relaxed text-mut">
+              Nobody can act on a super admin from in here — not even a super
+              admin. That seat is entered and left through the environment, so
+              the portal cannot lock out the one person who can unlock it.
+            </p>
           ) : (
             <p className="mt-2 text-[12px] leading-relaxed text-mut">
-              Your level is read-only. Actions on accounts need Admin.
+              You manage standard accounts. Acting on another admin needs
+              Super admin.
             </p>
           )}
         </div>

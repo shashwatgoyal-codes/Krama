@@ -1,4 +1,19 @@
 import { adminDb } from "./db";
+import { isSuperAdmin } from "./guard";
+import type { Level } from "./levels";
+
+/**
+ * Which tier an account is on.
+ *
+ * Derived rather than stored, because two of the three tiers are not
+ * rows: superadmin is an environment variable, standard is the absence
+ * of a grant. Reading it back out of one place keeps the table and the
+ * badge from ever disagreeing.
+ */
+function levelOf(email: string, hasLiveGrant: boolean): Level {
+  if (isSuperAdmin(email)) return "superadmin";
+  return hasLiveGrant ? "admin" : "standard";
+}
 
 /**
  * Everything the portal reads.
@@ -77,6 +92,7 @@ export type UserRow = {
   joined: Date;
   lastSeen: Date | null;
   items: number;
+  level: Level;
 };
 
 /**
@@ -110,6 +126,7 @@ export async function listUsers(query?: string): Promise<UserRow[]> {
         orderBy: { createdAt: "desc" },
         take: 1,
       },
+      adminRole: { select: { revokedAt: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 200,
@@ -123,10 +140,13 @@ export async function listUsers(query?: string): Promise<UserRow[]> {
     joined: u.createdAt,
     lastSeen: u.sessions[0]?.createdAt ?? null,
     items: u._count.tasks + u._count.notes + u._count.events + u._count.links,
+    level: levelOf(u.email, Boolean(u.adminRole) && u.adminRole?.revokedAt === null),
   }));
 }
 
 export type AccountDetail = UserRow & {
+  grantedAt: Date | null;
+  grantedBy: string | null;
   timezone: string | null;
   breakdown: { tasks: number; notes: number; events: number; links: number };
   liveSessions: number;
@@ -147,6 +167,7 @@ export async function accountDetail(id: string): Promise<AccountDetail | null> {
         select: { createdAt: true, expiresAt: true },
         orderBy: { createdAt: "desc" },
       },
+      adminRole: { select: { revokedAt: true, grantedAt: true, grantedBy: true } },
     },
   });
   if (!u) return null;
@@ -160,6 +181,9 @@ export async function accountDetail(id: string): Promise<AccountDetail | null> {
     joined: u.createdAt,
     lastSeen: u.sessions[0]?.createdAt ?? null,
     items: u._count.tasks + u._count.notes + u._count.events + u._count.links,
+    level: levelOf(u.email, Boolean(u.adminRole) && u.adminRole?.revokedAt === null),
+    grantedAt: u.adminRole?.revokedAt === null ? (u.adminRole?.grantedAt ?? null) : null,
+    grantedBy: u.adminRole?.revokedAt === null ? (u.adminRole?.grantedBy ?? null) : null,
     timezone: u.profile?.timezone ?? null,
     breakdown: {
       tasks: u._count.tasks,

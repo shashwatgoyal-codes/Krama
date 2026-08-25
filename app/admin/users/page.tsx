@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminDbConfigured } from "@/lib/admin/db";
 import { listUsers } from "@/lib/admin/queries";
+import { LEVEL_LABEL, LEVEL_STYLE } from "@/lib/admin/levels";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,11 @@ export default async function AdminUsers({
     <>
       <h1 className="font-display text-[17px] font-semibold">Users</h1>
       <p className="mt-1.5 max-w-[62ch] text-[12.5px] leading-relaxed text-mut">
-        &ldquo;312 items&rdquo; is operational — it tells you whether an account is
-        in use. What those items say is not available here.
+        Role answers who has power here: <strong>Standard</strong> is an
+        ordinary account, <strong>Admin</strong> can act on others,{" "}
+        <strong>Super admin</strong> can grant that. &ldquo;312 items&rdquo; is
+        operational — it tells you whether an account is in use. What those
+        items say is not available here.
       </p>
 
       <form className="mt-4 flex gap-2">
@@ -52,7 +56,7 @@ export default async function AdminUsers({
         <table className="w-full min-w-[640px] border-collapse text-[12.5px]">
           <thead>
             <tr className="border-b border-ln text-left">
-              {["Account", "Status", "Joined", "Last seen", "Items"].map((h) => (
+              {["Account", "Role", "Status", "Joined", "Last seen", "Items"].map((h) => (
                 <th key={h} className="label-xs px-3.5 py-2.5 font-semibold text-mut">
                   {h}
                 </th>
@@ -67,6 +71,17 @@ export default async function AdminUsers({
                     {u.name}
                   </Link>
                   <span className="block text-[11px] text-mut">{u.email}</span>
+                </td>
+                <td className="px-3.5 py-2.5">
+                  {u.level === "standard" ? (
+                    <span className="text-[11px] text-mut">Standard</span>
+                  ) : (
+                    <span
+                      className={`rounded border px-[5px] py-0.5 text-[10.5px] font-semibold ${LEVEL_STYLE[u.level]}`}
+                    >
+                      {LEVEL_LABEL[u.level]}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3.5 py-2.5">
                   {u.verified ? (
@@ -88,7 +103,7 @@ export default async function AdminUsers({
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3.5 py-6 text-center text-mut">
+                <td colSpan={6} className="px-3.5 py-6 text-center text-mut">
                   {q ? `Nothing matches “${q}”.` : "No accounts yet."}
                 </td>
               </tr>

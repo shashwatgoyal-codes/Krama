@@ -1,21 +1,22 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { isLevel, type Level } from "./levels";
+import { canOpenPortal, type Level } from "./levels";
 
 /**
  * Who is looking at the admin portal, if anyone.
  *
- * Two independent sources, deliberately. The owner comes from
+ * Two independent sources, deliberately. The superadmin comes from
  * SUPER_ADMIN_EMAIL in the environment and has no row anywhere, so
- * database write access alone cannot make one. Everyone else is a row
- * the owner created.
+ * database write access alone cannot make one. Admins are rows the
+ * superadmin created. Everyone else is standard, which is the absence
+ * of a row rather than a value in one.
  */
 
 export type AdminActor = { userId: string; email: string; level: Level };
 
 /** Case-insensitive, because email is. Trimmed, because env values are pasted. */
-function isOwner(email: string): boolean {
+export function isSuperAdmin(email: string): boolean {
   const configured = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
   if (!configured) return false;
   return configured === email.trim().toLowerCase();
@@ -25,8 +26,8 @@ export async function currentAdmin(): Promise<AdminActor | null> {
   const user = await getSessionUser();
   if (!user) return null;
 
-  if (isOwner(user.email)) {
-    return { userId: user.id, email: user.email, level: "owner" };
+  if (isSuperAdmin(user.email)) {
+    return { userId: user.id, email: user.email, level: "superadmin" };
   }
 
   const role = await db.adminRole.findUnique({
@@ -35,9 +36,9 @@ export async function currentAdmin(): Promise<AdminActor | null> {
   });
   // A revoked role is not a role. Checked here rather than by deleting
   // the row, so the grant and its revocation both stay on record.
-  if (!role || role.revokedAt || !isLevel(role.level)) return null;
+  if (!role || role.revokedAt) return null;
 
-  return { userId: user.id, email: user.email, level: role.level };
+  return { userId: user.id, email: user.email, level: "admin" };
 }
 
 /**
@@ -50,7 +51,7 @@ export async function currentAdmin(): Promise<AdminActor | null> {
  */
 export async function requireAdmin(): Promise<AdminActor> {
   const actor = await currentAdmin();
-  if (!actor) redirect("/app");
+  if (!actor || !canOpenPortal(actor.level)) redirect("/app");
   return actor;
 }
 

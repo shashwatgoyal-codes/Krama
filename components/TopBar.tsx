@@ -24,11 +24,23 @@ export default function TopBar({
   env,
   name,
   avatar,
+  isAdmin = false,
 }: {
   env: AppEnv;
   name: string;
   /** Src for the uploaded picture, or null for the initial. */
   avatar: string | null;
+  /**
+   * Whether to show the way into the admin portal.
+   *
+   * Invisible to everyone who isn't, obvious to everyone who is. A
+   * greyed-out link or a "no access" page would tell a stranger the
+   * portal exists, which is an invitation to find out more about it —
+   * while an admin with no link has to remember a URL, which is how an
+   * invited admin ends up unable to reach the thing they were invited
+   * to.
+   */
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -95,6 +107,14 @@ export default function TopBar({
         >
           Search
         </Link>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="rounded-md border border-warn bg-warn-soft px-2 py-1 text-[11.5px] font-semibold text-warn transition-opacity hover:opacity-80"
+          >
+            Admin
+          </Link>
+        )}
         <ThemeToggle />
         <Link
           href="/app/profile"
