@@ -34,18 +34,20 @@ model User {
   avatarType String?
   avatarAt   DateTime?
 
-  profile  Profile?
-  sessions Session[]
-  codes    VerificationCode[]
-  events   Event[]
-  links    Link[]
-  areas    Area[]
-  tasks    Task[]
-  notes    Note[]
-  tags        Tag[]
-  ledger      PointEntry[]
-  rewards     Reward[]
-  redemptions Redemption[]
+  profile       Profile?
+  adminRole     AdminRole?         @relation("adminRole")
+  adminRequests AdminRequest[]     @relation("adminRequest")
+  sessions      Session[]
+  codes         VerificationCode[]
+  events        Event[]
+  links         Link[]
+  areas         Area[]
+  tasks         Task[]
+  notes         Note[]
+  tags          Tag[]
+  ledger        PointEntry[]
+  rewards       Reward[]
+  redemptions   Redemption[]
 
   @@map("users")
 }
@@ -55,7 +57,7 @@ model User {
 /// matters more than the title, and `taskId` is where it stops being a
 /// bookmark you never revisit.
 model Link {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   userId String
   taskId String?
 
@@ -142,6 +144,110 @@ model VerificationCode {
 /// a fresh instance. A per-instance limiter is worse than none: it looks
 /// like a limit of five while actually allowing five per instance, and
 /// nothing in the logs says so.
+/// Who may use the admin portal, and at what level.
+///
+/// There is deliberately no row for the owner. The owner is whoever
+/// matches SUPER_ADMIN_EMAIL in the environment, which means promoting
+/// yourself to the top requires deploy access rather than a SQL
+/// statement. A role table that can mint its own root is not a boundary.
+model AdminRole {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  level     AdminLevel
+  /// The admin who granted this. Null only for rows created by the owner.
+  grantedBy String?
+  grantedAt DateTime   @default(now())
+  revokedAt DateTime?
+
+  user User @relation("adminRole", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([revokedAt])
+  @@map("admin_roles")
+}
+
+enum AdminLevel {
+  /// Read-only: metadata and aggregates, no actions.
+  support
+  /// Can act on accounts. Cannot grant admin access.
+  admin
+
+  @@map("admin_level")
+}
+
+/// An outstanding invitation to the admin portal.
+///
+/// Only the token's hash is stored, the same way sessions work — the
+/// link that goes in the email is the only place the token exists.
+model AdminInvite {
+  id         String     @id @default(cuid())
+  email      String
+  level      AdminLevel
+  tokenHash  String     @unique
+  invitedBy  String
+  createdAt  DateTime   @default(now())
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("admin_invites")
+}
+
+/// Somebody asking for admin access, for the owner to decide on.
+///
+/// Nothing writes to this yet — the invite flow covers the real need
+/// while there is one account. It exists now so that adding the queue
+/// later is a screen rather than a migration under live data.
+model AdminRequest {
+  id          String        @id @default(cuid())
+  userId      String
+  reason      String
+  requestedAt DateTime      @default(now())
+  status      RequestStatus @default(pending)
+  decidedBy   String?
+  decidedAt   DateTime?
+
+  user User @relation("adminRequest", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("admin_requests")
+}
+
+enum RequestStatus {
+  pending
+  approved
+  declined
+
+  @@map("request_status")
+}
+
+/// Every administrative action, append-only.
+///
+/// Protected by a trigger rejecting UPDATE and DELETE, the same way the
+/// point ledger is. An audit trail an admin can quietly rewrite records
+/// nothing. It also records refusals and expiries, not just successes —
+/// a log that only shows what worked is not much of an audit trail.
+model AuditLog {
+  id         String   @id @default(cuid())
+  /// The admin who acted. Kept as a plain string, not a relation, so the
+  /// record survives that account being deleted.
+  actorEmail String
+  actorLevel String
+  action     String
+  /// What was acted on: a user id, an invite id, a setting name.
+  target     String?
+  /// Required by every write path. An action with no stated reason is
+  /// the one you will want an explanation for later.
+  reason     String
+  createdAt  DateTime @default(now())
+
+  @@index([actorEmail])
+  @@index([target])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
 model AuthAttempt {
   /// Scope of the throttle, e.g. "signin:someone@example.com".
   key         String    @id
@@ -207,9 +313,9 @@ model Profile {
 
   // --- Profile tab -------------------------------------------------
   /// 1 = Monday, 0 = Sunday. Drives the calendar's first column.
-  weekStartsOn Int    @default(1)
+  weekStartsOn      Int       @default(1)
   /// "24" | "12"
-  timeFormat   String @default("24")
+  timeFormat        String    @default("24")
   /// Shown as "last changed N months ago", never the password itself.
   passwordChangedAt DateTime?
 
@@ -217,8 +323,8 @@ model Profile {
   /// "HH:MM" in the user's zone, or null for no nudge. The defaults are
   /// the ones the design shows: a reminder you have to go and switch on
   /// is a reminder almost nobody switches on.
-  morningReminder String? @default("08:30")
-  eveningReminder String? @default("21:00")
+  morningReminder    String? @default("08:30")
+  eveningReminder    String? @default("21:00")
   /// How far back something may be logged and still count for half.
   backdateLimitDays  Int     @default(2)
   /// Unfinished work moves forward instead of disappearing.
@@ -228,14 +334,14 @@ model Profile {
 
   // --- Appearance tab ----------------------------------------------
   /// "comfortable" | "compact"
-  density      String  @default("comfortable")
-  reduceMotion Boolean @default(false)
+  density       String   @default("comfortable")
+  reduceMotion  Boolean  @default(false)
   /// "krama" = Cal Sans + Inter, "system" = the OS stack.
-  interfaceFont String @default("krama")
+  interfaceFont String   @default("krama")
   /// Five preset names, one per sticky tint. See lib/notes.ts.
   noteTints     String[] @default(["amber", "sky", "rose", "violet", "slate"])
   /// Palette token for the single accent hue. See lib/appearance.ts.
-  accent       String  @default("amber")
+  accent        String   @default("amber")
 
   /// Where a new task lands when no area is chosen.
   defaultAreaId String?
@@ -303,11 +409,11 @@ model Redemption {
 /// are everything else, and they mean the same thing on a task, a note,
 /// an event or a saved link.
 model Tag {
-  id     String @id @default(cuid())
+  id     String    @id @default(cuid())
   userId String
   name   String
   /// Same palette as areas — "mut" is the plain grey most tags stay.
-  colour String @default("mut")
+  colour String    @default("mut")
   /// Touched whenever the tag is applied, so unused ones can be found.
   usedAt DateTime?
 
@@ -361,7 +467,7 @@ enum Recurrence {
 }
 
 model Task {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   userId String
   areaId String?
 
@@ -372,16 +478,16 @@ model Task {
   // Points the task is worth. Kept narrow on purpose — see AGENTS.md.
   points Int @default(20)
 
-  dueOn       DateTime?
-  completedAt DateTime?
+  dueOn          DateTime?
+  completedAt    DateTime?
   // The day this task belongs to, in the user's timezone. Drives the
   // backdating rule; not the same as createdAt.
   createdForDate DateTime
 
-  recurrence       Recurrence @default(none)
+  recurrence         Recurrence @default(none)
   // For monthly: day of month. For weekly it held the single weekday,
   // and still does for rows written before recurrenceDays existed.
-  recurrenceValue  Int?
+  recurrenceValue    Int?
   /// What time of day a routine happens, as minutes from midnight, and
   /// for how long. Set on the template, not the instance: the whole
   /// point is that the calendar can draw next Monday's gym session
@@ -394,19 +500,19 @@ model Task {
   /// is a thing people actually want and a single weekday cannot say
   /// it. Empty means fall back to recurrenceValue, so rows written
   /// before this existed keep working.
-  recurrenceDays   Int[]      @default([])
+  recurrenceDays     Int[]      @default([])
   /// The last day this routine runs, or null for open-ended. Stored as
   /// a day rather than an instant: "until the end of March" is a date
   /// someone chose, not a moment, and a timezone should not be able to
   /// move it.
-  recurrenceUntil  DateTime?
+  recurrenceUntil    DateTime?
   // Instances point back at the template they came from.
   recurrenceParentId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   area   Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
   events Event[]
   links  Link[]
@@ -435,7 +541,7 @@ model PointEntry {
   sourceId   String?
 
   points     Int
-  multiplier Float @default(1)
+  multiplier Float    @default(1)
   // The day it counted toward, after the day-boundary rule is applied.
   countedFor DateTime
 

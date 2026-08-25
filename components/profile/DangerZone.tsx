@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import { inputClass } from "./Row";
+import PasswordInput from "@/components/ui/PasswordInput";
 import { deleteAccountAction } from "@/app/app/profile/actions";
 
 export default function DangerZone({
@@ -54,10 +55,9 @@ export default function DangerZone({
                 >
                   Your password
                 </label>
-                <input
+                <PasswordInput
                   id="delete-password"
                   name="password"
-                  type="password"
                   required
                   autoComplete="current-password"
                   className={`mt-1.5 ${inputClass}`}

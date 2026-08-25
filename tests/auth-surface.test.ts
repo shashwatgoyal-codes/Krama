@@ -36,21 +36,44 @@ describe("every password box can be revealed", () => {
   }
 
   it("the toggle cannot submit the form it sits in", () => {
-    const src = read("components/auth/PasswordField.tsx");
+    // The button lives in one shared component now, used by both the
+    // auth Field and the bare inputs on the profile screen.
+    const src = read("components/ui/RevealToggle.tsx");
     expect(src).toContain('type="button"');
   });
 
   it("the toggle says which state it is in, for a screen reader", () => {
-    const src = read("components/auth/PasswordField.tsx");
+    const src = read("components/ui/RevealToggle.tsx");
     expect(src).toContain("aria-pressed");
     expect(src).toContain("Show password");
     expect(src).toContain("Hide password");
   });
 
+  it("both password entry points go through the one toggle", () => {
+    // Two implementations of this control would mean two places to get
+    // type="button" and the aria wiring wrong.
+    for (const f of [
+      "components/auth/PasswordField.tsx",
+      "components/ui/PasswordInput.tsx",
+    ]) {
+      expect(read(f)).toContain("RevealToggle");
+    }
+  });
+
+  it("the profile screens no longer have bare password boxes", () => {
+    for (const f of [
+      "components/profile/ChangePasswordRow.tsx",
+      "components/profile/DangerZone.tsx",
+    ]) {
+      expect(read(f)).toContain("PasswordInput");
+      expect(read(f)).not.toContain('type="password"');
+    }
+  });
+
   it("starts hidden and remembers nothing between visits", () => {
     // Revealing a password is a decision about this moment and who is
     // behind you — not a preference worth persisting.
-    const src = read("components/auth/PasswordField.tsx");
+    const src = read("components/ui/PasswordInput.tsx");
     expect(src).toContain("useState(false)");
     expect(src).not.toContain("localStorage");
     expect(src).not.toContain("sessionStorage");
