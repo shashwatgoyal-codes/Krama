@@ -20,12 +20,15 @@ export default function ReasonedAction({
   label,
   title,
   confirm,
+  tone = "danger",
 }: {
   action: (formData: FormData) => Promise<ActionResult>;
   hidden: Record<string, string>;
   label: string;
   title: string;
   confirm: string;
+  /** "safe" for reversible actions — restoring access, ending sessions. */
+  tone?: "danger" | "safe";
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -37,7 +40,10 @@ export default function ReasonedAction({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border border-ln2 px-2 py-1 text-[11.5px] font-semibold text-mut transition-colors hover:border-bad hover:text-bad"
+        className={
+          "rounded-md border border-ln2 px-2 py-1 text-[11.5px] font-semibold text-mut transition-colors " +
+          (tone === "danger" ? "hover:border-bad hover:text-bad" : "hover:border-ink hover:text-ink")
+        }
       >
         {label}
       </button>
@@ -89,7 +95,10 @@ export default function ReasonedAction({
         <button
           type="submit"
           disabled={pending || reason.trim().length < 3}
-          className="rounded-md bg-bad px-2.5 py-1 text-[11.5px] font-semibold text-white disabled:opacity-45"
+          className={
+            "rounded-md px-2.5 py-1 text-[11.5px] font-semibold text-white disabled:opacity-45 " +
+            (tone === "danger" ? "bg-bad" : "bg-ink")
+          }
         >
           {pending ? "…" : confirm}
         </button>

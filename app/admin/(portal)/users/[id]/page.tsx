@@ -4,6 +4,8 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { adminDbConfigured } from "@/lib/admin/db";
 import { accountDetail } from "@/lib/admin/queries";
 import { canActOn, LEVEL_LABEL, LEVEL_BLURB } from "@/lib/admin/levels";
+import ReasonedAction from "@/components/admin/ReasonedAction";
+import { suspendAccount, restoreAccount, endSessions } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,11 @@ export default async function AccountPage({
       <h1 className="mt-2 font-display text-[17px] font-semibold">{account.name}</h1>
       <p className="text-[12.5px] text-mut">{account.email}</p>
       <p className="mt-1 text-[11.5px] text-fai">{LEVEL_BLURB[account.level]}</p>
+      {account.suspendedAt && (
+        <p className="mt-2 inline-block rounded border border-bad bg-bad-soft px-[6px] py-0.5 text-[11px] font-semibold text-bad">
+          Suspended
+        </p>
+      )}
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="rounded-xl border border-ln bg-surf p-4">
@@ -94,12 +101,70 @@ export default async function AccountPage({
         <div className="rounded-xl border border-ln bg-surf p-4">
           <h2 className="label-xs text-mut">Actions</h2>
           {canActOn(actor.level, account.level) ? (
-            <p className="mt-2 text-[12px] leading-relaxed text-mut">
-              None yet. Suspend, force a password reset and request content
-              access all land here — each one needing a written reason, each one
-              recorded in the audit log under your name. They are deliberately
-              not shipped before that log exists.
-            </p>
+            <div className="mt-3 flex flex-col gap-3">
+              {account.suspendedAt ? (
+                <div>
+                  <p className="text-[12px] text-mut">
+                    Suspended on {account.suspendedAt.toISOString().slice(0, 10)}.
+                    They cannot sign in.
+                  </p>
+                  <p className="mt-1 text-[11.5px] italic text-fai">
+                    &ldquo;{account.suspendedReason}&rdquo;
+                  </p>
+                  <div className="mt-2">
+                    <ReasonedAction
+                      action={restoreAccount}
+                      hidden={{ userId: account.id }}
+                      label="Restore access"
+                      title={`Restore access for ${account.email}`}
+                      confirm="Restore"
+                      tone="safe"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[12px] leading-relaxed text-mut">
+                    Suspending stops them signing in and ends every session they
+                    have. Nothing is deleted and it can be undone.
+                  </p>
+                  <div className="mt-2">
+                    <ReasonedAction
+                      action={suspendAccount}
+                      hidden={{ userId: account.id }}
+                      label="Suspend account"
+                      title={`Suspend ${account.email}`}
+                      confirm="Suspend"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-ln pt-3">
+                <p className="text-[12px] leading-relaxed text-mut">
+                  Ends {account.liveSessions} live session
+                  {account.liveSessions === 1 ? "" : "s"} without suspending —
+                  for &ldquo;I left myself signed in somewhere&rdquo;.
+                </p>
+                <div className="mt-2">
+                  <ReasonedAction
+                    action={endSessions}
+                    hidden={{ userId: account.id }}
+                    label="Sign out everywhere"
+                    title={`End every session for ${account.email}`}
+                    confirm="Sign out"
+                    tone="safe"
+                  />
+                </div>
+              </div>
+
+              <p className="border-t border-ln pt-3 text-[11.5px] leading-relaxed text-fai">
+                Every action needs a reason and is recorded in the audit log
+                under your name. Forcing a password reset is not here yet: it
+                depends on email, which cannot reach anyone but the Resend
+                account owner until a domain is verified.
+              </p>
+            </div>
           ) : account.level === "superadmin" ? (
             <p className="mt-2 text-[12px] leading-relaxed text-mut">
               Nobody can act on a super admin from in here — not even a super

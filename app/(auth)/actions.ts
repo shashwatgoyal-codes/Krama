@@ -102,7 +102,7 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
 
   const user = await db.user.findUnique({
     where: { email },
-    select: { id: true, passwordHash: true },
+    select: { id: true, passwordHash: true, suspendedAt: true },
   });
 
   // Hash even when the user doesn't exist, so the response takes the same
@@ -115,6 +115,20 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
   if (!user || !valid) {
     await recordFailure(key);
     return { ok: false, error: BAD_CREDENTIALS };
+  }
+
+  // Checked after the password, deliberately. Refusing earlier would let
+  // anyone discover which accounts are suspended by watching how fast the
+  // answer comes back, and would say so to somebody who never had the
+  // password in the first place.
+  if (user.suspendedAt) {
+    await clearAttempts(key);
+    return {
+      ok: false,
+      error:
+        "This account is suspended. Reply to the address you signed up with " +
+        "if you think that is a mistake.",
+    };
   }
 
   await clearAttempts(key);

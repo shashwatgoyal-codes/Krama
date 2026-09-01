@@ -24,6 +24,12 @@ model User {
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
 
+  /// Set when an admin suspends the account. Nothing is deleted — a
+  /// suspension is a door held shut, not a bin, so it can be undone and
+  /// the reason survives to explain why it happened.
+  suspendedAt     DateTime?
+  suspendedReason String?
+
   /// A small avatar, kept in the row rather than in object storage —
   /// there is no bucket configured, and one 200KB image per account is
   /// not what Postgres struggles with. Capped hard on the way in.

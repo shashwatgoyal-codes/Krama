@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { canManageAdmins, LEVEL_LABEL } from "@/lib/admin/levels";
 import { listAdmins, listPending, INVITE_TTL_DAYS } from "@/lib/admin/invites";
 import InviteForm from "./InviteForm";
-import ReasonedAction from "./ReasonedAction";
+import ReasonedAction from "@/components/admin/ReasonedAction";
 import { withdrawInvite, removeAdmin } from "./actions";
 
 export const dynamic = "force-dynamic";

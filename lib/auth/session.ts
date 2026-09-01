@@ -54,7 +54,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     select: {
       id: true,
       expiresAt: true,
-      user: { select: { id: true, email: true, name: true } },
+      user: {
+        select: { id: true, email: true, name: true, suspendedAt: true },
+      },
     },
   });
 
@@ -62,6 +64,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   if (session.expiresAt.getTime() <= Date.now()) {
     await db.session.delete({ where: { id: session.id } }).catch(() => {});
+    return null;
+  }
+
+  // Suspending deletes the account's sessions, so this should never fire
+  // — it is here for the race where one was created a moment before, and
+  // because a suspension enforced in only one place is a suspension with
+  // a way around it.
+  if (session.user.suspendedAt) {
+    await db.session.deleteMany({ where: { userId: session.user.id } }).catch(() => {});
     return null;
   }
 

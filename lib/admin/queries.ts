@@ -145,6 +145,8 @@ export async function listUsers(query?: string): Promise<UserRow[]> {
 }
 
 export type AccountDetail = UserRow & {
+  suspendedAt: Date | null;
+  suspendedReason: string | null;
   grantedAt: Date | null;
   grantedBy: string | null;
   timezone: string | null;
@@ -161,6 +163,8 @@ export async function accountDetail(id: string): Promise<AccountDetail | null> {
       name: true,
       emailVerified: true,
       createdAt: true,
+      suspendedAt: true,
+      suspendedReason: true,
       profile: { select: { timezone: true } },
       _count: { select: { tasks: true, notes: true, events: true, links: true } },
       sessions: {
@@ -182,6 +186,8 @@ export async function accountDetail(id: string): Promise<AccountDetail | null> {
     lastSeen: u.sessions[0]?.createdAt ?? null,
     items: u._count.tasks + u._count.notes + u._count.events + u._count.links,
     level: levelOf(u.email, Boolean(u.adminRole) && u.adminRole?.revokedAt === null),
+    suspendedAt: u.suspendedAt,
+    suspendedReason: u.suspendedReason,
     grantedAt: u.adminRole?.revokedAt === null ? (u.adminRole?.grantedAt ?? null) : null,
     grantedBy: u.adminRole?.revokedAt === null ? (u.adminRole?.grantedBy ?? null) : null,
     timezone: u.profile?.timezone ?? null,
