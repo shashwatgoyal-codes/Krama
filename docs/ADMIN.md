@@ -29,8 +29,15 @@ GRANT USAGE ON SCHEMA public TO krama_admin;
 
 -- 3. Metadata about accounts. Note what is absent: passwordHash, and the
 --    avatar bytes.
-GRANT SELECT ("id", "email", "name", "emailVerified", "createdAt")
-  ON users TO krama_admin;
+--
+--    Keep this list in step with what lib/admin/queries.ts selects. A
+--    column the code reads and the grant omits fails as "permission
+--    denied for table users", which reads as though the whole table were
+--    barred rather than one column.
+GRANT SELECT (
+  "id", "email", "name", "emailVerified", "createdAt",
+  "suspendedAt", "suspendedReason"
+) ON users TO krama_admin;
 
 -- 4. Enough of a profile to say where someone is, and how they have things
 --    configured. No content.
@@ -88,6 +95,15 @@ SELECT "body" FROM notes LIMIT 1;  -- must fail: permission denied for column bo
 
 If the second one returns a row, the grant is wrong and the portal's promise is
 not being kept. Fix the grant; do not work around it in the query.
+
+## Order of operations
+
+Run the migrations first, then create the role. Migrations that need a grant
+carry their own, wrapped in a check for the role existing — so on a fresh
+environment they are a no-op, and the block above is what does the work. Create
+the role first and those grants land; create it afterwards and the block above
+covers the same ground. Either order works, but not half of each: if you add a
+migration that grants something, add it here too.
 
 ## Adding a table later
 
