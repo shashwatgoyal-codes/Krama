@@ -3,9 +3,17 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminDbConfigured } from "@/lib/admin/db";
 import { accountDetail } from "@/lib/admin/queries";
-import { canActOn, LEVEL_LABEL, LEVEL_BLURB } from "@/lib/admin/levels";
+import { canActOn, canManageAdmins, LEVEL_LABEL, LEVEL_BLURB } from "@/lib/admin/levels";
 import ReasonedAction from "@/components/admin/ReasonedAction";
-import { suspendAccount, restoreAccount, endSessions } from "./actions";
+import DangerDelete from "@/components/admin/DangerDelete";
+import {
+  suspendAccount,
+  restoreAccount,
+  endSessions,
+  promoteToAdmin,
+  demoteToStandard,
+  removeAccount,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -179,6 +187,54 @@ export default async function AccountPage({
           )}
         </div>
       </div>
+
+      {canManageAdmins(actor.level) && account.level !== "superadmin" && (
+        <div className="mt-4 rounded-xl border border-ln bg-surf p-4">
+          <h2 className="label-xs text-mut">Super admin only</h2>
+
+          <div className="mt-3 flex flex-wrap items-start gap-x-6 gap-y-3">
+            <div>
+              <p className="text-[12px] text-mut">
+                Currently <strong>{LEVEL_LABEL[account.level]}</strong>.
+              </p>
+              <div className="mt-2">
+                {account.level === "standard" ? (
+                  <ReasonedAction
+                    action={promoteToAdmin}
+                    hidden={{ userId: account.id }}
+                    label="Make admin"
+                    title={`Make ${account.email} an admin`}
+                    confirm="Promote"
+                    tone="safe"
+                  />
+                ) : (
+                  <ReasonedAction
+                    action={demoteToStandard}
+                    hidden={{ userId: account.id }}
+                    label="Remove admin"
+                    title={`Return ${account.email} to a standard account`}
+                    confirm="Demote"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-ln pt-3">
+            <DangerDelete
+              action={removeAccount}
+              userId={account.id}
+              email={account.email}
+            />
+          </div>
+
+          <p className="mt-3 text-[11.5px] leading-relaxed text-fai">
+            Nobody can be made a super admin here — that level has no row to
+            write, which is why it lives in the environment. To change who it
+            is, change SUPER_ADMIN_EMAIL and redeploy.
+          </p>
+        </div>
+      )}
     </>
   );
 }

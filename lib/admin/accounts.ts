@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { record } from "./audit";
-import { canActOn, type Level } from "./levels";
+import { canActOn, canManageAdmins, type Level } from "./levels";
 import { isSuperAdmin, type AdminActor } from "./guard";
 
 /**
@@ -117,5 +117,125 @@ export async function signOutEverywhere(
     target: gate.email,
     reason: `${reason} — ${count} session${count === 1 ? "" : "s"} ended`,
   });
+  return { ok: true };
+}
+
+/**
+ * Promoting a standard account to admin, without an invitation.
+ *
+ * The invitation flow exists for someone who is not here yet. This is
+ * for an account already in front of you — the same grant, reached by a
+ * different door, and recorded the same way.
+ *
+ * Super admin only, and it cannot mint another super admin: that level
+ * has no row to write, which is the whole reason it lives in the
+ * environment.
+ */
+export async function promote(
+  actor: AdminActor,
+  userId: string,
+  reason: string,
+): Promise<Outcome> {
+  if (!canManageAdmins(actor.level)) {
+    return { ok: false, error: "Only a super admin can change what someone is." };
+  }
+  const target = await levelOfUser(userId);
+  if (!target) return { ok: false, error: "That account no longer exists." };
+
+  if (target.level !== "standard") {
+    return { ok: false, error: `That account is already ${target.level}.` };
+  }
+
+  await db.adminRole.upsert({
+    where: { userId },
+    create: { userId, level: "admin", grantedBy: actor.email },
+    update: { level: "admin", grantedBy: actor.email, grantedAt: new Date(), revokedAt: null },
+  });
+  await record({ actor, action: "admin.granted", target: target.email, reason });
+  return { ok: true };
+}
+
+/** Taking admin back, leaving an ordinary account behind. */
+export async function demote(
+  actor: AdminActor,
+  userId: string,
+  reason: string,
+): Promise<Outcome> {
+  if (!canManageAdmins(actor.level)) {
+    return { ok: false, error: "Only a super admin can change what someone is." };
+  }
+  if (userId === actor.userId) {
+    return { ok: false, error: "You cannot demote yourself." };
+  }
+  const target = await levelOfUser(userId);
+  if (!target) return { ok: false, error: "That account no longer exists." };
+  if (target.level === "superadmin") {
+    return {
+      ok: false,
+      error: "The super admin comes from the environment. Change SUPER_ADMIN_EMAIL instead.",
+    };
+  }
+  if (target.level !== "admin") return { ok: false, error: "That account is not an admin." };
+
+  await db.adminRole.update({ where: { userId }, data: { revokedAt: new Date() } });
+  await record({ actor, action: "admin.revoked", target: target.email, reason });
+  return { ok: true };
+}
+
+/**
+ * Deleting an account and everything in it.
+ *
+ * The one irreversible thing in the portal, so it is the one with the
+ * most in front of it: super admin only, never yourself, never another
+ * super admin, and the typed reason has to be the account's email rather
+ * than free text — the same shape as a repository-deletion confirmation,
+ * because "are you sure" is a question people answer without reading.
+ *
+ * The audit row is written before the delete and holds the email as a
+ * plain string, so the record of the deletion outlives the account. The
+ * ledger's append-only trigger is lifted transaction-locally, the way
+ * self-deletion does it, since the rows are going with their owner.
+ */
+export async function deleteAccount(
+  actor: AdminActor,
+  userId: string,
+  confirmation: string,
+  reason: string,
+): Promise<Outcome> {
+  if (!canManageAdmins(actor.level)) {
+    return { ok: false, error: "Only a super admin can delete an account." };
+  }
+  if (userId === actor.userId) {
+    return {
+      ok: false,
+      error: "You cannot delete your own account from here. Use your profile.",
+    };
+  }
+
+  const target = await levelOfUser(userId);
+  if (!target) return { ok: false, error: "That account no longer exists." };
+  if (target.level === "superadmin") {
+    return { ok: false, error: "The super admin cannot be deleted from here." };
+  }
+
+  if (confirmation.trim().toLowerCase() !== target.email.toLowerCase()) {
+    await record({
+      actor,
+      action: "account.delete.refused",
+      target: target.email,
+      reason: `${reason} — refused: confirmation did not match`,
+    });
+    return { ok: false, error: `Type ${target.email} exactly to confirm.` };
+  }
+
+  // Recorded first. If the delete fails the log has an attempt that did
+  // not happen, which is recoverable; the other order risks a deletion
+  // with nothing saying who did it.
+  await record({ actor, action: "account.deleted", target: target.email, reason });
+
+  await db.$transaction([
+    db.$executeRaw`SELECT set_config('krama.allow_ledger_delete', 'on', true)`,
+    db.$executeRaw`DELETE FROM users WHERE id = ${userId}`,
+  ]);
   return { ok: true };
 }
