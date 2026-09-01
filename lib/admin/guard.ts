@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { canOpenPortal, type Level } from "./levels";
+import { isStepped } from "./stepup";
 
 /**
  * Who is looking at the admin portal, if anyone.
@@ -52,6 +53,9 @@ export async function currentAdmin(): Promise<AdminActor | null> {
 export async function requireAdmin(): Promise<AdminActor> {
   const actor = await currentAdmin();
   if (!actor || !canOpenPortal(actor.level)) redirect("/app");
+  // Being an admin is not the same as having proved it recently. The
+  // login session lasts thirty days; the portal asks again.
+  if (!(await isStepped(actor.userId))) redirect("/admin/unlock");
   return actor;
 }
 

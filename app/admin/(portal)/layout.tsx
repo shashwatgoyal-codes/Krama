@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { adminDbConfigured } from "@/lib/admin/db";
 import { LEVEL_LABEL } from "@/lib/admin/levels";
 import { pageTitle } from "@/lib/env";
+import LockButton from "./LockButton";
 
 export const metadata: Metadata = {
   title: pageTitle("Admin"),
@@ -19,9 +20,14 @@ const NAV = [
 ];
 
 /**
- * Every admin screen sits inside this, and the gate is here rather than
- * on each page — one place to get right, and a new page added later is
+ * Every gated admin screen sits inside this, and the gate is here rather
+ * than on each page — one place to get right, and a page added later is
  * protected by existing rather than by someone remembering.
+ *
+ * The (portal) route group exists so /admin/unlock can sit outside it.
+ * requireAdmin sends anyone without a live step-up to that page; if it
+ * rendered inside this layout, reaching it would require the very thing
+ * it exists to obtain, and the redirect would bounce forever.
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const actor = await requireAdmin();
@@ -65,6 +71,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <span title={actor.email}>
               {actor.email} · {LEVEL_LABEL[actor.level]}
             </span>
+            <LockButton />
             <Link
               href="/app"
               className="rounded-md border border-ln2 px-2 py-1 font-medium transition-colors hover:bg-surf2 hover:text-ink"
