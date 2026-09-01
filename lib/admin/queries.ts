@@ -194,3 +194,54 @@ export async function accountDetail(id: string): Promise<AccountDetail | null> {
     liveSessions: u.sessions.filter((s) => s.expiresAt > now).length,
   };
 }
+
+export type AuditRow = {
+  id: string;
+  actorEmail: string;
+  actorLevel: string;
+  action: string;
+  target: string | null;
+  reason: string;
+  createdAt: Date;
+};
+
+/**
+ * The audit trail.
+ *
+ * Read through the restricted connection like everything else, which
+ * also means the portal cannot edit its own history even by accident —
+ * that role has no UPDATE or DELETE anywhere, and the table refuses both
+ * regardless of who asks.
+ */
+export async function auditTrail(
+  filter?: { actor?: string; action?: string },
+  take = 200,
+): Promise<AuditRow[]> {
+  const where: Record<string, unknown> = {};
+  if (filter?.actor?.trim()) {
+    where.actorEmail = { contains: filter.actor.trim(), mode: "insensitive" };
+  }
+  if (filter?.action?.trim()) {
+    where.action = { startsWith: filter.action.trim() };
+  }
+
+  return adminDb.auditLog.findMany({
+    where,
+    select: {
+      id: true, actorEmail: true, actorLevel: true,
+      action: true, target: true, reason: true, createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take,
+  });
+}
+
+/** The distinct action names present, for the filter. */
+export async function auditActions(): Promise<string[]> {
+  const rows = await adminDb.auditLog.findMany({
+    select: { action: true },
+    distinct: ["action"],
+    orderBy: { action: "asc" },
+  });
+  return rows.map((r) => r.action);
+}
