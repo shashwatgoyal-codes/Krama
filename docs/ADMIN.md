@@ -96,6 +96,53 @@ SELECT "body" FROM notes LIMIT 1;  -- must fail: permission denied for column bo
 If the second one returns a row, the grant is wrong and the portal's promise is
 not being kept. Fix the grant; do not work around it in the query.
 
+## The support role
+
+Reading what somebody wrote needs a **third** role, separate again. The admin
+role above has no grant on content and never will. This one has content and
+nothing else — no `users` table at all, so it can read a note by owner id and
+still cannot say whose it is.
+
+One code path uses it: `lib/admin/support.ts`, which refuses unless a live,
+approved, unexpired, unrevoked consent record names both the account and the
+exact scope being read. Splitting it this way is the point — if unsealing were
+a flag on the admin connection, every admin query would be one bug away from
+returning content.
+
+```sql
+CREATE ROLE krama_support WITH LOGIN PASSWORD 'replace-me';
+GRANT USAGE ON SCHEMA public TO krama_support;
+
+-- Content, and only the columns the viewer renders.
+GRANT SELECT ("id", "userId", "body",  "createdAt") ON notes  TO krama_support;
+GRANT SELECT ("id", "userId", "title", "createdAt") ON tasks  TO krama_support;
+GRANT SELECT ("id", "userId", "title", "startsAt")  ON events TO krama_support;
+GRANT SELECT ("id", "userId", "url",   "savedAt")   ON links  TO krama_support;
+
+-- Deliberately absent: users, sessions, profiles, the ledger, the audit log.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public
+  FROM krama_support;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE ALL ON TABLES FROM krama_support;
+```
+
+Then set `SUPPORT_DATABASE_URL` alongside the others. Without it the viewer
+refuses rather than falling back to a connection that would work.
+
+### Checking it worked
+
+From `psql` as `krama_support`:
+
+```sql
+SELECT "body" FROM notes LIMIT 1;      -- works: this role is the exception
+SELECT "email" FROM users LIMIT 1;     -- must fail: identities are not its business
+UPDATE notes SET "body" = 'x';         -- must fail: read-only, always
+```
+
+And as `krama_admin`, `SELECT "body" FROM notes` must **still** fail. If it
+succeeds, the seal has been widened by accident and the consent flow is
+decorative.
+
 ## Order of operations
 
 Run the migrations first, then create the role. Migrations that need a grant

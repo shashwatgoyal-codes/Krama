@@ -43,6 +43,7 @@ model User {
   profile       Profile?
   adminRole     AdminRole?         @relation("adminRole")
   adminRequests AdminRequest[]     @relation("adminRequest")
+  supportAccess SupportAccess[]    @relation("supportAccess")
   sessions      Session[]
   codes         VerificationCode[]
   events        Event[]
@@ -255,6 +256,72 @@ model AuditLog {
   @@index([target])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+/// An admin asking to read somebody's content, and their answer.
+///
+/// The only thing that can ever unseal content, and it is the account
+/// holder who unseals it. An admin can ask; they cannot grant their own
+/// request, extend it, or ask again once refused without asking again.
+///
+/// Read-only, always. If something needs changing, the person changes
+/// it — an admin who could edit somebody's notes would be a worse
+/// problem than one who could read them.
+model SupportAccess {
+  id               String         @id @default(cuid())
+  userId           String
+  /// Plain string, so the record survives the admin's account going.
+  adminEmail       String
+  /// What the admin says they need it for. Shown to the user verbatim.
+  reason           String
+  /// Which kinds of content. Never everything by default.
+  scopes           SupportScope[]
+  requestedAt      DateTime       @default(now())
+  /// The request lapses on its own if it is simply ignored.
+  requestExpiresAt DateTime
+
+  approvedAt  DateTime?
+  declinedAt  DateTime?
+  /// When the granted window closes. Null until approved.
+  accessUntil DateTime?
+  revokedAt   DateTime?
+
+  /// Every record the admin actually opened while it was live.
+  views SupportView[]
+
+  user User @relation("supportAccess", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, approvedAt])
+  @@index([requestExpiresAt])
+  @@map("support_access")
+}
+
+/// What an admin may look at. Deliberately granular — "help me with my
+/// calendar" should not open somebody's notes.
+enum SupportScope {
+  tasks
+  notes
+  events
+  links
+
+  @@map("support_scope")
+}
+
+/// One row per thing the admin opened, shown to the user in their own
+/// settings. Being able to see what was looked at is what makes consent
+/// mean something afterwards, not just at the moment of asking.
+model SupportView {
+  id       String       @id @default(cuid())
+  accessId String
+  scope    SupportScope
+  /// How many records were returned. Not what they said.
+  count    Int
+  viewedAt DateTime     @default(now())
+
+  access SupportAccess @relation(fields: [accessId], references: [id], onDelete: Cascade)
+
+  @@index([accessId])
+  @@map("support_views")
 }
 
 model AuthAttempt {

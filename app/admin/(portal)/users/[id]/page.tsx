@@ -166,6 +166,18 @@ export default async function AccountPage({
                 </div>
               </div>
 
+              <div className="border-t border-ln pt-3">
+                <p className="text-[12px] leading-relaxed text-mut">
+                  You cannot read their content. You can ask them to let you.
+                </p>
+                <Link
+                  href={`/admin/users/${account.id}/support`}
+                  className="mt-2 inline-block rounded-md border border-ln2 px-2 py-1 text-[11.5px] font-semibold text-mut transition-colors hover:border-ink hover:text-ink"
+                >
+                  Support access
+                </Link>
+              </div>
+
               <p className="border-t border-ln pt-3 text-[11.5px] leading-relaxed text-fai">
                 Every action needs a reason and is recorded in the audit log
                 under your name. Forcing a password reset is not here yet: it
