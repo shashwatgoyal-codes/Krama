@@ -35,18 +35,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="min-h-screen bg-paper">
-      {/* Not decoration. Nothing else in this app is striped, so a
-          screenshot of this page is unambiguous, and so is glancing at
-          the wrong tab. */}
-      <div
-        aria-hidden="true"
-        className="h-1 w-full"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(45deg, var(--warn) 0 10px, transparent 10px 20px)",
-        }}
-      />
-
       <header className="flex-none border-b border-ln bg-surf">
         <div className="flex h-12 items-center gap-3.5 px-4">
           <span className="font-display text-[14.5px] font-semibold tracking-[-0.015em]">

@@ -29,14 +29,6 @@ export default async function Unlock({
   return (
     <main className="grid min-h-screen place-items-center px-6">
       <div className="w-full max-w-[380px]">
-        <div
-          aria-hidden="true"
-          className="mb-6 h-1 w-full rounded"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, var(--warn) 0 10px, transparent 10px 20px)",
-          }}
-        />
         <h1 className="font-display text-[19px] font-semibold tracking-[-0.02em]">
           Confirm it&rsquo;s you
         </h1>

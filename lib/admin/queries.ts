@@ -207,6 +207,15 @@ export type AuditRow = {
   actorLevel: string;
   action: string;
   target: string | null;
+  /**
+   * The account the target refers to, when it still exists.
+   *
+   * Targets are a mixture — a user id, an email address, a flag key — so
+   * this is resolved rather than assumed, and stays null for a deleted
+   * account. A link to an account that has been deleted would be a 404
+   * on the one screen whose job is to explain what happened to it.
+   */
+  targetUserId: string | null;
   reason: string;
   createdAt: Date;
 };
@@ -231,7 +240,7 @@ export async function auditTrail(
     where.action = { startsWith: filter.action.trim() };
   }
 
-  return adminDb.auditLog.findMany({
+  const rows = await adminDb.auditLog.findMany({
     where,
     select: {
       id: true, actorEmail: true, actorLevel: true,
@@ -240,6 +249,25 @@ export async function auditTrail(
     orderBy: { createdAt: "desc" },
     take,
   });
+
+  // One lookup for the whole page rather than one per row.
+  const targets = [...new Set(rows.map((r) => r.target).filter(Boolean))] as string[];
+  const accounts = targets.length
+    ? await adminDb.user.findMany({
+        where: { OR: [{ id: { in: targets } }, { email: { in: targets } }] },
+        select: { id: true, email: true },
+      })
+    : [];
+  const byKey = new Map<string, string>();
+  for (const a of accounts) {
+    byKey.set(a.id, a.id);
+    byKey.set(a.email, a.id);
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    targetUserId: r.target ? (byKey.get(r.target) ?? null) : null,
+  }));
 }
 
 /** The distinct action names present, for the filter. */

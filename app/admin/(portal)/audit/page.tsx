@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/guard";
 import { adminDbConfigured } from "@/lib/admin/db";
 import { auditTrail, auditActions } from "@/lib/admin/queries";
@@ -92,7 +93,18 @@ export default async function AuditPage({
                     {r.action}
                   </span>
                 </td>
-                <td className="px-3.5 py-2.5 text-mut">{r.target ?? "—"}</td>
+                <td className="px-3.5 py-2.5 text-mut">
+                  {r.targetUserId ? (
+                    <Link href={`/admin/users/${r.targetUserId}`} className="font-semibold text-acc">
+                      {r.target}
+                    </Link>
+                  ) : (
+                    // A flag key, or an account that has since been
+                    // deleted. Shown either way — the record outlives
+                    // what it points at, which is the point of it.
+                    (r.target ?? "—")
+                  )}
+                </td>
                 <td className="max-w-[320px] px-3.5 py-2.5 text-mut">{r.reason}</td>
               </tr>
             ))}

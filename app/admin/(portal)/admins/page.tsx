@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/guard";
 import { canManageAdmins, LEVEL_LABEL } from "@/lib/admin/levels";
 import { listAdmins, listPending, INVITE_TTL_DAYS } from "@/lib/admin/invites";
@@ -51,7 +52,17 @@ export default async function AdminsPage() {
               {admins.map((a) => (
                 <tr key={a.id} className="border-b border-ln last:border-0">
                   <td className="px-3.5 py-2.5">
-                    <span className="font-semibold">{a.user.name}</span>
+                    {/* Clickable for the same reason the users table is:
+                        the name is the thing you want to look into, and
+                        having to go back to Users and search for somebody
+                        you are already looking at is the kind of small
+                        friction that makes a tool feel unfinished. */}
+                    <Link
+                      href={`/admin/users/${a.user.id}`}
+                      className="font-semibold text-acc"
+                    >
+                      {a.user.name}
+                    </Link>
                     <span className="block text-[11px] text-mut">{a.user.email}</span>
                   </td>
                   <td className="px-3.5 py-2.5">{LEVEL_LABEL[a.level]}</td>
