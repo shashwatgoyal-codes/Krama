@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import TopBar from "@/components/TopBar";
 import { currentAdmin } from "@/lib/admin/guard";
 import AccessBanner from "@/components/AccessBanner";
+import QuickCapture from "@/components/QuickCapture";
 import { db as database } from "@/lib/db";
 import { canOpenPortal } from "@/lib/admin/levels";
 import { appEnv } from "@/lib/env";
@@ -123,6 +124,7 @@ export default async function AppLayout({
       />
       {user && !account?.emailVerified && <VerifyBanner email={user.email} />}
       <AccessBanner count={liveAccess} waiting={waitingAccess} />
+      <QuickCapture />
       {children}
     </div>
   );

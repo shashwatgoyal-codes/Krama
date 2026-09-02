@@ -44,6 +44,7 @@ model User {
   adminRole     AdminRole?         @relation("adminRole")
   adminRequests AdminRequest[]     @relation("adminRequest")
   supportAccess SupportAccess[]    @relation("supportAccess")
+  captures      CaptureItem[]      @relation("capture")
   sessions      Session[]
   codes         VerificationCode[]
   events        Event[]
@@ -322,6 +323,30 @@ model SupportView {
 
   @@index([accessId])
   @@map("support_views")
+}
+
+/// Something you wrote down before deciding what it was.
+///
+/// The point of the whole feature: at the moment a thought arrives you
+/// are usually in the middle of something else, and if capturing it
+/// means deciding whether it is a task or a note, which area, which tag
+/// and what it is worth, you will either break your flow to file it or
+/// not write it down at all. This table is where it waits.
+model CaptureItem {
+  id         String    @id @default(cuid())
+  userId     String
+  text       String
+  createdAt  DateTime  @default(now())
+  /// Set when it becomes something. The row stays, so the inbox can show
+  /// what it turned into rather than silently emptying.
+  triagedAt  DateTime?
+  resultType String?
+  resultId   String?
+
+  user User @relation("capture", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, triagedAt])
+  @@map("capture_items")
 }
 
 model AuthAttempt {
