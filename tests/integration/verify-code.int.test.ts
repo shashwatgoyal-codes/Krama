@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { db } from "@/lib/db";
 import { hasLiveCode, issueCode } from "@/lib/repositories/verification";
-import { makeUser, cleanup } from "./harness";
+import { makeUser, cleanupAll } from "./harness";
 
 /**
  * Whether a code is already waiting.
@@ -26,7 +26,10 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await cleanup();
+  // cleanupAll rather than cleanup: several users are made across these
+  // tests, including the second one in the isolation case, and cleanup
+  // takes a single user.
+  await cleanupAll();
 });
 
 describe("hasLiveCode", () => {
