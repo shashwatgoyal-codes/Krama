@@ -13,6 +13,7 @@ import {
   purgeStaleAttempts,
 } from "@/lib/repositories/auth-attempts";
 import { retryMessage } from "@/lib/auth/rate-limit";
+import { flagOnGlobally } from "@/lib/repositories/flags";
 import {
   signUpSchema,
   signInSchema,
@@ -38,6 +39,12 @@ async function requestKey(email: string): Promise<string> {
 }
 
 export async function signUp(formData: FormData): Promise<ActionResult> {
+  // Checked here as well as on the page. A hidden form is still a POST
+  // endpoint, and this is the one that actually creates the account.
+  if (!(await flagOnGlobally("open_registration"))) {
+    return { ok: false, error: "New accounts are closed at the moment." };
+  }
+
   const parsed = signUpSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),

@@ -349,6 +349,27 @@ model CaptureItem {
   @@map("capture_items")
 }
 
+/// A switch for something that is not ready for everybody.
+///
+/// Rows are created by migration rather than by the portal, so the set
+/// of flags is a thing you can read in the codebase rather than a thing
+/// somebody typed into a form at 2am. The portal changes their values.
+///
+/// A flag with no row is off. That is the safe direction: a typo in a
+/// flag name turns a feature off rather than on for everyone.
+model FeatureFlag {
+  key         String   @id
+  description String
+  enabled     Boolean  @default(false)
+  /// 0-100. Only consulted when enabled; a flag that is off is off for
+  /// everyone regardless of what this says.
+  rollout     Int      @default(100)
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("feature_flags")
+}
+
 model AuthAttempt {
   /// Scope of the throttle, e.g. "signin:someone@example.com".
   key         String    @id
