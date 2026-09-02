@@ -194,6 +194,12 @@ export default async function ProfilePage({
                         : `You're signed in on ${p.otherSessions + 1} devices.`
                     }
                   >
+                    <a
+                      href="/app/devices"
+                      className="mb-2 inline-block rounded-md border border-ln2 px-2.5 py-1 text-[12px] font-semibold text-mut transition-colors hover:bg-surf2 hover:text-ink"
+                    >
+                      See your devices
+                    </a>
                     <form action={signOutEverywhere}>
                       <button
                         type="submit"

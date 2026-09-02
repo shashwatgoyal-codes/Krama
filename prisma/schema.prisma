@@ -363,14 +363,18 @@ model AuthAttempt {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
+  id         String   @id @default(cuid())
+  userId     String
   // Only ever the SHA-256 of the token. The token itself lives in the
   // user's cookie and is never stored anywhere.
-  tokenHash String   @unique
-  expiresAt DateTime
-  userAgent String?
-  createdAt DateTime @default(now())
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  /// Updated when the session is refreshed. Without it a device list can
+  /// say when you signed in and not whether you have used it since —
+  /// which is the column that answers "is this still me?".
+  lastSeenAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

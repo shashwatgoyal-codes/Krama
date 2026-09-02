@@ -88,8 +88,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   // set cookies on every /app request.
   if (shouldRefresh(session.expiresAt)) {
     const expiresAt = sessionExpiry();
+    // lastSeenAt rides along with the refresh rather than being its own
+    // write. Touching a row on every request would turn a read-mostly
+    // table into a write-heavy one for a column nobody needs to the
+    // second — "active 2 hours ago" is the honest resolution here.
     await db.session
-      .update({ where: { id: session.id }, data: { expiresAt } })
+      .update({
+        where: { id: session.id },
+        data: { expiresAt, lastSeenAt: new Date() },
+      })
       .catch(() => {});
     try {
       jar.set(SESSION_COOKIE, token, {
@@ -119,4 +126,22 @@ export async function destroySession(): Promise<void> {
 /** Signs out everywhere — used after a password change or reset. */
 export async function destroyAllSessions(userId: string): Promise<void> {
   await db.session.deleteMany({ where: { userId } });
+}
+
+/**
+ * Which session row the current cookie belongs to.
+ *
+ * Only the devices screen needs this, and it needs it for one reason:
+ * to mark the row you are reading from, so "sign out" on the wrong line
+ * cannot end the session you are using.
+ */
+export async function currentSessionId(): Promise<string | null> {
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const row = await db.session.findUnique({
+    where: { tokenHash: hashSessionToken(token) },
+    select: { id: true },
+  });
+  return row?.id ?? null;
 }
