@@ -76,6 +76,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://krama:krama@localhost:5432/krama_test?sslmode=disable
           DIRECT_URL: postgresql://krama:krama@localhost:5432/krama_test?sslmode=disable
+          # One-time codes are stored as an HMAC keyed with this, and the
+          # code refuses to issue one without it rather than falling back
+          # to an empty key. Any integration test that issues a code needs
+          # it set; until one existed, nothing here did.
+          #
+          # A throwaway value in plain sight, like the database password
+          # above. It keys nothing that outlives the job.
+          SESSION_SECRET: ci-only-not-a-secret-at-least-32-characters-long
 
       # Proves the app compiles without any secrets. If this ever starts
       # needing DATABASE_URL, something is reaching the database at build

@@ -18,6 +18,20 @@ import { makeUser, cleanupAll } from "./harness";
  * reasoning about it.
  */
 
+/*
+ * Issuing a code needs SESSION_SECRET — it is the HMAC key the codes are
+ * stored under, and the code refuses rather than falling back to an
+ * empty one. Said out loud here because the failure otherwise arrives as
+ * six unrelated-looking assertion errors, which is exactly how this file
+ * broke CI the first time.
+ */
+if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 16) {
+  throw new Error(
+    "These tests issue one-time codes, which needs SESSION_SECRET (32+ chars). " +
+      "Set it in .env.local locally, or in the workflow's env for CI.",
+  );
+}
+
 let userId: string;
 
 beforeEach(async () => {
