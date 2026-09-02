@@ -89,7 +89,9 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
   // confirmed address there is no way back into this account, and the
   // moment someone has just typed the address is the moment they are
   // most able to check it.
-  redirect("/app/verify-email?sent=1");
+  // No ?sent=1: the page decides for itself whether a code is
+  // needed, so the parameter would only be a second source of truth.
+  redirect("/app/verify-email");
 }
 
 export async function signIn(formData: FormData): Promise<ActionResult> {
