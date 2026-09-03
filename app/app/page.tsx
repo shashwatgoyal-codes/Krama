@@ -32,6 +32,7 @@ export default async function TodayPage() {
   await runDayMaintenance(user.id, dayKey, {
     rolloverUnfinished: settings.rolloverUnfinished,
     catchUpRoutines: settings.catchUpRoutines,
+    keepFinishedDays: settings.keepFinishedDays,
   });
 
   const [stats, blocks, open, scheduled, notes, saved] = await Promise.all([

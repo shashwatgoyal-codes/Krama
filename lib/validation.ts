@@ -281,3 +281,17 @@ export const feedbackSchema = z.object({
 });
 
 export const feedbackIdSchema = z.object({ id: z.string().cuid() });
+
+/**
+ * How long finished tasks are kept.
+ *
+ * Only the offered options are accepted rather than any number: this
+ * setting deletes things, and a hand-edited form field is not the place
+ * to discover that someone posted 1 and lost the year.
+ */
+export const retentionSchema = z.object({
+  keepFinishedDays: z.coerce
+    .number()
+    .int()
+    .refine((n) => [0, 90, 180, 365].includes(n), "Pick one of the options."),
+});

@@ -11,6 +11,8 @@ import AreasAndTags from "@/components/profile/AreasAndTags";
 import AvatarField from "@/components/profile/AvatarField";
 import Toggle from "@/components/profile/Toggle";
 import DataPanel from "@/components/profile/DataPanel";
+import RetentionPanel from "@/components/profile/RetentionPanel";
+import { sweepPreview } from "@/lib/repositories/retention";
 import {
   listTags,
   staleTags,
@@ -34,6 +36,7 @@ import TimeZoneField from "@/components/profile/TimeZoneField";
 import ChangePasswordRow from "@/components/profile/ChangePasswordRow";
 import SaveForm from "@/components/profile/SaveForm";
 import { listMyFeedback } from "@/lib/repositories/feedback";
+import type { TimeFormat } from "@/lib/time";
 import DangerZone from "@/components/profile/DangerZone";
 import FeedbackPanel from "@/components/profile/FeedbackPanel";
 import ThemePicker from "@/components/profile/ThemePicker";
@@ -96,6 +99,11 @@ export default async function ProfilePage({
       tagUsage(user.id),
       listMyFeedback(user.id),
     ]);
+
+  const wouldRemove = await sweepPreview(user.id, p.keepFinishedDays);
+  // Every clock label on this page reads the way the reader asked for.
+  const clock = p.timeFormat as TimeFormat;
+
   const staleIds = new Set(stale.map((t) => t.id));
 
   const zones = zoneGroups(p.timezone);
@@ -155,6 +163,7 @@ export default async function ProfilePage({
                     min={0}
                     max={12}
                     format="hour"
+                    timeFormat={clock}
                   />
                 </SettingRow>
 
@@ -363,6 +372,7 @@ export default async function ProfilePage({
                     id="morningReminder"
                     name="morningReminder"
                     value={p.morningReminder}
+                    timeFormat={clock}
                   />
                 </SettingRow>
 
@@ -375,6 +385,7 @@ export default async function ProfilePage({
                     id="eveningReminder"
                     name="eveningReminder"
                     value={p.eveningReminder}
+                    timeFormat={clock}
                   />
                 </SettingRow>
 
@@ -540,6 +551,16 @@ export default async function ProfilePage({
             <>
               <Section title="What you've done">
                 <DataPanel counts={counts} memberSince={memberSince} />
+              </Section>
+
+              <Section
+                title="What Krama keeps"
+                description="What is cleared out on its own, and what is never touched."
+              >
+                <RetentionPanel
+                  keepFinishedDays={p.keepFinishedDays}
+                  wouldRemove={wouldRemove}
+                />
               </Section>
 
               <Section

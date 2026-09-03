@@ -508,6 +508,12 @@ model Profile {
   /// Off means a missed routine is skipped, not stacked up.
   catchUpRoutines    Boolean @default(false)
 
+  /// How long finished tasks are kept, in days. 0 means forever, which is
+  /// the default: points live in the ledger and survive either way, but
+  /// what someone actually did is theirs to keep, and an app that quietly
+  /// deletes your history to save space has made the wrong trade.
+  keepFinishedDays   Int     @default(0)
+
   // --- Appearance tab ----------------------------------------------
   /// "comfortable" | "compact"
   density       String   @default("comfortable")
