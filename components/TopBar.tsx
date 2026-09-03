@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import ProfileMenu from "./ProfileMenu";
 import {
   ENV_LABEL,
   ENV_STYLE,
@@ -24,11 +25,14 @@ const NAV = [
 export default function TopBar({
   env,
   name,
+  email,
   avatar,
   isAdmin = false,
+  signOut,
 }: {
   env: AppEnv;
   name: string;
+  email: string;
   /** Src for the uploaded picture, or null for the initial. */
   avatar: string | null;
   /**
@@ -42,6 +46,8 @@ export default function TopBar({
    * to.
    */
   isAdmin?: boolean;
+  /** Passed down so the menu can end this session without a page of its own. */
+  signOut: () => Promise<void>;
 }) {
   const pathname = usePathname();
 
@@ -117,33 +123,12 @@ export default function TopBar({
           </Link>
         )}
         <ThemeToggle />
-        <Link
-          href="/app/profile"
-          aria-label={`Profile — signed in as ${name}`}
-          aria-current={pathname === "/app/profile" ? "page" : undefined}
-          title={name}
-          className={
-            "grid size-[26px] flex-none place-items-center rounded-full bg-acc " +
-            "text-[11px] font-bold text-on-acc transition-shadow hover:ring-2 " +
-            "hover:ring-acc-soft " +
-            (pathname === "/app/profile"
-              ? "ring-2 ring-acc ring-offset-2 ring-offset-surf"
-              : "")
-          }
-        >
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatar}
-              alt=""
-              width={26}
-              height={26}
-              className="size-full rounded-full object-cover"
-            />
-          ) : (
-            name.charAt(0).toUpperCase()
-          )}
-        </Link>
+        <ProfileMenu
+          name={name}
+          email={email}
+          avatar={avatar}
+          signOut={signOut}
+        />
       </div>
       </div>
 

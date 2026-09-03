@@ -32,6 +32,8 @@ export type TagView = {
   name: string;
   colour: string;
   stale: boolean;
+  /** How many things carry it. Stated before one is removed. */
+  uses: number;
 };
 
 /**
@@ -229,10 +231,10 @@ export default function AreasAndTags({
       {/* ----------------------------------------------------- tags */}
       <Heading label="Tags" count={`${tags.length} used`} top />
 
-      {/* Chips exactly as drawn: mono, small, uppercase, and quiet.
-          They are labels, not controls — which is why there is no x on
-          them. Removing one happens under Review, where tidying is
-          what you came to do. */}
+      {/* Chips are quiet labels, but every one can now be removed. The ×
+          used to appear only under Review, which meant a tag in use could
+          never be deleted at all: you had to stop using it, wait for it
+          to go stale, then come back. */}
       <div className="flex flex-wrap items-center gap-1.5 py-2">
         {shown.length === 0 ? (
           <span className="text-[11.5px] text-mut">
@@ -247,23 +249,50 @@ export default function AreasAndTags({
               className={`inline-flex items-center gap-1 rounded-[4px] border px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] ${CHIP[tag.colour] ?? CHIP.mut}`}
             >
               {tag.name}
-              {showStale && (
-                <button
-                  type="button"
-                  disabled={pending}
-                  aria-label={`Remove ${tag.name}`}
-                  onClick={() => {
-                    const d = new FormData();
-                    d.set("id", tag.id);
-                    run(removeTag, d);
-                  }}
-                  className="cursor-pointer text-fai hover:text-bad"
-                >
-                  ×
-                </button>
-              )}
+              <button
+                type="button"
+                disabled={pending}
+                aria-label={`Remove the tag ${tag.name}`}
+                title={
+                  tag.uses > 0
+                    ? `On ${tag.uses} thing${tag.uses === 1 ? "" : "s"}`
+                    : "Remove"
+                }
+                onClick={() => {
+                  // A tag nothing uses goes without ceremony. One that is
+                  // in use says so first — "delete this tag" and "take it
+                  // off forty things" are different decisions.
+                  if (tag.uses > 0 && confirming !== tag.id) {
+                    setConfirming(tag.id);
+                    return;
+                  }
+                  const d = new FormData();
+                  d.set("id", tag.id);
+                  run(removeTag, d, () => setConfirming(null));
+                }}
+                className="cursor-pointer text-fai hover:text-bad"
+              >
+                ×
+              </button>
             </span>
           ))
+        )}
+
+        {confirming && shown.some((t) => t.id === confirming) && (
+          <span className="w-full pt-1 text-[11.5px] text-mut">
+            <strong>{shown.find((t) => t.id === confirming)!.name}</strong> is on{" "}
+            {shown.find((t) => t.id === confirming)!.uses} thing
+            {shown.find((t) => t.id === confirming)!.uses === 1 ? "" : "s"}.
+            Click × again to take it off all of them — the things themselves
+            stay.{" "}
+            <button
+              type="button"
+              onClick={() => setConfirming(null)}
+              className="font-semibold text-acc"
+            >
+              Cancel
+            </button>
+          </span>
         )}
 
         {addingTag ? (

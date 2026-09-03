@@ -4,7 +4,7 @@ import { currentSessionId } from "@/lib/auth/session";
 import { listDevices } from "@/lib/repositories/sessions";
 import { pageTitle } from "@/lib/env";
 import DeviceRow from "./DeviceRow";
-import { signOutDevice, signOutOthers } from "./actions";
+import { signOutDevice, signOutOthers, signOutThisDevice } from "./actions";
 
 export const metadata: Metadata = {
   title: pageTitle("Devices"),
@@ -29,7 +29,12 @@ export default async function DevicesPage() {
 
       <div className="mt-5 rounded-xl border border-ln bg-surf">
         {devices.map((d) => (
-          <DeviceRow key={d.id} device={d} action={signOutDevice} />
+          <DeviceRow
+            key={d.id}
+            device={d}
+            action={signOutDevice}
+            signOutThis={d.current ? signOutThisDevice : undefined}
+          />
         ))}
       </div>
 

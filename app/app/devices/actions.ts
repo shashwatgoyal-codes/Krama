@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUserOrThrow } from "@/lib/auth/guard";
 import { currentSessionId } from "@/lib/auth/session";
 import { endDevice, endOtherDevices } from "@/lib/repositories/sessions";
+import { signOut } from "@/app/(auth)/actions";
 import type { ActionResult } from "@/lib/validation";
 
 export async function signOutDevice(formData: FormData): Promise<ActionResult> {
@@ -24,4 +25,17 @@ export async function signOutOthers(): Promise<void> {
   const user = await requireUserOrThrow();
   await endOtherDevices(user.id, await currentSessionId());
   revalidatePath("/app/devices");
+}
+
+/**
+ * Sign out of the device you are reading this on.
+ *
+ * Deliberately the ordinary sign-out rather than endDevice, which
+ * refuses the current session. Before this, the only way to leave this
+ * device from here was "sign out everywhere" — a hammer for a job that
+ * needed a hand.
+ */
+export async function signOutThisDevice(): Promise<void> {
+  await requireUserOrThrow();
+  await signOut();
 }

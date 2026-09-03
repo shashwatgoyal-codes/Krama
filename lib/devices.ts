@@ -13,7 +13,25 @@
  * because they are fighting password sharing; that is not this problem.
  */
 
-export type Device = { browser: string; platform: string; label: string };
+/** Which picture to draw. Coarse on purpose — see describeDevice. */
+export type DeviceKind = "phone" | "tablet" | "laptop" | "unknown";
+
+export type Device = {
+  browser: string;
+  platform: string;
+  label: string;
+  kind: DeviceKind;
+};
+
+const KIND: Record<string, DeviceKind> = {
+  iPhone: "phone",
+  Android: "phone",
+  iPad: "tablet",
+  Mac: "laptop",
+  Windows: "laptop",
+  Linux: "laptop",
+  ChromeOS: "laptop",
+};
 
 const BROWSERS: [RegExp, string][] = [
   [/\bEdg\//i, "Edge"],
@@ -40,7 +58,14 @@ function match(list: [RegExp, string][], ua: string): string | null {
 
 export function describeDevice(userAgent: string | null | undefined): Device {
   const ua = (userAgent ?? "").trim();
-  if (!ua) return { browser: "Unknown", platform: "device", label: "Unknown device" };
+  if (!ua) {
+    return {
+      browser: "Unknown",
+      platform: "device",
+      label: "Unknown device",
+      kind: "unknown",
+    };
+  }
 
   // Order matters: Chrome and Edge both claim Safari, Edge claims Chrome.
   const browser = match(BROWSERS, ua) ?? "Unknown browser";
@@ -55,7 +80,7 @@ export function describeDevice(userAgent: string | null | undefined): Device {
           ? browser
           : `${browser} on ${platform}`;
 
-  return { browser, platform, label };
+  return { browser, platform, label, kind: KIND[platform] ?? "unknown" };
 }
 
 /** "active now", "3 hours ago", "6 days ago" — rounded, never precise. */

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth/password";
 import { BLOCK_MINUTES } from "./time";
 import { ACCENT_VALUES, DENSITIES } from "./appearance";
+import { isHexTint } from "./tint-colour";
 import { TINT_PRESETS } from "./notes";
 
 /**
@@ -188,11 +189,18 @@ export const rhythmSchema = z.object({
 export const appearanceSchema = z.object({
   accent: z.enum(ACCENT_VALUES),
   interfaceFont: z.enum(["krama", "system"]),
-  // Exactly five, each a known preset. A short list would leave a note
-  // colour undefined; a long one would silently ignore the extras.
+  // Exactly five. A short list would leave a note colour undefined; a
+  // long one would silently ignore the extras.
+  //
+  // Each slot is either a named preset or a hand-picked colour. The hex
+  // is validated rather than trusted: it lands in a stylesheet, so
+  // anything that is not six hex digits has no business reaching it.
   noteTints: z.array(z.string()).length(5).refine(
-    (t) => t.every((v) => TINT_PRESETS.some((p) => p.value === v)),
-    "That isn't one of the tints.",
+    (t) =>
+      t.every(
+        (v) => TINT_PRESETS.some((p) => p.value === v) || isHexTint(v),
+      ),
+    "That isn't a tint or a colour.",
   ),
   density: z.enum(DENSITIES),
   reduceMotion: z.coerce.boolean(),

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import TopBar from "@/components/TopBar";
+import { signOut } from "@/app/(auth)/actions";
 import { currentAdmin } from "@/lib/admin/guard";
 import AccessBanner from "@/components/AccessBanner";
 import QuickCapture from "@/components/QuickCapture";
@@ -116,6 +117,8 @@ export default async function AppLayout({
         isAdmin={admin !== null && canOpenPortal(admin.level)}
         env={appEnv()}
         name={user?.name ?? "You"}
+        email={user?.email ?? ""}
+        signOut={signOut}
         avatar={
           user && account?.avatarAt
             ? `/api/avatar/${user.id}?v=${account.avatarAt.getTime()}`

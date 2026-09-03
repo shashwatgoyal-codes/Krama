@@ -11,7 +11,7 @@ import AreasAndTags from "@/components/profile/AreasAndTags";
 import AvatarField from "@/components/profile/AvatarField";
 import Toggle from "@/components/profile/Toggle";
 import DataPanel from "@/components/profile/DataPanel";
-import { listTags, staleTags, areaStats } from "@/lib/repositories/tags";
+import { listTags, staleTags, areaStats, tagUsage } from "@/lib/repositories/tags";
 import { weekDays } from "@/lib/week";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 import { getContentCounts } from "@/lib/repositories/profile";
@@ -73,7 +73,7 @@ export default async function ProfilePage({
   const user = await requireUser();
   const params = await searchParams;
   const section: SectionKey = isSectionKey(params.s) ? params.s : "profile";
-  const [p, areas, stats, tags, stale, counts] = await Promise.all([
+  const [p, areas, stats, tags, stale, counts, usage] = await Promise.all([
     getProfileOverview(user.id),
     listAreasWithCounts(user.id),
     areaStats(
@@ -83,6 +83,9 @@ export default async function ProfilePage({
     listTags(user.id),
     staleTags(user.id),
     getContentCounts(user.id),
+    // How many things carry each tag, so removing one can say what
+    // it is about to come off before it comes off.
+    tagUsage(user.id),
   ]);
   const staleIds = new Set(stale.map((t) => t.id));
 
@@ -424,6 +427,7 @@ export default async function ProfilePage({
                   name: t.name,
                   colour: t.colour,
                   stale: staleIds.has(t.id),
+                  uses: usage[t.id] ?? 0,
                 }))}
                 defaultAreaId={p.defaultAreaId}
                 staleCount={stale.length}

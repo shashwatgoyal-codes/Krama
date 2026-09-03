@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
-import { describeDevice, lastSeenLabel } from "@/lib/devices";
+import { describeDevice, lastSeenLabel, type DeviceKind } from "@/lib/devices";
 
 export type DeviceRow = {
   id: string;
   label: string;
+  kind: DeviceKind;
   signedInAt: Date;
   lastSeen: string;
   current: boolean;
@@ -28,13 +29,17 @@ export async function listDevices(
     select: { id: true, userAgent: true, createdAt: true, lastSeenAt: true },
   });
 
-  return rows.map((r) => ({
+  return rows.map((r) => {
+    const device = describeDevice(r.userAgent);
+    return {
     id: r.id,
-    label: describeDevice(r.userAgent).label,
+    label: device.label,
+    kind: device.kind,
     signedInAt: r.createdAt,
     lastSeen: lastSeenLabel(r.lastSeenAt, now),
     current: r.id === currentSessionId,
-  }));
+    };
+  });
 }
 
 /**
