@@ -10,6 +10,7 @@ import {
   archiveLink,
   linkToTask,
 } from "@/app/app/explore/actions";
+import { useToast } from "@/components/ui/Toast";
 
 export type LinkDetailView = {
   id: string;
@@ -32,6 +33,7 @@ const FIELD =
 
 export default function LinkDetail({ link }: { link: LinkDetailView }) {
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -42,6 +44,7 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
     startTransition(async () => {
       const result = await action(data);
       if (result && !result.ok && result.error) setError(result.error);
+      else if (result?.ok) toast.success("Saved.");
     });
   }
 

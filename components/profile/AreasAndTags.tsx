@@ -16,6 +16,7 @@ const CHIP: Record<string, string> = {
 };
 import { addArea, editArea, removeArea } from "@/app/app/profile/areas-actions";
 import { addTag, removeTag, setDefaultArea } from "@/app/app/profile/tags-actions";
+import { useToast } from "@/components/ui/Toast";
 
 export type AreaRow = {
   id: string;
@@ -59,6 +60,7 @@ export default function AreasAndTags({
   const [confirming, setConfirming] = useState<string | null>(null);
   const [showStale, setShowStale] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const tagForm = useRef<HTMLFormElement>(null);
 
@@ -70,8 +72,10 @@ export default function AreasAndTags({
     setError(null);
     startTransition(async () => {
       const result = await action(data);
-      if (result.ok) onOk?.();
-      else if (result.error) setError(result.error);
+      if (result.ok) {
+        onOk?.();
+        toast.success("Saved.");
+      } else if (result.error) setError(result.error);
     });
   }
 

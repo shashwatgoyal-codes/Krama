@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateFlag } from "./actions";
 import type { ActionResult } from "@/lib/validation";
+import { useToast } from "@/components/ui/Toast";
 
 type Props = {
   flag: {
@@ -28,6 +29,7 @@ export default function FlagRow({ flag, canEdit }: Props) {
   const [rollout, setRollout] = useState(flag.rollout);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
 
@@ -92,6 +94,9 @@ export default function FlagRow({ flag, canEdit }: Props) {
               else {
                 setSaved(true);
                 setReason("");
+                toast.success(
+                  `${flag.key} — ${enabled ? `on at ${rollout}%` : "off"}.`,
+                );
               }
             })
           }

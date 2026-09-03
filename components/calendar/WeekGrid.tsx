@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { scheduleTaskAt, moveBlockToHour } from "@/app/app/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * The week (or a single day) as a grid. Times down the side, days
@@ -55,6 +56,7 @@ export default function WeekGrid({
 }) {
   const [target, setTarget] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   const scroller = useRef<HTMLDivElement>(null);
@@ -92,6 +94,7 @@ export default function WeekGrid({
         ? await scheduleTaskAt(data)
         : await moveBlockToHour(data);
       if (!result.ok) setError(result.error);
+      else toast.success(taskId ? "Scheduled." : "Moved.");
     });
   }
 

@@ -18,6 +18,7 @@ import {
   removeNote,
   noteToTask,
 } from "@/app/app/notes/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Notes: a list of what you have written, and the one you are reading.
@@ -47,6 +48,7 @@ export default function NoteBoard({
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const editor = useRef<HTMLTextAreaElement>(null);
 
   const shown = useMemo(() => {
@@ -103,6 +105,7 @@ export default function NoteBoard({
       if (result.data) setSelectedId(result.data);
       setQuery("");
       setTimeout(() => editor.current?.focus(), 60);
+      toast.success("Note added.");
     });
   }
 

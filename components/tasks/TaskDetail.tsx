@@ -9,6 +9,7 @@ import TagField from "@/components/tags/TagField";
 import UntilField from "@/components/tasks/UntilField";
 import WeekdayPicker from "@/components/tasks/WeekdayPicker";
 import type { TagChip } from "@/lib/tags";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * The detail panel from the design: what the task is, when it's due,
@@ -91,6 +92,7 @@ export default function TaskDetail({
   const [recurrence, setRecurrence] = useState(task.recurrence);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   function run(
@@ -105,6 +107,7 @@ export default function TaskDetail({
       if (result?.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2200);
+        toast.success("Task updated.");
         onOk?.();
       } else if (result?.error) {
         setError(result.error);

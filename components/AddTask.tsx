@@ -5,6 +5,7 @@ import { createTask } from "@/app/app/actions";
 import UntilField from "@/components/tasks/UntilField";
 import { BLOCK_MINUTES } from "@/lib/time";
 import WeekdayPicker from "@/components/tasks/WeekdayPicker";
+import { useToast } from "@/components/ui/Toast";
 
 const REPEATS = [
   { value: "none", label: "Once" },
@@ -24,6 +25,7 @@ export default function AddTask({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [repeat, setRepeat] = useState<string>("none");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,6 +50,9 @@ export default function AddTask({
         inputRef.current.focus();
       }
       setRepeat("none");
+      // The field empties itself so you can add another, which leaves
+      // nothing on screen to say the first one landed.
+      toast.success("Task added.");
     });
   }
 

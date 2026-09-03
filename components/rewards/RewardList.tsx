@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import { addReward, removeReward, claimReward } from "@/app/app/rewards/actions";
 import type { RewardView } from "@/lib/rewards";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * The rewards themselves.
@@ -15,6 +16,7 @@ import type { RewardView } from "@/lib/rewards";
  */
 export default function RewardList({ rewards }: { rewards: RewardView[] }) {
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [adding, setAdding] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -26,8 +28,10 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
     setError(null);
     startTransition(async () => {
       const result = await action(data);
-      if (result.ok) onOk?.();
-      else setError(result.error ?? "That didn't work.");
+      if (result.ok) {
+        onOk?.();
+        toast.success("Done.");
+      } else setError(result.error ?? "That didn't work.");
     });
   }
 

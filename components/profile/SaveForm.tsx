@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import type { ActionResult } from "@/lib/validation";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Wraps a settings panel's form. Every panel saves the same way, so the
@@ -36,6 +37,7 @@ export default function SaveForm({
   // there is furniture — it stops being read, and it never confirms that
   // the edit you just made actually registered anywhere.
   const [dirty, setDirty] = useState(false);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   function submit(formData: FormData) {
@@ -46,6 +48,7 @@ export default function SaveForm({
       if (result.ok) {
         setDirty(false);
         setSaved(true);
+        toast.success("Saved.");
         // Long enough to notice, short enough not to become furniture.
         setTimeout(() => setSaved(false), 2500);
       } else {

@@ -79,17 +79,53 @@ describe("how it is reached", () => {
     expect(toast()).toContain("must be used inside");
   });
 
-  it("is used where the thing you acted on disappears", () => {
-    // These are the screens with nowhere to put an inline message: the
-    // row, card or page is gone by the time the action returns.
+  it("confirms everywhere something is saved or created", () => {
+    for (const f of [
+      "components/AddTask.tsx",
+      "components/notes/NoteBoard.tsx",
+      "components/tasks/TaskDetail.tsx",
+      "components/calendar/WeekGrid.tsx",
+      "components/plan/Plan.tsx",
+      "components/explore/SaveLinkBar.tsx",
+      "components/explore/LinkDetail.tsx",
+      "components/rewards/RewardList.tsx",
+      "components/profile/SaveForm.tsx",
+      "components/profile/ChangePasswordRow.tsx",
+      "components/profile/AvatarField.tsx",
+      "components/profile/AreasAndTags.tsx",
+      "components/profile/DataPanel.tsx",
+    ]) {
+      expect(read(f), `${f} should confirm its success`).toContain("useToast");
+    }
+  });
+
+  it("confirms where the thing you acted on disappears", () => {
+    // No inline message can survive here: the row, card or page is gone
+    // by the time the action returns.
     for (const f of [
       "app/app/inbox/TriageRow.tsx",
       "app/app/devices/DeviceRow.tsx",
       "app/app/access/Decide.tsx",
       "components/admin/ReasonedAction.tsx",
       "components/admin/DangerDelete.tsx",
+      "app/admin/(portal)/flags/FlagRow.tsx",
     ]) {
-      expect(read(f)).toContain("useToast");
+      expect(read(f), `${f} should confirm its success`).toContain("useToast");
+    }
+  });
+
+  it("stays out of the flows that already have their own screen", () => {
+    // Each of these replaces itself with the outcome — a second
+    // announcement at the top would be saying it twice.
+    for (const f of [
+      "components/QuickCapture.tsx",            // says so in the dialog
+      "components/auth/VerifyEmailForm.tsx",    // multi-step
+      "components/auth/ResetFlow.tsx",          // multi-step
+      "components/profile/DangerZone.tsx",      // signs you out entirely
+      "app/admin/unlock/UnlockForm.tsx",        // redirects into the portal
+      "app/admin/(portal)/admins/InviteForm.tsx", // shows the invite link
+    ]) {
+      expect(read(f), `${f} should not toast`).not.toContain("useToast");
     }
   });
 });
