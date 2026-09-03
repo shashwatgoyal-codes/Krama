@@ -26,6 +26,12 @@ export type WeekBlock = {
   done: boolean;
   /** Drawn from a routine rather than a stored block. */
   projected?: boolean;
+  /**
+   * A routine's real row for the day, never put in the diary. It knows
+   * whether it was done, which a projection cannot, but has no block
+   * behind it to move.
+   */
+  unscheduled?: boolean;
 };
 
 export type WeekColumn = {
@@ -161,57 +167,59 @@ export default function WeekGrid({
 
       {/* body — the whole day, scrolled rather than truncated */}
       <div ref={scroller} className="max-h-[62vh] overflow-y-auto">
-      <div
-        className="relative grid"
-        style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}
-      >
-        <div className="border-r border-ln">
-          {hours.map((h) => (
-            <div
-              key={h}
-              className="border-b border-ln px-1.5 pt-0.5 text-right font-mono text-[9.5px] text-fai"
-              style={{ height: ROW_HEIGHT }}
-            >
-              {String(h).padStart(2, "0")}:00
-            </div>
-          ))}
-        </div>
+        <div
+          className="relative grid"
+          style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}
+        >
+          <div className="border-r border-ln">
+            {hours.map((h) => (
+              <div
+                key={h}
+                className="border-b border-ln px-1.5 pt-0.5 text-right font-mono text-[9.5px] text-fai"
+                style={{ height: ROW_HEIGHT }}
+              >
+                {String(h).padStart(2, "0")}:00
+              </div>
+            ))}
+          </div>
 
-        {columns.map((col, index) => (
-          <div key={col.dayKey} className="relative border-r border-ln">
-            {hours.map((h) => {
-              const slot = `${col.dayKey}:${h}`;
-              return (
-                <div
-                  key={h}
-                  data-slot={slot}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setTarget(slot);
-                  }}
-                  onDragLeave={() => setTarget((t) => (t === slot ? null : t))}
-                  onDrop={(e) => drop(e, col.dayKey, h)}
-                  className={
-                    "border-b border-ln transition-colors " +
-                    (target === slot ? "bg-acc-soft" : "")
-                  }
-                  style={{ height: ROW_HEIGHT }}
-                />
-              );
-            })}
+          {columns.map((col, index) => (
+            <div key={col.dayKey} className="relative border-r border-ln">
+              {hours.map((h) => {
+                const slot = `${col.dayKey}:${h}`;
+                return (
+                  <div
+                    key={h}
+                    data-slot={slot}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setTarget(slot);
+                    }}
+                    onDragLeave={() =>
+                      setTarget((t) => (t === slot ? null : t))
+                    }
+                    onDrop={(e) => drop(e, col.dayKey, h)}
+                    className={
+                      "border-b border-ln transition-colors " +
+                      (target === slot ? "bg-acc-soft" : "")
+                    }
+                    style={{ height: ROW_HEIGHT }}
+                  />
+                );
+              })}
 
-            {blocks
-              .filter((b) => b.dayIndex === index)
-              .map((b) => (
-                <div
-                  key={b.id}
-                  draggable={!b.projected}
-                  data-block-id={b.id}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("text/krama-block", b.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  title={`${b.clock} · ${b.duration} · ${b.title}`}
+              {blocks
+                .filter((b) => b.dayIndex === index)
+                .map((b) => (
+                  <div
+                    key={b.id}
+                    draggable={!b.projected && !b.unscheduled}
+                    data-block-id={b.id}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/krama-block", b.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    title={`${b.clock} · ${b.duration} · ${b.title}`}
                     className={
                       "absolute left-[3px] right-[3px] overflow-hidden rounded-[5px] " +
                       "border-l-2 px-[7px] py-[5px] text-[11px] leading-[1.3] " +
@@ -221,7 +229,9 @@ export default function WeekGrid({
                       // grab cursor either.
                       (b.projected
                         ? "cursor-default border border-dashed border-ln2 border-l-acc "
-                        : "cursor-grab active:cursor-grabbing ") +
+                        : b.unscheduled
+                          ? "cursor-default "
+                          : "cursor-grab active:cursor-grabbing ") +
                       (b.projected
                         ? ""
                         : b.done
@@ -229,26 +239,26 @@ export default function WeekGrid({
                           : "border-l-acc bg-acc-soft") +
                       (pending ? " opacity-60" : "")
                     }
-                  style={{
-                    top: (b.offsetMinutes / 60) * ROW_HEIGHT + 2,
-                    // Never shorter than a readable strip, however brief.
-                    height: Math.max(
-                      22,
-                      (b.durationMinutes / 60) * ROW_HEIGHT - 4,
-                    ),
-                  }}
-                >
-                  <div className="truncate font-semibold text-ink">
-                    {b.title}
+                    style={{
+                      top: (b.offsetMinutes / 60) * ROW_HEIGHT + 2,
+                      // Never shorter than a readable strip, however brief.
+                      height: Math.max(
+                        22,
+                        (b.durationMinutes / 60) * ROW_HEIGHT - 4,
+                      ),
+                    }}
+                  >
+                    <div className="truncate font-semibold text-ink">
+                      {b.title}
+                    </div>
+                    <div className="font-mono text-[9px] text-mut opacity-80">
+                      {b.duration}
+                    </div>
                   </div>
-                  <div className="font-mono text-[9px] text-mut opacity-80">
-                    {b.duration}
-                  </div>
-                </div>
-              ))}
-          </div>
-        ))}
-      </div>
+                ))}
+            </div>
+          ))}
+        </div>
       </div>
 
       {error && (

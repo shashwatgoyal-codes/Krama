@@ -128,3 +128,48 @@ export async function listRoutineTemplates(
       : null,
   }));
 }
+
+/** A routine occurrence that has a real row behind it. */
+export type RoutineInstance = {
+  id: string;
+  templateId: string;
+  dayKey: string;
+  done: boolean;
+};
+
+/**
+ * The routine instances that already exist across a range of days.
+ *
+ * A projected block is a promise that a row will appear on that day. Once
+ * the row is there the row is the truth, including whether it was done —
+ * so the calendar needs to know which days have one, and stop drawing a
+ * ghost over the top of it.
+ */
+export async function listRoutineInstances(
+  userId: string,
+  dayKeys: string[],
+): Promise<RoutineInstance[]> {
+  if (dayKeys.length === 0) return [];
+
+  const rows = await db.task.findMany({
+    where: {
+      userId,
+      recurrenceParentId: { not: null },
+      createdForDate: { in: dayKeys.map(dayKeyToDate) },
+      status: { not: "dropped" },
+    },
+    select: {
+      id: true,
+      status: true,
+      createdForDate: true,
+      recurrenceParentId: true,
+    },
+  });
+
+  return rows.map((r) => ({
+    id: r.id,
+    templateId: r.recurrenceParentId as string,
+    dayKey: r.createdForDate.toISOString().slice(0, 10),
+    done: r.status === "done",
+  }));
+}

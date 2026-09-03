@@ -57,6 +57,8 @@ model User {
   rewards       Reward[]
   redemptions   Redemption[]
 
+  feedback Feedback[] @relation("feedback")
+
   @@map("users")
 }
 
@@ -231,6 +233,54 @@ enum RequestStatus {
   declined
 
   @@map("request_status")
+}
+
+/// Something a user chose to tell whoever runs Krama.
+///
+/// This is the one piece of a person's writing the admin role is allowed
+/// to read, and the exception is the point: notes and tasks are private
+/// because they were written for the person alone, whereas feedback was
+/// written *to* an administrator and is useless unread. docs/ADMIN.md
+/// grants SELECT on this table for that reason and no other.
+///
+/// The reply is kept alongside rather than emailed and forgotten, so the
+/// person who sent it can see it was answered without leaving the app.
+model Feedback {
+  id        String       @id @default(cuid())
+  userId    String
+  kind      FeedbackKind @default(other)
+  message   String
+  /// The screen they were on, which is usually the missing half of a
+  /// report that says only "this is broken".
+  fromPath  String?
+  status    FeedbackStatus @default(new)
+  reply     String?
+  createdAt DateTime     @default(now())
+  handledBy String?
+  handledAt DateTime?
+
+  user User @relation("feedback", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("feedback")
+}
+
+enum FeedbackKind {
+  idea
+  problem
+  praise
+  other
+
+  @@map("feedback_kind")
+}
+
+enum FeedbackStatus {
+  new
+  read
+  done
+
+  @@map("feedback_status")
 }
 
 /// Every administrative action, append-only.
@@ -647,6 +697,12 @@ model Task {
   @@index([userId, status])
   @@index([userId, createdForDate])
   @@index([recurrenceParentId])
+  // One instance per routine per day. createMany's skipDuplicates has
+  // nothing to skip on without this, so two tabs opening at once really
+  // could produce two standups — the thing the materialiser claims to
+  // prevent. Templates carry NULL here and Postgres counts NULLs as
+  // distinct, so they are unaffected.
+  @@unique([recurrenceParentId, createdForDate])
   @@map("tasks")
 }
 

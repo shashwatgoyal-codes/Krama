@@ -52,15 +52,6 @@ export default async function DevicesPage() {
           </p>
         </form>
       )}
-
-      <p className="mt-6 text-[11.5px] leading-relaxed text-fai">
-        No locations here. Working out where a device is means looking its
-        address up with a third party and storing addresses this app does not
-        keep — and it is often wrong by a few hundred kilometres, which would
-        make you doubt a list whose whole job is to be trusted. When you signed
-        in and whether you have used it since answer &ldquo;is this me?&rdquo;
-        without any of that.
-      </p>
     </div>
   );
 }
