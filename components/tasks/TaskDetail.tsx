@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import { toggleTask, deleteTask } from "@/app/app/actions";
-import { scheduleAt, clearSchedule, saveDetails } from "@/app/app/tasks/actions";
+import {
+  scheduleAt,
+  clearSchedule,
+  saveDetails,
+} from "@/app/app/tasks/actions";
 import { BLOCK_MINUTES } from "@/lib/time";
 import TagField from "@/components/tags/TagField";
 import UntilField from "@/components/tasks/UntilField";
@@ -11,6 +15,7 @@ import WeekdayPicker from "@/components/tasks/WeekdayPicker";
 import type { TagChip } from "@/lib/tags";
 import { useToast } from "@/components/ui/Toast";
 
+import { clockLabel, type TimeFormat } from "@/lib/time";
 /**
  * The detail panel from the design: what the task is, when it's due,
  * when it's scheduled, whether it repeats, and where it came from.
@@ -62,30 +67,39 @@ const REPEATS = [
   { value: "monthly", label: "Monthly" },
 ];
 
-/** Half-hour steps across a plausible day. */
-const TIMES = Array.from({ length: 36 }, (_, i) => {
-  const minutes = 6 * 60 + i * 30;
-  return {
-    hour: Math.floor(minutes / 60),
-    minute: minutes % 60,
-    label: `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(
-      minutes % 60,
-    ).padStart(2, "0")}`,
-  };
-});
+/**
+ * Half-hour steps across a plausible day, labelled in the reader's clock.
+ *
+ * Built per render rather than once at module load, because the labels
+ * depend on a setting. As a constant it was always 24-hour, so someone on
+ * a 12-hour clock picked "13:30" from this list and then saw "01:30 pm"
+ * on the calendar for the very same block.
+ */
+function timesFor(format: TimeFormat) {
+  return Array.from({ length: 36 }, (_, i) => {
+    const minutes = 6 * 60 + i * 30;
+    return {
+      hour: Math.floor(minutes / 60),
+      minute: minutes % 60,
+      label: clockLabel(minutes, format),
+    };
+  });
+}
 
-const FIELD =
-  "w-full rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink " +
-  "focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft";
+// The side panel is narrow, so it takes the compact variant of the one
+// shared field style rather than a second definition of it.
+const FIELD = "field field-sm";
 
 export default function TaskDetail({
   task,
   areas,
   allTags,
+  timeFormat = "24",
 }: {
   task: TaskPanelView;
   areas: { id: string; name: string }[];
   allTags: TagChip[];
+  timeFormat?: TimeFormat;
 }) {
   const [scheduling, setScheduling] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -279,14 +293,13 @@ export default function TaskDetail({
               </div>
               {task.routineTime ? (
                 <p className="mt-1 text-[11px] text-fai">
-                  It appears on the calendar on every day it runs, not just
-                  the next one.
+                  It appears on the calendar on every day it runs, not just the
+                  next one.
                 </p>
               ) : (
                 <p className="mt-1 text-[11px] text-warn">
-                  No time set, so this routine does not appear on the
-                  calendar at all. Give it one and every day it runs shows
-                  up.
+                  No time set, so this routine does not appear on the calendar
+                  at all. Give it one and every day it runs shows up.
                 </p>
               )}
 
@@ -325,7 +338,10 @@ export default function TaskDetail({
           <Button type="submit" size="sm" disabled={pending}>
             Save details
           </Button>
-          <span aria-live="polite" className="text-[11.5px] font-semibold text-ok">
+          <span
+            aria-live="polite"
+            className="text-[11.5px] font-semibold text-ok"
+          >
             {saved && "Saved"}
           </span>
         </div>
@@ -365,12 +381,15 @@ export default function TaskDetail({
                   const [h, m] = e.target.value.split(":");
                   const form = e.target.form;
                   if (!form) return;
-                  (form.elements.namedItem("hour") as HTMLInputElement).value = h;
-                  (form.elements.namedItem("minute") as HTMLInputElement).value = m;
+                  (form.elements.namedItem("hour") as HTMLInputElement).value =
+                    h;
+                  (
+                    form.elements.namedItem("minute") as HTMLInputElement
+                  ).value = m;
                 }}
                 className={FIELD}
               >
-                {TIMES.map((t) => (
+                {timesFor(timeFormat).map((t) => (
                   <option key={t.label} value={`${t.hour}:${t.minute}`}>
                     {t.label}
                   </option>
@@ -411,10 +430,19 @@ export default function TaskDetail({
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="submit" variant="primary" size="sm" disabled={pending}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={pending}
+            >
               {pending ? "Saving…" : task.block ? "Move it" : "Schedule it"}
             </Button>
-            <Button type="button" size="sm" onClick={() => setScheduling(false)}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setScheduling(false)}
+            >
               Cancel
             </Button>
           </div>

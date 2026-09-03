@@ -17,6 +17,7 @@ import {
   minuteLabel,
   DEFAULT_ROUTINE_MINUTES,
 } from "@/lib/projection";
+import type { TimeFormat } from "@/lib/time";
 import { dayKeyFor, shiftDayKey } from "@/lib/day";
 import {
   weekDays,
@@ -171,6 +172,10 @@ export default async function CalendarPage({
    * template, and only where the first two are absent — otherwise the
    * same routine is on the day twice.
    */
+  // The reader's clock, used for every label on this page so the grid,
+  // the blocks and the routines all agree.
+  const format = settings.timeFormat as TimeFormat;
+
   const occupied = new Set<string>();
 
   // A ghost is keyed by the routine it comes from; a real row is keyed by
@@ -221,7 +226,7 @@ export default async function CalendarPage({
       dayIndex,
       offsetMinutes: (startMinute ?? 0) - START_HOUR * 60,
       durationMinutes: minutes,
-      clock: minuteLabel(startMinute ?? 0),
+      clock: minuteLabel(startMinute ?? 0, format),
       duration: formatDuration(minutes),
       done: i.done,
       // A real row, but with no block behind it there is nothing to drag.
@@ -243,7 +248,7 @@ export default async function CalendarPage({
       dayIndex,
       offsetMinutes: p.startMinute - START_HOUR * 60,
       durationMinutes: p.minutes,
-      clock: minuteLabel(p.startMinute),
+      clock: minuteLabel(p.startMinute, format),
       duration: formatDuration(p.minutes),
       done: false,
       projected: true,
@@ -291,7 +296,7 @@ export default async function CalendarPage({
         .map((p) => ({
           id: p.key,
           title: p.title,
-          clock: p.allDay ? "" : minuteLabel(p.startMinute),
+          clock: p.allDay ? "" : minuteLabel(p.startMinute, format),
           done: false,
         })),
     ],
@@ -396,6 +401,7 @@ export default async function CalendarPage({
               allDay={allDayBlocks}
               startHour={START_HOUR}
               endHour={END_HOUR}
+              timeFormat={format}
             />
           )}
         </div>

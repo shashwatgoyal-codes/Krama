@@ -1,4 +1,5 @@
 "use client";
+import { clockLabel, type TimeFormat } from "@/lib/time";
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { scheduleTaskAt, moveBlockToHour } from "@/app/app/actions";
@@ -52,6 +53,7 @@ export default function WeekGrid({
   allDay = [],
   startHour,
   endHour,
+  timeFormat = "24",
 }: {
   columns: WeekColumn[];
   blocks: WeekBlock[];
@@ -59,6 +61,8 @@ export default function WeekGrid({
   allDay?: WeekBlock[];
   startHour: number;
   endHour: number;
+  /** The reader's clock. The gutter used to be 24-hour whatever they chose. */
+  timeFormat?: TimeFormat;
 }) {
   const [target, setTarget] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +182,7 @@ export default function WeekGrid({
                 className="border-b border-ln px-1.5 pt-0.5 text-right font-mono text-[9.5px] text-fai"
                 style={{ height: ROW_HEIGHT }}
               >
-                {String(h).padStart(2, "0")}:00
+                {clockLabel(h * 60, timeFormat)}
               </div>
             ))}
           </div>
