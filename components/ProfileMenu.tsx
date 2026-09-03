@@ -113,6 +113,14 @@ export default function ProfileMenu({
             >
               Your devices
             </Link>
+            <Link
+              href="/app/guide"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-[12.5px] font-medium transition-colors hover:bg-surf2"
+            >
+              How Krama works
+            </Link>
 
             <form action={signOut} className="border-t border-ln">
               <button
