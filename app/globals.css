@@ -20,6 +20,14 @@
   --ln: #e6e8ec;
   --ln2: #d4d7dd;
 
+  /* Popup surfaces. macOS draws a native <select> menu on frosted glass,
+     which is the look the app's own menus and popovers should share —
+     translucent over what they cover, a bright hairline edge catching the
+     light, and a shadow deep enough to lift them off the page. */
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-edge: rgba(255, 255, 255, 0.65);
+  --glass-shadow: rgba(15, 17, 21, 0.18);
+
   --acc: #b45309;
   --acc-soft: #fdf1e3;
   --on-acc: #ffffff;
@@ -54,6 +62,14 @@
     --fai: #656b76;
     --ln: #1e2126;
     --ln2: #2d313a;
+
+    /* Popup surfaces. macOS draws a native <select> menu on frosted glass,
+       which is the look the app's own menus and popovers should share —
+       translucent over what they cover, a bright hairline edge catching the
+       light, and a shadow deep enough to lift them off the page. */
+    --glass: rgba(30, 33, 39, 0.72);
+    --glass-edge: rgba(255, 255, 255, 0.09);
+    --glass-shadow: rgba(0, 0, 0, 0.55);
     --acc: #efa850;
     --acc-soft: #241a0e;
     --on-acc: #231705;
@@ -86,6 +102,14 @@
   --fai: #656b76;
   --ln: #1e2126;
   --ln2: #2d313a;
+
+  /* Popup surfaces. macOS draws a native <select> menu on frosted glass,
+     which is the look the app's own menus and popovers should share —
+     translucent over what they cover, a bright hairline edge catching the
+     light, and a shadow deep enough to lift them off the page. */
+  --glass: rgba(30, 33, 39, 0.72);
+  --glass-edge: rgba(255, 255, 255, 0.09);
+  --glass-shadow: rgba(0, 0, 0, 0.55);
   --acc: #efa850;
   --acc-soft: #241a0e;
   --on-acc: #231705;
@@ -140,10 +164,12 @@
   --color-n5: var(--n5);
   --color-n5b: var(--n5b);
 
-  --font-display: "Cal Sans", -apple-system, BlinkMacSystemFont,
-    "SF Pro Display", system-ui, sans-serif;
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", system-ui, sans-serif;
+  --font-display:
+    "Cal Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui,
+    sans-serif;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 
   /*
@@ -152,7 +178,8 @@
    * fetches a font over the network, and pulling one down for a single
    * word on three screens would be the most expensive glyph in it.
    */
-  --font-deva: "Kohinoor Devanagari", "Devanagari Sangam MN", "Nirmala UI",
+  --font-deva:
+    "Kohinoor Devanagari", "Devanagari Sangam MN", "Nirmala UI",
     "Noto Sans Devanagari", "Mangal", serif;
 }
 
@@ -232,8 +259,12 @@
    Compact tightens every list row. Applied from a data attribute on the
    app shell rather than by swapping class names in each component, so a
    setting nobody remembers can't leave half the app on the old spacing. */
-[data-density="compact"] .row-pad { padding-block: 0.3rem; }
-[data-density="compact"] .row-gap { gap: 0.25rem; }
+[data-density="compact"] .row-pad {
+  padding-block: 0.3rem;
+}
+[data-density="compact"] .row-gap {
+  gap: 0.25rem;
+}
 
 /* ------------------------------------------------------------ reduced motion
    Honours the user's own choice as well as the OS one. Both are stated
@@ -247,7 +278,9 @@
   scroll-behavior: auto !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
@@ -258,7 +291,8 @@
    is a download and a rendering difference, and some people would
    rather not have either. */
 [data-font="system"] {
-  --display: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --display:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
@@ -285,4 +319,54 @@
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/*
+ * A popup that sits on frosted glass.
+ *
+ * The one native control in the app — the Start-time <select> — gets this
+ * from macOS for free, and it is the reason that menu feels like part of
+ * the desktop while the app's own menus felt like rectangles. So every
+ * floating surface the app draws itself uses the same recipe: it lets the
+ * page through, catches light along its top edge, and casts a shadow deep
+ * enough to sit above rather than on.
+ *
+ * The blur is a progressive enhancement. Where backdrop-filter is
+ * unavailable the fallback below turns the surface opaque, because
+ * translucency without blur is just text over text.
+ */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    0 12px 34px var(--glass-shadow),
+    0 2px 8px var(--glass-shadow);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .glass {
+    background: var(--surf);
+    border-color: var(--ln2);
+  }
+}
+
+/* Someone who has asked for less motion has usually also asked for less
+   of this: a blurred, saturated backdrop is exactly the kind of surface
+   that makes text hard to hold still. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--surf);
+    border-color: var(--ln2);
+  }
 }

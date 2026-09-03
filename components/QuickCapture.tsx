@@ -92,7 +92,7 @@ export default function QuickCapture() {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="w-full max-w-[520px] rounded-xl border border-ln bg-surf shadow-lg">
+      <div className="glass w-full max-w-[520px] rounded-xl">
         <textarea
           ref={box}
           value={text}

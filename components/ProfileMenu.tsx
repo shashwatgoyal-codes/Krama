@@ -91,7 +91,7 @@ export default function ProfileMenu({
              closes under the cursor. */
           className="absolute right-0 top-full z-50 pt-2"
         >
-          <div className="w-[212px] overflow-hidden rounded-lg border border-ln bg-surf shadow-lg">
+          <div className="glass w-[212px] overflow-hidden rounded-[10px]">
             <div className="border-b border-ln px-3 py-2.5">
               <p className="truncate text-[12.5px] font-semibold">{name}</p>
               <p className="truncate text-[11px] text-mut">{email}</p>

@@ -64,8 +64,7 @@ export default function NoteBoard({
    * something rather than on nothing, and falling back here means the
    * list is never briefly pointing at a note that is not in it.
    */
-  const selected =
-    shown.find((n) => n.id === selectedId) ?? shown[0] ?? null;
+  const selected = shown.find((n) => n.id === selectedId) ?? shown[0] ?? null;
 
   function act(
     action: (data: FormData) => Promise<{ ok: boolean; error?: string }>,
@@ -125,11 +124,9 @@ export default function NoteBoard({
             type="button"
             onClick={newNote}
             disabled={pending}
-            title="New note"
-            aria-label="New note"
-            className="flex-none cursor-pointer rounded-[9px] border border-ink bg-ink px-2.5 py-1.5 text-[13px] font-semibold leading-none text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:opacity-50"
+            className="flex-none cursor-pointer whitespace-nowrap rounded-[9px] border border-ink bg-ink px-3 py-1.5 text-[12.5px] font-semibold leading-none text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:opacity-50"
           >
-            +
+            New note
           </button>
         </div>
 
@@ -137,7 +134,7 @@ export default function NoteBoard({
           {shown.length === 0 ? (
             <p className="px-3 py-8 text-center text-[12px] leading-relaxed text-mut">
               {notes.length === 0
-                ? "No notes yet. Press + and start writing."
+                ? "No notes yet. Press New note and start writing."
                 : "Nothing matches that."}
             </p>
           ) : (
@@ -163,7 +160,9 @@ export default function NoteBoard({
                         <span
                           className={
                             "min-w-0 flex-1 truncate text-[12.5px] " +
-                            (on ? "font-semibold text-acc" : "font-semibold text-ink")
+                            (on
+                              ? "font-semibold text-acc"
+                              : "font-semibold text-ink")
                           }
                         >
                           {noteTitle(note.body)}
@@ -190,7 +189,7 @@ export default function NoteBoard({
       <section className="flex min-h-0 flex-col">
         {!selected ? (
           <p className="mx-auto mt-20 max-w-[34ch] px-4 text-center text-[12.5px] leading-relaxed text-mut">
-            Nothing selected. Press + to write something down.
+            Nothing selected. Press New note to write something down.
           </p>
         ) : (
           <form
@@ -243,7 +242,9 @@ export default function NoteBoard({
                     }
                     className={
                       `size-4 rounded-full border ${NOTE_TINT[c]} cursor-pointer ` +
-                      (selected.colour === c ? "ring-2 ring-ink" : "opacity-70 hover:opacity-100")
+                      (selected.colour === c
+                        ? "ring-2 ring-ink"
+                        : "opacity-70 hover:opacity-100")
                     }
                   />
                 ))}

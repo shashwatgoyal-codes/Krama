@@ -47,7 +47,9 @@ export default function TintPicker({ chosen }: { chosen: string[] }) {
                 aria-expanded={open === slot}
                 className={
                   "block size-[22px] cursor-pointer rounded-[5px] border transition-transform hover:scale-110 " +
-                  (open === slot ? "ring-2 ring-ink ring-offset-1 ring-offset-surf" : "")
+                  (open === slot
+                    ? "ring-2 ring-ink ring-offset-1 ring-offset-surf"
+                    : "")
                 }
                 style={{
                   backgroundColor: `var(--n${slot + 1})`,
@@ -56,7 +58,7 @@ export default function TintPicker({ chosen }: { chosen: string[] }) {
               />
 
               {open === slot && (
-                <div className="absolute right-0 top-[30px] z-20 w-[152px] rounded-lg border border-ln2 bg-surf p-2 shadow-[0_8px_26px_rgba(0,0,0,0.25)]">
+                <div className="glass absolute right-0 top-[30px] z-20 w-[152px] rounded-[10px] p-2">
                   <div className="grid grid-cols-4 gap-1.5">
                     {TINT_PRESETS.map((p) => (
                       <button
