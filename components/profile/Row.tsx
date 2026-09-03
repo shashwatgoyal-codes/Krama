@@ -29,7 +29,5 @@ export default function Row({
   );
 }
 
-export const inputClass =
-  "w-full rounded-[9px] border border-ln2 bg-surf px-[11px] py-[7px] text-[12.5px] " +
-  "text-ink placeholder:text-fai focus:border-acc focus:outline-none " +
-  "focus:ring-[3px] focus:ring-acc-soft disabled:opacity-50";
+/** The one field style, in app/globals.css. */
+export const inputClass = "field";

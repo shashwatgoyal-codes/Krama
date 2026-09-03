@@ -110,7 +110,7 @@ export default function FlagRow({ flag, canEdit }: Props) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Why — this goes in the audit log"
-            className="min-w-[240px] flex-1 rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] placeholder:text-fai focus:border-acc focus:outline-none"
+            className="field field-sm min-w-[240px] flex-1"
           />
           <button
             type="submit"

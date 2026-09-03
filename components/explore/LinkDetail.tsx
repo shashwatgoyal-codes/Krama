@@ -27,9 +27,7 @@ export type LinkDetailView = {
   shortUrl: string;
 };
 
-const FIELD =
-  "w-full rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink " +
-  "placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft";
+const FIELD = "field field-sm";
 
 export default function LinkDetail({ link }: { link: LinkDetailView }) {
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +35,9 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  function run(action: (d: FormData) => Promise<{ ok: boolean; error?: string }>) {
+  function run(
+    action: (d: FormData) => Promise<{ ok: boolean; error?: string }>,
+  ) {
     const data = new FormData();
     data.set("id", link.id);
     setError(null);
@@ -135,7 +135,10 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
           <Button type="submit" size="sm" disabled={pending}>
             Save
           </Button>
-          <span aria-live="polite" className="text-[11.5px] font-semibold text-ok">
+          <span
+            aria-live="polite"
+            className="text-[11.5px] font-semibold text-ok"
+          >
             {saved && "Saved"}
           </span>
         </div>
@@ -148,16 +151,28 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
           size="sm"
           disabled={pending || link.isTask}
           onClick={() => run(linkToTask)}
-          title={link.isTask ? "Already a task" : "Turn this into something to do"}
+          title={
+            link.isTask ? "Already a task" : "Turn this into something to do"
+          }
         >
           {link.isTask ? "Already a task" : "Make a task"}
         </Button>
 
-        <Button type="button" size="sm" disabled={pending} onClick={() => run(toggleRead)}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending}
+          onClick={() => run(toggleRead)}
+        >
           {link.read ? "Mark unread" : "Mark read"}
         </Button>
 
-        <Button type="button" size="sm" disabled={pending} onClick={() => run(archiveLink)}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending}
+          onClick={() => run(archiveLink)}
+        >
           Remove
         </Button>
       </div>

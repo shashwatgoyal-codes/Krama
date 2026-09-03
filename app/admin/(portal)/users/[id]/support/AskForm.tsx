@@ -14,7 +14,13 @@ import { SCOPES, SCOPE_LABEL } from "@/lib/admin/scopes";
  * Nothing is ticked to begin with. A form that defaults to asking for
  * everything is a form that gets sent asking for everything.
  */
-export default function AskForm({ userId, email }: { userId: string; email: string }) {
+export default function AskForm({
+  userId,
+  email,
+}: {
+  userId: string;
+  email: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [pending, start] = useTransition();
@@ -46,7 +52,12 @@ export default function AskForm({ userId, email }: { userId: string; email: stri
         <div className="mt-2 flex flex-wrap gap-3">
           {SCOPES.map((s) => (
             <label key={s} className="flex items-center gap-1.5 text-[12.5px]">
-              <input type="checkbox" name="scopes" value={s} className="accent-acc" />
+              <input
+                type="checkbox"
+                name="scopes"
+                value={s}
+                className="accent-acc"
+              />
               {SCOPE_LABEL[s]}
             </label>
           ))}
@@ -63,7 +74,7 @@ export default function AskForm({ userId, email }: { userId: string; email: stri
         minLength={10}
         required
         placeholder="Your repeating task is not appearing on the calendar and I need to see how it is set up."
-        className="mt-1 w-full rounded-lg border border-ln2 bg-surf px-[11px] py-[8px] text-[12.5px] placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+        className="field mt-1 w-full"
       />
 
       {error && <p className="mt-2 text-[12px] text-bad">{error}</p>}

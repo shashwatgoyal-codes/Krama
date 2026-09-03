@@ -39,7 +39,7 @@ export default function SaveLinkBar() {
           spellCheck={false}
           placeholder="Paste a link to save it…"
           aria-label="Link to save"
-          className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-[11px] py-1.5 text-[13px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+          className="field field-lg min-w-0 flex-1"
         />
         <button
           type="submit"

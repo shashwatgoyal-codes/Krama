@@ -148,7 +148,7 @@ export default function FeedbackRow({ row }: { row: Row }) {
             maxLength={2000}
             placeholder="They will see this in their settings."
             aria-label="Your reply"
-            className="w-full resize-y rounded-[9px] border border-ln2 bg-surf px-3 py-2.5 text-[12.5px] leading-relaxed text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+            className="field w-full resize-y leading-relaxed resize-y leading-relaxed"
           />
           <button
             type="submit"

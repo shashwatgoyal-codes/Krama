@@ -62,7 +62,7 @@ export default function SearchBox({
           autoFocus
           placeholder="Search everything…"
           aria-label="Search"
-          className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-[11px] py-2 text-[13px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+          className="field field-lg min-w-0 flex-1"
         />
         <button
           type="submit"

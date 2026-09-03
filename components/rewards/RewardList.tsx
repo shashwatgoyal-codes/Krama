@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
-import { addReward, removeReward, claimReward } from "@/app/app/rewards/actions";
+import {
+  addReward,
+  removeReward,
+  claimReward,
+} from "@/app/app/rewards/actions";
 import type { RewardView } from "@/lib/rewards";
 import { useToast } from "@/components/ui/Toast";
 
@@ -61,7 +65,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
               maxLength={60}
               placeholder="A film, a day off, that thing you keep not buying"
               aria-label="Reward name"
-              className="min-w-0 flex-1 rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+              className="field field-sm min-w-0 flex-1"
             />
             <input
               type="number"
@@ -70,11 +74,16 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
               min={1}
               defaultValue={200}
               aria-label="Cost in points"
-              className="tabular w-[92px] rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+              className="field field-sm tabular w-[92px]"
             />
           </div>
           <div className="mt-2 flex gap-2">
-            <Button type="submit" variant="primary" size="sm" disabled={pending}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={pending}
+            >
               {pending ? "Adding…" : "Add it"}
             </Button>
             <Button type="button" size="sm" onClick={() => setAdding(false)}>
@@ -86,8 +95,8 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
 
       {rewards.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-ln2 px-5 py-8 text-center text-[12.5px] leading-relaxed text-mut">
-          Nothing to claim yet. Name something you actually want and price
-          it — the points only mean something once they buy you something.
+          Nothing to claim yet. Name something you actually want and price it —
+          the points only mean something once they buy you something.
         </p>
       ) : (
         <ul className="mt-3 divide-y divide-ln border-y border-ln">
@@ -155,9 +164,9 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
       )}
 
       <p className="mt-3 text-[11px] text-fai">
-        Claiming spends your balance. It never changes your level — the
-        level is what you have done, and that does not un-happen because
-        you took something for it.
+        Claiming spends your balance. It never changes your level — the level is
+        what you have done, and that does not un-happen because you took
+        something for it.
       </p>
     </div>
   );

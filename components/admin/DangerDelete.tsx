@@ -76,7 +76,7 @@ export default function DangerDelete({
         value={confirmation}
         onChange={(e) => setConfirmation(e.target.value)}
         autoComplete="off"
-        className="mt-1 w-full rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] focus:border-bad focus:outline-none"
+        className="field field-sm field-danger mt-1 w-full focus:border-bad"
       />
 
       <label className="label-xs mt-2 block text-mut" htmlFor="delete-reason">
@@ -88,7 +88,7 @@ export default function DangerDelete({
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         placeholder="Recorded in the audit log"
-        className="mt-1 w-full rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] placeholder:text-fai focus:border-bad focus:outline-none"
+        className="field field-sm field-danger mt-1 w-full focus:border-bad"
       />
 
       {error && <p className="mt-2 text-[11.5px] text-bad">{error}</p>}

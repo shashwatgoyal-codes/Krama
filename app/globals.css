@@ -370,3 +370,94 @@
     border-color: var(--ln2);
   }
 }
+
+/*
+ * One field, everywhere.
+ *
+ * There were three definitions of this — in the task panel, the link
+ * panel, and settings — alike enough to look like a mistake and different
+ * enough to be one: two radii, two paddings, and only two of the three
+ * styled their placeholder. Anything that takes typing or a choice now
+ * shares this, so a date input beside a select beside a text box read as
+ * one family.
+ */
+.field {
+  width: 100%;
+  border-radius: 9px;
+  border: 1px solid var(--ln2);
+  background: var(--surf);
+  padding: 7px 11px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--ink);
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.field::placeholder {
+  color: var(--fai);
+}
+
+.field:focus,
+.field:focus-visible {
+  border-color: var(--acc);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--acc-soft);
+}
+
+.field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Three sizes, because the app genuinely has three densities: a side
+   panel, an ordinary form, and the wide bars people type into first. */
+.field-sm {
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 11.5px;
+}
+
+.field-lg {
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+/* For the fields that gate something destructive, where the focus ring
+   agreeing with the button beside it is the point. */
+.field-danger:focus,
+.field-danger:focus-visible {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px var(--bad-soft);
+}
+
+/*
+ * The little calendar and clock glyphs on native date and time inputs.
+ *
+ * The browser draws them in black whatever the page is doing, so on the
+ * dark theme they were a dark smudge on a dark field. Inverting is the
+ * only lever available — the picker popup itself belongs to the browser
+ * and cannot be styled at all, which is also why these stay native: a
+ * hand-built date picker would look right and behave worse.
+ */
+.field::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+
+.field::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .field::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+
+:root[data-theme="dark"] .field::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}

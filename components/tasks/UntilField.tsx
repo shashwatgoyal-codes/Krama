@@ -75,7 +75,7 @@ export default function UntilField({
           disabled={disabled}
           min={today}
           onChange={(e) => setDate(e.target.value)}
-          className="mt-2 w-full rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+          className="field field-sm mt-2 w-full"
         />
       )}
 

@@ -43,13 +43,9 @@ export default async function AuditPage({
           name="actor"
           defaultValue={actor ?? ""}
           placeholder="Filter by who"
-          className="w-full max-w-[220px] rounded-lg border border-ln2 bg-surf px-[11px] py-[7px] text-[12.5px] placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+          className="field w-full max-w-[220px]"
         />
-        <select
-          name="action"
-          defaultValue={action ?? ""}
-          className="rounded-lg border border-ln2 bg-surf px-[9px] py-[7px] text-[12.5px]"
-        >
+        <select name="action" defaultValue={action ?? ""} className="field">
           <option value="">Every action</option>
           {actions.map((a) => (
             <option key={a} value={a}>
@@ -70,7 +66,10 @@ export default async function AuditPage({
           <thead>
             <tr className="border-b border-ln text-left">
               {["When", "Who", "Action", "On", "Why"].map((h) => (
-                <th key={h} className="label-xs px-3.5 py-2.5 font-semibold text-mut">
+                <th
+                  key={h}
+                  className="label-xs px-3.5 py-2.5 font-semibold text-mut"
+                >
                   {h}
                 </th>
               ))}
@@ -78,7 +77,10 @@ export default async function AuditPage({
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-ln align-top last:border-0">
+              <tr
+                key={r.id}
+                className="border-b border-ln align-top last:border-0"
+              >
                 <td className="whitespace-nowrap px-3.5 py-2.5 font-mono text-[10.5px] text-mut">
                   {r.createdAt.toISOString().slice(0, 16).replace("T", " ")}
                 </td>
@@ -95,7 +97,10 @@ export default async function AuditPage({
                 </td>
                 <td className="px-3.5 py-2.5 text-mut">
                   {r.targetUserId ? (
-                    <Link href={`/admin/users/${r.targetUserId}`} className="font-semibold text-acc">
+                    <Link
+                      href={`/admin/users/${r.targetUserId}`}
+                      className="font-semibold text-acc"
+                    >
                       {r.target}
                     </Link>
                   ) : (
@@ -105,7 +110,9 @@ export default async function AuditPage({
                     (r.target ?? "—")
                   )}
                 </td>
-                <td className="max-w-[320px] px-3.5 py-2.5 text-mut">{r.reason}</td>
+                <td className="max-w-[320px] px-3.5 py-2.5 text-mut">
+                  {r.reason}
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (

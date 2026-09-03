@@ -15,7 +15,9 @@ import { inviteAdmin } from "./actions";
 export default function InviteForm() {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [issued, setIssued] = useState<{ email: string; url: string } | null>(null);
+  const [issued, setIssued] = useState<{ email: string; url: string } | null>(
+    null,
+  );
   const [copied, setCopied] = useState(false);
 
   return (
@@ -34,7 +36,10 @@ export default function InviteForm() {
             return;
           }
           const { email, token } = result.data;
-          setIssued({ email, url: `${window.location.origin}/invite/${token}` });
+          setIssued({
+            email,
+            url: `${window.location.origin}/invite/${token}`,
+          });
           setCopied(false);
         })
       }
@@ -48,14 +53,14 @@ export default function InviteForm() {
           type="email"
           required
           placeholder="their@email.com"
-          className="min-w-[220px] flex-1 rounded-lg border border-ln2 bg-surf px-[11px] py-[7px] text-[12.5px] placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+          className="field min-w-[220px] flex-1"
         />
         <input
           name="reason"
           required
           minLength={3}
           placeholder="Why — this goes in the audit log"
-          className="min-w-[240px] flex-[2] rounded-lg border border-ln2 bg-surf px-[11px] py-[7px] text-[12.5px] placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+          className="field min-w-[240px] flex-[2]"
         />
         <button
           type="submit"

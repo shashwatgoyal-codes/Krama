@@ -85,7 +85,7 @@ export default function FeedbackPanel({ mine }: { mine: FeedbackMine[] }) {
             maxLength={MAX_MESSAGE}
             placeholder="What happened, or what would help?"
             aria-label="Your message"
-            className="w-full resize-y rounded-[9px] border border-ln2 bg-surf px-3 py-2.5 text-[12.5px] leading-relaxed text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+            className="field w-full resize-y leading-relaxed resize-y leading-relaxed"
           />
           <div className="mt-1 flex items-center justify-between">
             <p className="text-[11px] text-mut">

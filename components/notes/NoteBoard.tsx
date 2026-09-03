@@ -118,7 +118,7 @@ export default function NoteBoard({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search notes"
             aria-label="Search notes"
-            className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-2.5 py-1.5 text-[12.5px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+            className="field min-w-0 flex-1"
           />
           <button
             type="button"
@@ -217,7 +217,7 @@ export default function NoteBoard({
               <select
                 name="areaId"
                 defaultValue={selected.areaId ?? ""}
-                className="rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none"
+                className="field field-sm"
               >
                 <option value="">Unfiled</option>
                 {areas.map((a) => (

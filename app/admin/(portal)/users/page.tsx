@@ -42,7 +42,7 @@ export default async function AdminUsers({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search by email or name"
-          className="w-full max-w-[320px] rounded-lg border border-ln2 bg-surf px-[11px] py-[7px] text-[12.5px] placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+          className="field w-full max-w-[320px]"
         />
         <button
           type="submit"
@@ -56,8 +56,18 @@ export default async function AdminUsers({
         <table className="w-full min-w-[640px] border-collapse text-[12.5px]">
           <thead>
             <tr className="border-b border-ln text-left">
-              {["Account", "Role", "Status", "Joined", "Last seen", "Items"].map((h) => (
-                <th key={h} className="label-xs px-3.5 py-2.5 font-semibold text-mut">
+              {[
+                "Account",
+                "Role",
+                "Status",
+                "Joined",
+                "Last seen",
+                "Items",
+              ].map((h) => (
+                <th
+                  key={h}
+                  className="label-xs px-3.5 py-2.5 font-semibold text-mut"
+                >
                   {h}
                 </th>
               ))}
@@ -67,7 +77,10 @@ export default async function AdminUsers({
             {users.map((u) => (
               <tr key={u.id} className="border-b border-ln last:border-0">
                 <td className="px-3.5 py-2.5">
-                  <Link href={`/admin/users/${u.id}`} className="font-semibold text-acc">
+                  <Link
+                    href={`/admin/users/${u.id}`}
+                    className="font-semibold text-acc"
+                  >
                     {u.name}
                   </Link>
                   <span className="block text-[11px] text-mut">{u.email}</span>
@@ -114,8 +127,8 @@ export default async function AdminUsers({
 
       {users.length === 200 && (
         <p className="mt-2 text-[11px] text-fai">
-          Showing the 200 most recent. Search to narrow it — this cap is here
-          so a growing table cannot quietly become a slow page.
+          Showing the 200 most recent. Search to narrow it — this cap is here so
+          a growing table cannot quietly become a slow page.
         </p>
       )}
     </>

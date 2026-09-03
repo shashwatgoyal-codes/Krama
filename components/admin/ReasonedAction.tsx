@@ -44,7 +44,9 @@ export default function ReasonedAction({
         onClick={() => setOpen(true)}
         className={
           "rounded-md border border-ln2 px-2 py-1 text-[11.5px] font-semibold text-mut transition-colors " +
-          (tone === "danger" ? "hover:border-bad hover:text-bad" : "hover:border-ink hover:text-ink")
+          (tone === "danger"
+            ? "hover:border-bad hover:text-bad"
+            : "hover:border-ink hover:text-ink")
         }
       >
         {label}
@@ -82,7 +84,7 @@ export default function ReasonedAction({
         onChange={(e) => setReason(e.target.value)}
         placeholder="Why? Recorded in the audit log"
         autoFocus
-        className="w-[240px] rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] placeholder:text-fai focus:border-acc focus:outline-none"
+        className="field field-sm w-[240px]"
       />
       <div className="flex gap-1.5">
         <button
@@ -106,7 +108,9 @@ export default function ReasonedAction({
           {pending ? "…" : confirm}
         </button>
       </div>
-      {error && <p className="max-w-[240px] text-right text-[11px] text-bad">{error}</p>}
+      {error && (
+        <p className="max-w-[240px] text-right text-[11px] text-bad">{error}</p>
+      )}
     </form>
   );
 }
