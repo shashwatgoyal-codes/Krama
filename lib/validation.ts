@@ -16,7 +16,7 @@ export const emailSchema = z
   .trim()
   .toLowerCase()
   .min(3, "Enter your email address.")
-  .max(254, "That email address is too long.")
+  .max(254, "That email is too long.")
   .email("That doesn't look like an email address.");
 
 export const passwordSchema = z
@@ -46,7 +46,7 @@ export const createTaskSchema = z.object({
     .string()
     .trim()
     .min(1, "Give the task a name.")
-    .max(200, "Keep the title under 200 characters."),
+    .max(200, "That title is too long. Keep it under 200 letters."),
   notes: z.string().trim().max(2000).optional(),
   areaId: z.string().cuid().optional(),
   points: z.number().int().min(1).max(30).optional(),
@@ -90,7 +90,7 @@ export const scheduleAtSchema = z.object({
     .int()
     .refine(
       (m) => (BLOCK_MINUTES as readonly number[]).includes(m),
-      "Pick one of the offered lengths.",
+      "Pick one of the choices shown.",
     ),
 });
 
@@ -114,7 +114,7 @@ export const nameSchema = z.object({
 
 const restDaysSchema = z
   .array(z.coerce.number().int().min(0).max(6))
-  .max(6, "Leave at least one day that counts — otherwise nothing does.")
+  .max(6, "Pick at least one day.")
   // A duplicate day in the form post shouldn't become a duplicate row.
   .transform((days) => [...new Set(days)].sort((a, b) => a - b));
 
@@ -128,7 +128,7 @@ export const profileTabSchema = z.object({
   timezone: z
     .string()
     .trim()
-    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+    .refine(isValidTimeZone, "We don't know that time zone."),
   // Capped at noon: a "day" that ends in the evening isn't a late night,
   // it's a different day, and allowing it would quietly corrupt every
   // date the scoring engine derives.
@@ -141,7 +141,7 @@ export const dayScheduleSchema = z.object({
   timezone: z
     .string()
     .trim()
-    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+    .refine(isValidTimeZone, "We don't know that time zone."),
   restDays: restDaysSchema,
   // Capped at noon: a "day" that ends in the evening isn't a late night,
   // it's a different day, and allowing it would quietly corrupt every
@@ -149,8 +149,8 @@ export const dayScheduleSchema = z.object({
   dayEndsAtHour: z.coerce
     .number()
     .int()
-    .min(0, "Pick an hour between midnight and noon.")
-    .max(12, "Pick an hour between midnight and noon."),
+    .min(0, "Pick an hour between 12am and 12pm.")
+    .max(12, "Pick an hour between 12am and 12pm."),
 });
 
 /** "HH:MM" in the user's own zone, or empty for no nudge. */
@@ -168,13 +168,13 @@ export const rhythmSchema = z.object({
   dailyFloor: z.coerce
     .number()
     .int()
-    .min(1, "The floor needs to be at least one action.")
-    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+    .min(1, "Pick at least 1 thing a day.")
+    .max(20, "Pick 20 or fewer things a day."),
   dailyTargetPoints: z.coerce
     .number()
     .int()
-    .min(1, "A day's work has to be worth at least a point.")
-    .max(500, "Above 500 a day, pace stops telling you anything."),
+    .min(1, "This has to be at least 1 point.")
+    .max(500, "Set this to 500 or less."),
   restDays: restDaysSchema,
   morningReminder: reminderSchema,
   eveningReminder: reminderSchema,
@@ -200,7 +200,7 @@ export const appearanceSchema = z.object({
       t.every(
         (v) => TINT_PRESETS.some((p) => p.value === v) || isHexTint(v),
       ),
-    "That isn't a tint or a colour.",
+    "That isn't a colour we can use.",
   ),
   density: z.enum(DENSITIES),
   reduceMotion: z.coerce.boolean(),
@@ -211,30 +211,30 @@ export const scoringSchema = z.object({
   dailyFloor: z.coerce
     .number()
     .int()
-    .min(1, "The floor needs to be at least one action.")
-    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+    .min(1, "Pick at least 1 thing a day.")
+    .max(20, "Pick 20 or fewer things a day."),
   dailyTargetPoints: z.coerce
     .number()
     .int()
-    .min(1, "A day's work has to be worth at least a point.")
-    .max(500, "Above 500 a day, pace stops telling you anything."),
+    .min(1, "This has to be at least 1 point.")
+    .max(500, "Set this to 500 or less."),
   dailyCap: z.coerce
     .number()
     .int()
-    .min(20, "A cap under 20 would slow you down almost immediately.")
+    .min(20, "Set this to 20 or more.")
     .max(1000, "Keep the cap under 1000."),
   scoringVisibility: z.enum(["hidden", "normal", "everywhere"]),
 });
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Enter your current password."),
+  currentPassword: z.string().min(1, "Type your password."),
   newPassword: passwordSchema,
 });
 
 export const deleteAccountSchema = z.object({
-  password: z.string().min(1, "Enter your password to confirm."),
+  password: z.string().min(1, "Type your password to make sure it's you."),
   confirm: z.literal("DELETE", {
-    error: "Type DELETE exactly to confirm.",
+    error: "Type DELETE to make sure.",
   }),
 });
 

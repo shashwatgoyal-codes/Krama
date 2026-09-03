@@ -24,7 +24,7 @@ export async function updateFlag(formData: FormData): Promise<ActionResult> {
       reason: z
         .string()
         .trim()
-        .min(3, "Say why. It is what makes the log worth keeping.")
+        .min(3, "Say why you're doing this. It gets saved.")
         .max(500),
     })
     .safeParse({

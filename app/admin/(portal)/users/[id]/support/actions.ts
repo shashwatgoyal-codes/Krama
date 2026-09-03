@@ -15,7 +15,7 @@ export async function askForAccess(formData: FormData): Promise<ActionResult> {
       reason: z
         .string()
         .trim()
-        .min(10, "Say what you need to look at and why — they will read this.")
+        .min(10, "Say what you need to see and why. They will read this.")
         .max(500),
       scopes: z.array(z.enum(SCOPES as [Scope, ...Scope[]])).min(1, "Pick at least one."),
     })

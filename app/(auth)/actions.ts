@@ -27,7 +27,7 @@ import {
  * addresses are registered — a free list of targets before they try a
  * single password.
  */
-const BAD_CREDENTIALS = "That email or password isn't right.";
+const BAD_CREDENTIALS = "That email or password is wrong.";
 
 async function requestKey(email: string): Promise<string> {
   const h = await headers();
@@ -42,7 +42,7 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
   // Checked here as well as on the page. A hidden form is still a POST
   // endpoint, and this is the one that actually creates the account.
   if (!(await flagOnGlobally("open_registration"))) {
-    return { ok: false, error: "New accounts are closed at the moment." };
+    return { ok: false, error: "New accounts are closed right now." };
   }
 
   const parsed = signUpSchema.safeParse({
@@ -66,7 +66,7 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
     // discover which addresses already have accounts.
     return {
       ok: false,
-      error: "That email can't be used. Try signing in instead.",
+      error: "You already have an account with that email. Sign in instead.",
       field: "email",
     };
   }

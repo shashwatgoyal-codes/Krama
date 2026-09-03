@@ -115,14 +115,14 @@ export async function toggleTask(formData: FormData): Promise<ActionResult> {
 
   const task = await getTask(user.id, parsed.data.id);
   // Not theirs, or not there — same answer either way.
-  if (!task) return { ok: false, error: "That task no longer exists." };
+  if (!task) return { ok: false, error: "That task is gone." };
 
   const settings = await getSettings(user.id);
   const nextStatus = task.status === "done" ? "open" : "done";
   const countedForDay = task.createdForDate.toISOString().slice(0, 10);
 
   const updated = await setTaskStatus(user.id, task.id, nextStatus);
-  if (!updated) return { ok: false, error: "That task no longer exists." };
+  if (!updated) return { ok: false, error: "That task is gone." };
 
   if (nextStatus === "done") {
     await awardPoints({
@@ -157,7 +157,7 @@ export async function deleteTask(formData: FormData): Promise<ActionResult> {
 
   const removed = await deleteTaskRow(user.id, parsed.data.id);
   if (!removed.deleted) {
-    return { ok: false, error: "That task no longer exists." };
+    return { ok: false, error: "That task is gone." };
   }
 
   revalidatePath("/app");
@@ -187,7 +187,7 @@ export async function scheduleTask(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Unknown task." };
 
   const task = await getTask(user.id, parsed.data.id);
-  if (!task) return { ok: false, error: "That task no longer exists." };
+  if (!task) return { ok: false, error: "That task is gone." };
 
   const settings = await getSettings(user.id);
   const dayKey = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
@@ -199,7 +199,7 @@ export async function scheduleTask(formData: FormData): Promise<ActionResult> {
   );
 
   if (blocks.some((b) => b.taskId === task.id)) {
-    return { ok: false, error: "That's already on the plan." };
+    return { ok: false, error: "That's already on your plan." };
   }
 
   const slot = nextFreeSlot(blocks, {
@@ -253,7 +253,7 @@ export async function scheduleTaskAt(
   if (!parsed.success) return { ok: false, error: "Couldn't schedule that." };
 
   const task = await getTask(user.id, parsed.data.id);
-  if (!task) return { ok: false, error: "That task no longer exists." };
+  if (!task) return { ok: false, error: "That task is gone." };
 
   const settings = await getSettings(user.id);
   const start = zonedTimeToInstant(
@@ -295,7 +295,7 @@ export async function unscheduleBlock(
   if (!parsed.success) return { ok: false, error: "Unknown block." };
 
   const removed = await deleteBlock(user.id, parsed.data.id);
-  if (!removed) return { ok: false, error: "That block no longer exists." };
+  if (!removed) return { ok: false, error: "That time block is gone." };
 
   revalidatePath("/app");
   revalidatePath("/app/calendar");
@@ -322,7 +322,7 @@ export async function moveBlockToHour(
 
   const settings = await getSettings(user.id);
   const block = await getBlock(user.id, parsed.data.id);
-  if (!block) return { ok: false, error: "That block no longer exists." };
+  if (!block) return { ok: false, error: "That time block is gone." };
 
   const length = block.endsAt.getTime() - block.startsAt.getTime();
   const start = zonedTimeToInstant(

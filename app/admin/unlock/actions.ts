@@ -67,7 +67,7 @@ export async function unlock(formData: FormData): Promise<ActionResult> {
       target: actor.email,
       reason: "Wrong password at the portal unlock",
     });
-    return { ok: false, error: "That password is not right." };
+    return { ok: false, error: "That password is wrong." };
   }
 
   await clearAttempts(key);

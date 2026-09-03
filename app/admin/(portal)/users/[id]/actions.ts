@@ -25,7 +25,7 @@ const schema = z.object({
   reason: z
     .string()
     .trim()
-    .min(3, "Say why. It is what makes the log worth keeping.")
+    .min(3, "Say why you're doing this. It gets saved.")
     .max(500),
 });
 
@@ -117,11 +117,11 @@ export async function removeAccount(formData: FormData): Promise<ActionResult> {
   const parsed = z
     .object({
       userId: z.string().cuid(),
-      confirmation: z.string().trim().min(1, "Type the email address to confirm."),
+      confirmation: z.string().trim().min(1, "Type the email address to make sure."),
       reason: z
         .string()
         .trim()
-        .min(3, "Say why. It is what makes the log worth keeping.")
+        .min(3, "Say why you're doing this. It gets saved.")
         .max(500),
     })
     .safeParse({

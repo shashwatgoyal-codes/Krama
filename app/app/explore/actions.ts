@@ -107,7 +107,7 @@ export async function saveLinkDetails(
     title: parsed.data.title,
     why: parsed.data.why || null,
   });
-  if (!updated) return { ok: false, error: "That link no longer exists." };
+  if (!updated) return { ok: false, error: "That link is gone." };
 
   await setTagsOn(user.id, "link", parsed.data.id, names);
 
@@ -121,7 +121,7 @@ export async function toggleRead(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Unknown link." };
 
   const link = await getLink(user.id, parsed.data.id);
-  if (!link) return { ok: false, error: "That link no longer exists." };
+  if (!link) return { ok: false, error: "That link is gone." };
 
   await updateLink(user.id, link.id, { readAt: link.readAt ? null : new Date() });
   touched();
@@ -148,7 +148,7 @@ export async function linkToTask(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Unknown link." };
 
   const link = await getLink(user.id, parsed.data.id);
-  if (!link) return { ok: false, error: "That link no longer exists." };
+  if (!link) return { ok: false, error: "That link is gone." };
   if (link.taskId) return { ok: false, error: "Already a task." };
 
   const settings = await getSettings(user.id);

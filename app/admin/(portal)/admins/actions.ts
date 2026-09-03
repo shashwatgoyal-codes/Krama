@@ -18,11 +18,11 @@ import { firstIssue, type ActionResult } from "@/lib/validation";
 const reasonSchema = z
   .string()
   .trim()
-  .min(3, "Say why. It is what makes the log worth keeping.")
+  .min(3, "Say why you're doing this. It gets saved.")
   .max(500);
 
 const inviteSchema = z.object({
-  email: z.string().trim().toLowerCase().email("That is not an email address."),
+  email: z.string().trim().toLowerCase().email("That doesn't look like an email address."),
   reason: reasonSchema,
 });
 

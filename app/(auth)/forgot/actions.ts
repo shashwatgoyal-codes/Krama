@@ -42,7 +42,7 @@ export async function requestReset(
   // Throttled even for addresses with no account, or the throttle itself
   // becomes the oracle the identical wording was meant to close.
   if (!(await checkRateLimit(key)).allowed) {
-    return { ok: false, error: "Too many requests. Try again in a few minutes." };
+    return { ok: false, error: "Too many tries. Wait a few minutes and try again." };
   }
   await recordFailure(key);
 
@@ -75,7 +75,7 @@ export async function resetPassword(formData: FormData): Promise<ActionResult> {
   const key = await limiterKey(email);
 
   if (!(await checkRateLimit(key)).allowed) {
-    return { ok: false, error: "Too many attempts. Try again in a few minutes." };
+    return { ok: false, error: "Too many tries. Wait a few minutes and try again." };
   }
 
   const strength = checkPassword(password);
@@ -90,7 +90,7 @@ export async function resetPassword(formData: FormData): Promise<ActionResult> {
 
   // Same message for a wrong address and a wrong code, so this form
   // can't be used to test which addresses are registered either.
-  const WRONG = "That code isn't right, or it has expired. Request a new one.";
+  const WRONG = "That code is wrong or too old. Ask for a new one.";
 
   if (!user) {
     await recordFailure(key);
@@ -105,7 +105,7 @@ export async function resetPassword(formData: FormData): Promise<ActionResult> {
       field: "code",
       error:
         result.reason === "locked"
-          ? "Too many wrong guesses. Request a new code."
+          ? "Too many wrong tries. Ask for a new code."
           : WRONG,
     };
   }
