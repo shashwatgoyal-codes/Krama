@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/validation";
+import { useToast } from "@/components/ui/Toast";
 
 type Action = (formData: FormData) => Promise<ActionResult>;
 
@@ -27,19 +28,21 @@ export default function Decide({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
 
-  const run = (action: Action) => (fd: FormData) =>
+  const run = (action: Action, said: string) => (fd: FormData) =>
     start(async () => {
       setError(null);
       const result = await action(fd);
       if (!result.ok) setError(result.error);
+      else toast.success(said);
     });
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
         {approve && (
-          <form action={run(approve)}>
+          <form action={run(approve, "They can look, for 24 hours. You can stop it at any point.")}>
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"
@@ -51,7 +54,7 @@ export default function Decide({
           </form>
         )}
         {decline && (
-          <form action={run(decline)}>
+          <form action={run(decline, "Declined. Nothing of yours was shown.")}>
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"
@@ -63,7 +66,7 @@ export default function Decide({
           </form>
         )}
         {revoke && (
-          <form action={run(revoke)}>
+          <form action={run(revoke, "Stopped. They can no longer see anything.")}>
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"

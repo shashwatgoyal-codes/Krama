@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/validation";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * A destructive action that cannot be taken without saying why.
@@ -34,6 +35,7 @@ export default function ReasonedAction({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
 
   if (!open) {
     return (
@@ -62,6 +64,7 @@ export default function ReasonedAction({
           }
           setOpen(false);
           setReason("");
+          toast.success(`${confirm} — done, and recorded in the audit log.`);
         })
       }
       className="flex flex-col items-end gap-1.5"

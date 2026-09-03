@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/validation";
 import type { DeviceRow as Row } from "@/lib/repositories/sessions";
+import { useToast } from "@/components/ui/Toast";
 
 export default function DeviceRow({
   device,
@@ -13,6 +14,7 @@ export default function DeviceRow({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
 
   return (
     <div className="flex items-center gap-3 border-b border-ln p-3.5 last:border-0">
@@ -46,6 +48,7 @@ export default function DeviceRow({
               fd.set("id", device.id);
               const result = await action(fd);
               if (!result.ok) setError(result.error);
+              else toast.success(`Signed out of ${device.label}.`);
             })
           }
           className="flex-none rounded-md border border-ln2 px-2.5 py-1 text-[11.5px] font-semibold text-mut transition-colors hover:border-bad hover:text-bad disabled:opacity-50"

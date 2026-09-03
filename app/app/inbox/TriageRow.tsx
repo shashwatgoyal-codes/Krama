@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/validation";
+import { useToast } from "@/components/ui/Toast";
 import { SUGGESTION_LABEL, type Suggestion } from "@/lib/capture";
 
 /**
@@ -33,6 +34,7 @@ export default function TriageRow({
   const [value, setValue] = useState(text);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
 
   const file = (as: Suggestion) => () =>
     start(async () => {
@@ -43,6 +45,9 @@ export default function TriageRow({
       fd.set("as", as);
       const result = await triage(fd);
       if (!result.ok) setError(result.error);
+      // The row is gone by the time this resolves, so the confirmation
+      // has to live somewhere that outlives it.
+      else toast.success(`Filed as a ${as === "link" ? "saved link" : as}.`);
     });
 
   const order: Suggestion[] = [
@@ -85,6 +90,7 @@ export default function TriageRow({
               fd.set("id", id);
               const result = await discard(fd);
               if (!result.ok) setError(result.error);
+              else toast.success("Discarded.");
             })
           }
           className="ml-auto rounded-md px-2 py-1 text-[11.5px] font-medium text-fai transition-colors hover:text-bad"

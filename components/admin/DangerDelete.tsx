@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/validation";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Deleting an account.
@@ -26,6 +27,7 @@ export default function DangerDelete({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
 
   const matches = confirmation.trim().toLowerCase() === email.toLowerCase();
 
@@ -48,6 +50,9 @@ export default function DangerDelete({
           setError(null);
           const result = await action(fd);
           if (result && !result.ok) setError(result.error);
+          // On success this redirects to the users list, so the message
+          // has to outlive the page it was triggered from.
+          else toast.success(`${email} deleted. The audit log kept a record.`);
         })
       }
       className="rounded-lg border border-bad bg-bad-soft p-3"
