@@ -16,6 +16,7 @@ const NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/admins", label: "Admins" },
+  { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/flags", label: "Flags" },
   { href: "/admin/audit", label: "Audit log" },
 ];
@@ -30,7 +31,11 @@ const NAV = [
  * rendered inside this layout, reaching it would require the very thing
  * it exists to obtain, and the redirect would bounce forever.
  */
-export default async function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const actor = await requireAdmin();
 
   return (

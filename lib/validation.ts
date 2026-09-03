@@ -133,7 +133,10 @@ export const profileTabSchema = z.object({
   // it's a different day, and allowing it would quietly corrupt every
   // date the scoring engine derives.
   dayEndsAtHour: z.coerce.number().int().min(0).max(12),
-  weekStartsOn: z.coerce.number().int().refine((d) => d === 0 || d === 1),
+  weekStartsOn: z.coerce
+    .number()
+    .int()
+    .refine((d) => d === 0 || d === 1),
   timeFormat: z.enum(["12", "24"]),
 });
 
@@ -195,13 +198,14 @@ export const appearanceSchema = z.object({
   // Each slot is either a named preset or a hand-picked colour. The hex
   // is validated rather than trusted: it lands in a stylesheet, so
   // anything that is not six hex digits has no business reaching it.
-  noteTints: z.array(z.string()).length(5).refine(
-    (t) =>
-      t.every(
-        (v) => TINT_PRESETS.some((p) => p.value === v) || isHexTint(v),
-      ),
-    "That isn't a colour we can use.",
-  ),
+  noteTints: z
+    .array(z.string())
+    .length(5)
+    .refine(
+      (t) =>
+        t.every((v) => TINT_PRESETS.some((p) => p.value === v) || isHexTint(v)),
+      "That isn't a colour we can use.",
+    ),
   density: z.enum(DENSITIES),
   reduceMotion: z.coerce.boolean(),
   showPointsOnTasks: z.coerce.boolean(),
@@ -244,8 +248,7 @@ export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
 /** Shape every server action returns, so forms can render errors uniformly. */
 export type ActionResult<T = undefined> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string; field?: string };
+  { ok: true; data?: T } | { ok: false; error: string; field?: string };
 
 /** Turns a Zod failure into the first message a person should see. */
 export function firstIssue(error: z.ZodError): {
@@ -258,3 +261,23 @@ export function firstIssue(error: z.ZodError): {
     field: issue?.path[0]?.toString(),
   };
 }
+
+/**
+ * A message to whoever runs Krama.
+ *
+ * The floor is four characters because "hi" is not a report and the
+ * person deserves to be told so at the form rather than after a round
+ * trip. The ceiling is generous: someone describing a bug properly should
+ * never be cut off mid-sentence.
+ */
+export const feedbackSchema = z.object({
+  kind: z.enum(["idea", "problem", "praise", "other"]),
+  message: z
+    .string()
+    .trim()
+    .min(4, "Please write a little more so we can act on it.")
+    .max(2000, "That is longer than we can store. Please shorten it."),
+  fromPath: z.string().optional(),
+});
+
+export const feedbackIdSchema = z.object({ id: z.string().cuid() });

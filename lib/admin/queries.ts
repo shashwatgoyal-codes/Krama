@@ -41,29 +41,35 @@ export async function overview(now = new Date()): Promise<Overview> {
   const thirtyAgo = new Date(now.getTime() - 30 * DAY);
   const fourteenAgo = new Date(now.getTime() - 14 * DAY);
 
-  const [totalAccounts, verifiedAccounts, activeSeven, activeThirty, signups, failedSignins] =
-    await Promise.all([
-      adminDb.user.count(),
-      adminDb.user.count({ where: { emailVerified: { not: null } } }),
-      // "Active" is a live session, which is the only activity signal
-      // available without reading anyone's content.
-      adminDb.session.findMany({
-        where: { createdAt: { gte: sevenAgo } },
-        select: { userId: true },
-        distinct: ["userId"],
-      }),
-      adminDb.session.findMany({
-        where: { createdAt: { gte: thirtyAgo } },
-        select: { userId: true },
-        distinct: ["userId"],
-      }),
-      adminDb.user.findMany({
-        where: { createdAt: { gte: fourteenAgo } },
-        select: { createdAt: true },
-        orderBy: { createdAt: "asc" },
-      }),
-      adminDb.authAttempt.count({ where: { lockedUntil: { not: null } } }),
-    ]);
+  const [
+    totalAccounts,
+    verifiedAccounts,
+    activeSeven,
+    activeThirty,
+    signups,
+    failedSignins,
+  ] = await Promise.all([
+    adminDb.user.count(),
+    adminDb.user.count({ where: { emailVerified: { not: null } } }),
+    // "Active" is a live session, which is the only activity signal
+    // available without reading anyone's content.
+    adminDb.session.findMany({
+      where: { createdAt: { gte: sevenAgo } },
+      select: { userId: true },
+      distinct: ["userId"],
+    }),
+    adminDb.session.findMany({
+      where: { createdAt: { gte: thirtyAgo } },
+      select: { userId: true },
+      distinct: ["userId"],
+    }),
+    adminDb.user.findMany({
+      where: { createdAt: { gte: fourteenAgo } },
+      select: { createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    adminDb.authAttempt.count({ where: { lockedUntil: { not: null } } }),
+  ]);
 
   const byDay = new Map<string, number>();
   for (let i = 13; i >= 0; i--) {
@@ -120,7 +126,9 @@ export async function listUsers(query?: string): Promise<UserRow[]> {
       name: true,
       emailVerified: true,
       createdAt: true,
-      _count: { select: { tasks: true, notes: true, events: true, links: true } },
+      _count: {
+        select: { tasks: true, notes: true, events: true, links: true },
+      },
       sessions: {
         select: { createdAt: true },
         orderBy: { createdAt: "desc" },
@@ -140,7 +148,10 @@ export async function listUsers(query?: string): Promise<UserRow[]> {
     joined: u.createdAt,
     lastSeen: u.sessions[0]?.createdAt ?? null,
     items: u._count.tasks + u._count.notes + u._count.events + u._count.links,
-    level: levelOf(u.email, Boolean(u.adminRole) && u.adminRole?.revokedAt === null),
+    level: levelOf(
+      u.email,
+      Boolean(u.adminRole) && u.adminRole?.revokedAt === null,
+    ),
   }));
 }
 
@@ -166,12 +177,16 @@ export async function accountDetail(id: string): Promise<AccountDetail | null> {
       suspendedAt: true,
       suspendedReason: true,
       profile: { select: { timezone: true } },
-      _count: { select: { tasks: true, notes: true, events: true, links: true } },
+      _count: {
+        select: { tasks: true, notes: true, events: true, links: true },
+      },
       sessions: {
         select: { createdAt: true, expiresAt: true },
         orderBy: { createdAt: "desc" },
       },
-      adminRole: { select: { revokedAt: true, grantedAt: true, grantedBy: true } },
+      adminRole: {
+        select: { revokedAt: true, grantedAt: true, grantedBy: true },
+      },
     },
   });
   if (!u) return null;
@@ -185,11 +200,16 @@ export async function accountDetail(id: string): Promise<AccountDetail | null> {
     joined: u.createdAt,
     lastSeen: u.sessions[0]?.createdAt ?? null,
     items: u._count.tasks + u._count.notes + u._count.events + u._count.links,
-    level: levelOf(u.email, Boolean(u.adminRole) && u.adminRole?.revokedAt === null),
+    level: levelOf(
+      u.email,
+      Boolean(u.adminRole) && u.adminRole?.revokedAt === null,
+    ),
     suspendedAt: u.suspendedAt,
     suspendedReason: u.suspendedReason,
-    grantedAt: u.adminRole?.revokedAt === null ? (u.adminRole?.grantedAt ?? null) : null,
-    grantedBy: u.adminRole?.revokedAt === null ? (u.adminRole?.grantedBy ?? null) : null,
+    grantedAt:
+      u.adminRole?.revokedAt === null ? (u.adminRole?.grantedAt ?? null) : null,
+    grantedBy:
+      u.adminRole?.revokedAt === null ? (u.adminRole?.grantedBy ?? null) : null,
     timezone: u.profile?.timezone ?? null,
     breakdown: {
       tasks: u._count.tasks,
@@ -243,15 +263,22 @@ export async function auditTrail(
   const rows = await adminDb.auditLog.findMany({
     where,
     select: {
-      id: true, actorEmail: true, actorLevel: true,
-      action: true, target: true, reason: true, createdAt: true,
+      id: true,
+      actorEmail: true,
+      actorLevel: true,
+      action: true,
+      target: true,
+      reason: true,
+      createdAt: true,
     },
     orderBy: { createdAt: "desc" },
     take,
   });
 
   // One lookup for the whole page rather than one per row.
-  const targets = [...new Set(rows.map((r) => r.target).filter(Boolean))] as string[];
+  const targets = [
+    ...new Set(rows.map((r) => r.target).filter(Boolean)),
+  ] as string[];
   const accounts = targets.length
     ? await adminDb.user.findMany({
         where: { OR: [{ id: { in: targets } }, { email: { in: targets } }] },
@@ -278,4 +305,70 @@ export async function auditActions(): Promise<string[]> {
     orderBy: { action: "asc" },
   });
   return rows.map((r) => r.action);
+}
+
+/**
+ * Feedback, read through the restricted role like everything else here.
+ *
+ * The message column is the single piece of a person's own writing this
+ * role may select, and that is deliberate: it was written to an
+ * administrator. The sender's email comes with it, because a report you
+ * cannot reply to is half a report — and unlike the content tables,
+ * knowing who sent it is the point rather than a leak.
+ */
+export type FeedbackRow = {
+  id: string;
+  kind: string;
+  message: string;
+  fromPath: string | null;
+  status: string;
+  reply: string | null;
+  createdAt: Date;
+  handledBy: string | null;
+  handledAt: Date | null;
+  userId: string;
+  email: string;
+  name: string | null;
+};
+
+export async function listFeedback(status?: string): Promise<FeedbackRow[]> {
+  const rows = await adminDb.feedback.findMany({
+    where: status && status !== "all" ? { status: status as never } : undefined,
+    select: {
+      id: true,
+      kind: true,
+      message: true,
+      fromPath: true,
+      status: true,
+      reply: true,
+      createdAt: true,
+      handledBy: true,
+      handledAt: true,
+      userId: true,
+      user: { select: { email: true, name: true } },
+    },
+    // Waiting first, then newest — the queue reads top to bottom.
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    take: 200,
+  });
+
+  return rows.map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    message: r.message,
+    fromPath: r.fromPath,
+    status: r.status,
+    reply: r.reply,
+    createdAt: r.createdAt,
+    handledBy: r.handledBy,
+    handledAt: r.handledAt,
+    userId: r.userId,
+    email: r.user.email,
+    name: r.user.name,
+  }));
+}
+
+/** How many are still waiting, for the nav badge and the overview. */
+export async function feedbackWaiting(): Promise<number> {
+  return adminDb.feedback.count({ where: { status: "new" } });
 }

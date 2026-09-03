@@ -11,7 +11,12 @@ import AreasAndTags from "@/components/profile/AreasAndTags";
 import AvatarField from "@/components/profile/AvatarField";
 import Toggle from "@/components/profile/Toggle";
 import DataPanel from "@/components/profile/DataPanel";
-import { listTags, staleTags, areaStats, tagUsage } from "@/lib/repositories/tags";
+import {
+  listTags,
+  staleTags,
+  areaStats,
+  tagUsage,
+} from "@/lib/repositories/tags";
 import { weekDays } from "@/lib/week";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 import { getContentCounts } from "@/lib/repositories/profile";
@@ -28,7 +33,9 @@ import SettingRow from "@/components/profile/SettingRow";
 import TimeZoneField from "@/components/profile/TimeZoneField";
 import ChangePasswordRow from "@/components/profile/ChangePasswordRow";
 import SaveForm from "@/components/profile/SaveForm";
+import { listMyFeedback } from "@/lib/repositories/feedback";
 import DangerZone from "@/components/profile/DangerZone";
+import FeedbackPanel from "@/components/profile/FeedbackPanel";
 import ThemePicker from "@/components/profile/ThemePicker";
 import {
   signOutEverywhere,
@@ -73,20 +80,22 @@ export default async function ProfilePage({
   const user = await requireUser();
   const params = await searchParams;
   const section: SectionKey = isSectionKey(params.s) ? params.s : "profile";
-  const [p, areas, stats, tags, stale, counts, usage] = await Promise.all([
-    getProfileOverview(user.id),
-    listAreasWithCounts(user.id),
-    areaStats(
-      user.id,
-      dayKeyToDate(weekDays(dayKeyFor(new Date(), "UTC", 0))[0]),
-    ),
-    listTags(user.id),
-    staleTags(user.id),
-    getContentCounts(user.id),
-    // How many things carry each tag, so removing one can say what
-    // it is about to come off before it comes off.
-    tagUsage(user.id),
-  ]);
+  const [p, areas, stats, tags, stale, counts, usage, myFeedback] =
+    await Promise.all([
+      getProfileOverview(user.id),
+      listAreasWithCounts(user.id),
+      areaStats(
+        user.id,
+        dayKeyToDate(weekDays(dayKeyFor(new Date(), "UTC", 0))[0]),
+      ),
+      listTags(user.id),
+      staleTags(user.id),
+      getContentCounts(user.id),
+      // How many things carry each tag, so removing one can say what
+      // it is about to come off before it comes off.
+      tagUsage(user.id),
+      listMyFeedback(user.id),
+    ]);
   const staleIds = new Set(stale.map((t) => t.id));
 
   const zones = zoneGroups(p.timezone);
@@ -547,6 +556,15 @@ export default async function ProfilePage({
                 />
               </Section>
             </>
+          )}
+
+          {section === "feedback" && (
+            <Section
+              title="Tell us something"
+              description="An idea, a problem, or something you like. It goes straight to whoever runs Krama."
+            >
+              <FeedbackPanel mine={myFeedback} />
+            </Section>
           )}
         </div>
       </div>

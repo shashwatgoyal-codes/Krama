@@ -66,6 +66,19 @@ GRANT SELECT ON admin_roles   TO krama_admin;
 GRANT SELECT ON admin_invites TO krama_admin;
 GRANT SELECT ON audit_log     TO krama_admin;
 
+-- 7b. Feedback — the one exception to "no content".
+--
+--     Every other grant above names id/userId/timestamp columns and stops,
+--     because notes and tasks were written for the person who wrote them.
+--     Feedback was written TO an administrator, and a message nobody may
+--     read is not feedback. So this table is granted whole, including the
+--     message and the sender, and it is the only place that is true.
+--
+--     Still SELECT only: replies are written by the application's own
+--     connection, after the portal's guard has run and an audit entry has
+--     been made.
+GRANT SELECT ON feedback TO krama_admin;
+
 -- 8. Nothing may be written through this role, ever. Audit entries are written
 --    by the application's connection, into a table that rejects UPDATE and
 --    DELETE by trigger.
