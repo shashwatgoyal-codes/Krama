@@ -27,6 +27,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
   function run(
     action: (data: FormData) => Promise<{ ok: boolean; error?: string }>,
     data: FormData,
+    done: string,
     onOk?: () => void,
   ) {
     setError(null);
@@ -34,7 +35,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
       const result = await action(data);
       if (result.ok) {
         onOk?.();
-        toast.success("Done.");
+        toast.success(done);
       } else setError(result.error ?? "That didn't work.");
     });
   }
@@ -54,7 +55,9 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
 
       {adding && (
         <form
-          action={(data) => run(addReward, data, () => setAdding(false))}
+          action={(data) =>
+            run(addReward, data, "Reward added.", () => setAdding(false))
+          }
           className="mt-3 rounded-lg border border-ln bg-surf2 p-3"
         >
           <div className="flex flex-wrap gap-2">
@@ -130,7 +133,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
                   onClick={() => {
                     const data = new FormData();
                     data.set("id", reward.id);
-                    run(claimReward, data);
+                    run(claimReward, data, "Claimed. Enjoy it.");
                   }}
                 >
                   {reward.affordable ? "Claim it" : "Not yet"}
@@ -142,7 +145,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
                   onClick={() => {
                     const data = new FormData();
                     data.set("id", reward.id);
-                    run(removeReward, data);
+                    run(removeReward, data, "Reward removed.");
                   }}
                   className="cursor-pointer rounded-md border border-ln2 px-2 py-1 text-[11px] text-mut transition-colors hover:border-bad hover:text-bad disabled:cursor-not-allowed"
                 >

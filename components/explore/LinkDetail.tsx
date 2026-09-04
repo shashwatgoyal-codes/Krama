@@ -35,8 +35,14 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  /**
+   * As in the task panel: every button here shares one submitter, so
+   * every one of them confirmed with "Saved." — including Remove, which
+   * had not saved anything. Each says what it actually did.
+   */
   function run(
     action: (d: FormData) => Promise<{ ok: boolean; error?: string }>,
+    done: string,
   ) {
     const data = new FormData();
     data.set("id", link.id);
@@ -44,7 +50,7 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
     startTransition(async () => {
       const result = await action(data);
       if (result && !result.ok && result.error) setError(result.error);
-      else if (result?.ok) toast.success("Saved.");
+      else if (result?.ok) toast.success(done);
     });
   }
 
@@ -150,7 +156,7 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
           variant="primary"
           size="sm"
           disabled={pending || link.isTask}
-          onClick={() => run(linkToTask)}
+          onClick={() => run(linkToTask, "Added to your tasks.")}
           title={
             link.isTask ? "Already a task" : "Turn this into something to do"
           }
@@ -162,7 +168,9 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
           type="button"
           size="sm"
           disabled={pending}
-          onClick={() => run(toggleRead)}
+          onClick={() =>
+            run(toggleRead, link.read ? "Marked unread." : "Marked read.")
+          }
         >
           {link.read ? "Mark unread" : "Mark read"}
         </Button>
@@ -171,7 +179,7 @@ export default function LinkDetail({ link }: { link: LinkDetailView }) {
           type="button"
           size="sm"
           disabled={pending}
-          onClick={() => run(archiveLink)}
+          onClick={() => run(archiveLink, "Removed from Explore.")}
         >
           Remove
         </Button>

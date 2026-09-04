@@ -89,9 +89,17 @@ export default function TaskDetail({
   const toast = useToast();
   const [pending, startTransition] = useTransition();
 
+  /**
+   * Every form in this panel posts through here, which is why they all
+   * used to confirm with "Task updated." — including the one that had
+   * just deleted the task. A toast that describes a different action than
+   * the one taken is worse than no toast: it is the only feedback there
+   * is, and being told a deleted task was updated makes you go and look.
+   */
   function run(
     action: (data: FormData) => Promise<{ ok: boolean; error?: string }>,
     data: FormData,
+    done: string,
     onOk?: () => void,
   ) {
     setError(null);
@@ -101,7 +109,7 @@ export default function TaskDetail({
       if (result?.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2200);
-        toast.success("Task updated.");
+        toast.success(done);
         onOk?.();
       } else if (result?.error) {
         setError(result.error);
@@ -120,7 +128,7 @@ export default function TaskDetail({
 
       {/* details */}
       <form
-        action={(data) => run(saveDetails, data)}
+        action={(data) => run(saveDetails, data, "Task updated.")}
         className="flex flex-col gap-3"
       >
         <input type="hidden" name="id" value={task.id} />
@@ -330,7 +338,14 @@ export default function TaskDetail({
       {/* scheduling */}
       {scheduling ? (
         <form
-          action={(data) => run(scheduleAt, data, () => setScheduling(false))}
+          action={(data) =>
+            run(
+              scheduleAt,
+              data,
+              task.block ? "Moved." : "Added to your plan.",
+              () => setScheduling(false),
+            )
+          }
           className="mt-4 rounded-lg border border-ln bg-surf2 p-3"
         >
           <input type="hidden" name="id" value={task.id} />
@@ -437,7 +452,11 @@ export default function TaskDetail({
             onClick={() => {
               const data = new FormData();
               data.set("id", task.id);
-              run(toggleTask, data);
+              run(
+                toggleTask,
+                data,
+                task.done ? "Put back on your list." : "Nice — that’s done.",
+              );
             }}
           >
             {task.done ? "Not done after all" : "Complete"}
@@ -455,7 +474,7 @@ export default function TaskDetail({
               onClick={() => {
                 const data = new FormData();
                 data.set("blockId", task.block!.id);
-                run(clearSchedule, data);
+                run(clearSchedule, data, "Taken off your plan.");
               }}
             >
               Unschedule
@@ -474,7 +493,9 @@ export default function TaskDetail({
                 onClick={() => {
                   const data = new FormData();
                   data.set("id", task.id);
-                  run(deleteTask, data, () => setConfirmingDelete(false));
+                  run(deleteTask, data, "Task deleted.", () =>
+                    setConfirmingDelete(false),
+                  );
                 }}
                 className="cursor-pointer rounded-[9px] border border-bad bg-bad px-[13px] py-[7px] text-[12px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-45"
               >

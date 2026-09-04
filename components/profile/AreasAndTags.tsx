@@ -15,7 +15,11 @@ const CHIP: Record<string, string> = {
   bad: "border-bad bg-bad-soft text-bad",
 };
 import { addArea, editArea, removeArea } from "@/app/app/profile/areas-actions";
-import { addTag, removeTag, setDefaultArea } from "@/app/app/profile/tags-actions";
+import {
+  addTag,
+  removeTag,
+  setDefaultArea,
+} from "@/app/app/profile/tags-actions";
 import { useToast } from "@/components/ui/Toast";
 
 export type AreaRow = {
@@ -69,6 +73,7 @@ export default function AreasAndTags({
   function run(
     action: (d: FormData) => Promise<{ ok: boolean; error?: string }>,
     data: FormData,
+    done: string,
     onOk?: () => void,
   ) {
     setError(null);
@@ -76,7 +81,7 @@ export default function AreasAndTags({
       const result = await action(data);
       if (result.ok) {
         onOk?.();
-        toast.success("Saved.");
+        toast.success(done);
       } else if (result.error) setError(result.error);
     });
   }
@@ -127,7 +132,9 @@ export default function AreasAndTags({
 
           {editing === area.id && (
             <form
-              action={(d) => run(editArea, d, () => setEditing(null))}
+              action={(d) =>
+                run(editArea, d, "Area renamed.", () => setEditing(null))
+              }
               className="mb-2.5 flex flex-wrap items-end gap-3 rounded-lg border border-ln bg-surf2 p-3"
             >
               <input type="hidden" name="id" value={area.id} />
@@ -142,7 +149,12 @@ export default function AreasAndTags({
                 />
               </div>
               <Colours defaultValue={area.colour} />
-              <Button type="submit" variant="primary" size="sm" disabled={pending}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={pending}
+              >
                 Save
               </Button>
 
@@ -157,7 +169,7 @@ export default function AreasAndTags({
                     onClick={() => {
                       const d = new FormData();
                       d.set("id", area.id);
-                      run(removeArea, d, () => {
+                      run(removeArea, d, "Area removed.", () => {
                         setConfirming(null);
                         setEditing(null);
                       });
@@ -190,7 +202,9 @@ export default function AreasAndTags({
 
       {addingArea ? (
         <form
-          action={(d) => run(addArea, d, () => setAddingArea(false))}
+          action={(d) =>
+            run(addArea, d, "Area added.", () => setAddingArea(false))
+          }
           className="mt-2.5 flex flex-wrap items-end gap-3 rounded-lg border border-ln bg-surf2 p-3"
         >
           <div className="min-w-[140px] flex-1">
@@ -268,7 +282,7 @@ export default function AreasAndTags({
                   }
                   const d = new FormData();
                   d.set("id", tag.id);
-                  run(removeTag, d, () => setConfirming(null));
+                  run(removeTag, d, "Tag removed.", () => setConfirming(null));
                 }}
                 className="cursor-pointer text-fai hover:text-bad"
               >
@@ -280,8 +294,8 @@ export default function AreasAndTags({
 
         {confirming && shown.some((t) => t.id === confirming) && (
           <span className="w-full pt-1 text-[11.5px] text-mut">
-            <strong>{shown.find((t) => t.id === confirming)!.name}</strong> is on{" "}
-            {shown.find((t) => t.id === confirming)!.uses} thing
+            <strong>{shown.find((t) => t.id === confirming)!.name}</strong> is
+            on {shown.find((t) => t.id === confirming)!.uses} thing
             {shown.find((t) => t.id === confirming)!.uses === 1 ? "" : "s"}.
             Click × again to take it off all of them — the things themselves
             stay.{" "}
@@ -298,7 +312,9 @@ export default function AreasAndTags({
         {addingTag ? (
           <form
             ref={tagForm}
-            action={(d) => run(addTag, d, () => tagForm.current?.reset())}
+            action={(d) =>
+              run(addTag, d, "Tag added.", () => tagForm.current?.reset())
+            }
             className="flex items-center gap-1.5"
           >
             <input
@@ -347,7 +363,10 @@ export default function AreasAndTags({
           help="Anything created without an area — a note turned into a task, a saved link made into one — is filed here instead of sitting unfiled forever."
           htmlFor="defaultAreaId"
         >
-          <form action={(d) => run(setDefaultArea, d)} className="flex gap-2">
+          <form
+            action={(d) => run(setDefaultArea, d, "Default area set.")}
+            className="flex gap-2"
+          >
             <select
               id="defaultAreaId"
               name="defaultAreaId"
@@ -372,7 +391,11 @@ export default function AreasAndTags({
             label="Tidy up unused tags"
             description={`${staleCount} ${staleCount === 1 ? "tag hasn't" : "tags haven't"} been used in 90 days.`}
           >
-            <Button type="button" size="sm" onClick={() => setShowStale((v) => !v)}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setShowStale((v) => !v)}
+            >
               {showStale ? "Show all" : "Review"}
             </Button>
           </SettingRow>
@@ -414,7 +437,6 @@ function Heading({
     </div>
   );
 }
-
 
 function Colours({ defaultValue }: { defaultValue: string }) {
   return (
