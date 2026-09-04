@@ -28,7 +28,7 @@ const createSchema = z.object({
   // somewhere to write, not a complaint that you have not written yet —
   // the note is created so the cursor has a home, and the list shows it
   // as "New note" until it has a first line.
-  body: z.string().trim().max(1000, "Keep a note under 1000 characters."),
+  body: z.string().trim().max(1000, "That note is too long. Keep it under 1000 letters."),
   colour: colourSchema.default("n1"),
 });
 
@@ -74,7 +74,7 @@ export async function moveNote(formData: FormData): Promise<ActionResult> {
   const { id, x, y } = parsed.data;
   const z = await raiseNote(user.id, id);
   const moved = await updateNote(user.id, id, { x, y, z });
-  if (!moved) return { ok: false, error: "That note no longer exists." };
+  if (!moved) return { ok: false, error: "That note is gone." };
 
   // No revalidate: the client already has the note where it dropped it,
   // and re-rendering the board mid-drag would fight the user.
@@ -146,7 +146,7 @@ export async function noteToTask(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Unknown note." };
 
   const note = await getNote(user.id, parsed.data.id);
-  if (!note) return { ok: false, error: "That note no longer exists." };
+  if (!note) return { ok: false, error: "That note is gone." };
   if (note.taskId) return { ok: false, error: "Already a task." };
 
   const settings = await getSettings(user.id);

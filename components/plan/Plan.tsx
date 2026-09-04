@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { scheduleTask, unscheduleBlock } from "@/app/app/actions";
 import { toggleTask } from "@/app/app/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * The plan: what today actually looks like, with real times.
@@ -38,6 +39,7 @@ const TONE: Record<PlanBlockView["tone"], string> = {
 export default function Plan({ blocks }: { blocks: PlanBlockView[] }) {
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   function drop(event: React.DragEvent) {
@@ -52,6 +54,7 @@ export default function Plan({ blocks }: { blocks: PlanBlockView[] }) {
     startTransition(async () => {
       const result = await scheduleTask(data);
       if (!result.ok) setError(result.error);
+      else toast.success("Scheduled.");
     });
   }
 

@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import { inputClass } from "./Row";
 import SettingRow from "./SettingRow";
 import { recountScore, eraseAllContent } from "@/app/app/profile/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * What the account contains, and the two ways to empty it.
@@ -29,6 +30,7 @@ export default function DataPanel({
   memberSince: string;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [erasing, setErasing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -118,6 +120,9 @@ export default function DataPanel({
                   if (result.ok) {
                     setErasing(false);
                     setNotice("Everything erased. Your account is untouched.");
+                    // Erasing empties every other screen, so the
+                    // confirmation should not be buried in this panel.
+                    toast.success("Everything erased.");
                   } else setError(result.error);
                 });
               }}

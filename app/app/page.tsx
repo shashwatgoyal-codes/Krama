@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth/guard";
 import { getSettings, getTodayStats } from "@/lib/repositories/profile";
-import { listOpenTasks } from "@/lib/repositories/tasks";
+import { listOpenTasks, listDoneOnDay } from "@/lib/repositories/tasks";
 import { listDayBlocks, scheduledTaskIds } from "@/lib/repositories/events";
 import { listNotes } from "@/lib/repositories/notes";
 import { recentLinks } from "@/lib/repositories/links";
@@ -8,7 +8,13 @@ import { dayKeyFor } from "@/lib/day";
 import { materialiseRecurring } from "@/lib/repositories/recurring";
 import { runDayMaintenance, reminderDue } from "@/lib/repositories/maintenance";
 import { formatDay } from "@/lib/format";
-import { formatClock, formatDuration, minutesBetween, totalCommitted } from "@/lib/time";
+import type { TimeFormat } from "@/lib/time";
+import {
+  formatClock,
+  formatDuration,
+  minutesBetween,
+  totalCommitted,
+} from "@/lib/time";
 import { describeRecurrence } from "@/lib/recurrence";
 import { POINTS } from "@/lib/points";
 import Today from "@/components/Today";
@@ -18,7 +24,11 @@ import type { NoteColour } from "@/lib/notes";
 export default async function TodayPage() {
   const user = await requireUser();
   const settings = await getSettings(user.id);
-  const dayKey = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
+  const dayKey = dayKeyFor(
+    new Date(),
+    settings.timezone,
+    settings.dayEndsAtHour,
+  );
 
   // Routines appear on their own — that's the whole point of them. Done
   // on load rather than by a scheduled job so it works without any
@@ -32,16 +42,24 @@ export default async function TodayPage() {
   await runDayMaintenance(user.id, dayKey, {
     rolloverUnfinished: settings.rolloverUnfinished,
     catchUpRoutines: settings.catchUpRoutines,
+    keepFinishedDays: settings.keepFinishedDays,
   });
 
-  const [stats, blocks, open, scheduled, notes, saved] = await Promise.all([
-    getTodayStats(user.id),
-    listDayBlocks(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
-    listOpenTasks(user.id),
-    scheduledTaskIds(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
-    listNotes(user.id),
-    recentLinks(user.id, 2),
-  ]);
+  const [stats, blocks, open, doneToday, scheduled, notes, saved] =
+    await Promise.all([
+      getTodayStats(user.id),
+      listDayBlocks(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
+      listOpenTasks(user.id),
+      listDoneOnDay(user.id, dayKey, settings.timezone, settings.dayEndsAtHour),
+      scheduledTaskIds(
+        user.id,
+        dayKey,
+        settings.timezone,
+        settings.dayEndsAtHour,
+      ),
+      listNotes(user.id),
+      recentLinks(user.id, 2),
+    ]);
 
   // Only one block is "next": the first unfinished one. Everything after
   // it is still ahead, and saying so about all of them at once would
@@ -116,6 +134,12 @@ export default async function TodayPage() {
       blocks={view}
       committed={totalCommitted(blocks)}
       waiting={waiting}
+      timeFormat={settings.timeFormat as TimeFormat}
+      done={doneToday.map((t) => ({
+        id: t.id,
+        title: t.title,
+        points: t.points,
+      }))}
       notes={notes.slice(0, 2).map((n) => ({
         id: n.id,
         body: n.body,

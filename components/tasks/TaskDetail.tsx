@@ -2,14 +2,21 @@
 
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
+import DateField from "@/components/ui/DateField";
+import TimeField from "@/components/ui/TimeField";
 import { toggleTask, deleteTask } from "@/app/app/actions";
-import { scheduleAt, clearSchedule, saveDetails } from "@/app/app/tasks/actions";
-import { BLOCK_MINUTES } from "@/lib/time";
+import {
+  scheduleAt,
+  clearSchedule,
+  saveDetails,
+} from "@/app/app/tasks/actions";
 import TagField from "@/components/tags/TagField";
 import UntilField from "@/components/tasks/UntilField";
 import WeekdayPicker from "@/components/tasks/WeekdayPicker";
 import type { TagChip } from "@/lib/tags";
+import { useToast } from "@/components/ui/Toast";
 
+import { BLOCK_MINUTES, blockTimes, type TimeFormat } from "@/lib/time";
 /**
  * The detail panel from the design: what the task is, when it's due,
  * when it's scheduled, whether it repeats, and where it came from.
@@ -61,41 +68,40 @@ const REPEATS = [
   { value: "monthly", label: "Monthly" },
 ];
 
-/** Half-hour steps across a plausible day. */
-const TIMES = Array.from({ length: 36 }, (_, i) => {
-  const minutes = 6 * 60 + i * 30;
-  return {
-    hour: Math.floor(minutes / 60),
-    minute: minutes % 60,
-    label: `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(
-      minutes % 60,
-    ).padStart(2, "0")}`,
-  };
-});
-
-const FIELD =
-  "w-full rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink " +
-  "focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft";
+// The side panel is narrow, so it takes the compact variant of the one
+// shared field style rather than a second definition of it.
+const FIELD = "field field-sm";
 
 export default function TaskDetail({
   task,
   areas,
   allTags,
+  timeFormat = "24",
 }: {
   task: TaskPanelView;
   areas: { id: string; name: string }[];
   allTags: TagChip[];
+  timeFormat?: TimeFormat;
 }) {
   const [scheduling, setScheduling] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [recurrence, setRecurrence] = useState(task.recurrence);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
+  /**
+   * Every form in this panel posts through here, which is why they all
+   * used to confirm with "Task updated." — including the one that had
+   * just deleted the task. A toast that describes a different action than
+   * the one taken is worse than no toast: it is the only feedback there
+   * is, and being told a deleted task was updated makes you go and look.
+   */
   function run(
     action: (data: FormData) => Promise<{ ok: boolean; error?: string }>,
     data: FormData,
+    done: string,
     onOk?: () => void,
   ) {
     setError(null);
@@ -105,6 +111,7 @@ export default function TaskDetail({
       if (result?.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2200);
+        toast.success(done);
         onOk?.();
       } else if (result?.error) {
         setError(result.error);
@@ -123,7 +130,7 @@ export default function TaskDetail({
 
       {/* details */}
       <form
-        action={(data) => run(saveDetails, data)}
+        action={(data) => run(saveDetails, data, "Task updated.")}
         className="flex flex-col gap-3"
       >
         <input type="hidden" name="id" value={task.id} />
@@ -173,8 +180,7 @@ export default function TaskDetail({
           </Field>
 
           <Field label="Due">
-            <input
-              type="date"
+            <DateField
               name="dueOn"
               defaultValue={task.dueOn}
               className={FIELD}
@@ -249,13 +255,15 @@ export default function TaskDetail({
                 At
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="time"
-                  name="routineTime"
-                  defaultValue={task.routineTime}
-                  disabled={pending}
-                  className={`${FIELD} max-w-[110px]`}
-                />
+                <div className="w-[110px]">
+                  <TimeField
+                    name="routineTime"
+                    defaultValue={task.routineTime}
+                    timeFormat={timeFormat}
+                    disabled={pending}
+                    className={FIELD}
+                  />
+                </div>
                 <span className="text-[11.5px] text-mut">for</span>
                 <select
                   name="routineMinutes"
@@ -276,14 +284,13 @@ export default function TaskDetail({
               </div>
               {task.routineTime ? (
                 <p className="mt-1 text-[11px] text-fai">
-                  It appears on the calendar on every day it runs, not just
-                  the next one.
+                  It appears on the calendar on every day it runs, not just the
+                  next one.
                 </p>
               ) : (
                 <p className="mt-1 text-[11px] text-warn">
-                  No time set, so this routine does not appear on the
-                  calendar at all. Give it one and every day it runs shows
-                  up.
+                  No time set, so this routine does not appear on the calendar
+                  at all. Give it one and every day it runs shows up.
                 </p>
               )}
 
@@ -322,7 +329,10 @@ export default function TaskDetail({
           <Button type="submit" size="sm" disabled={pending}>
             Save details
           </Button>
-          <span aria-live="polite" className="text-[11.5px] font-semibold text-ok">
+          <span
+            aria-live="polite"
+            className="text-[11.5px] font-semibold text-ok"
+          >
             {saved && "Saved"}
           </span>
         </div>
@@ -331,7 +341,14 @@ export default function TaskDetail({
       {/* scheduling */}
       {scheduling ? (
         <form
-          action={(data) => run(scheduleAt, data, () => setScheduling(false))}
+          action={(data) =>
+            run(
+              scheduleAt,
+              data,
+              task.block ? "Moved." : "Added to your plan.",
+              () => setScheduling(false),
+            )
+          }
           className="mt-4 rounded-lg border border-ln bg-surf2 p-3"
         >
           <input type="hidden" name="id" value={task.id} />
@@ -345,8 +362,7 @@ export default function TaskDetail({
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="Date">
-              <input
-                type="date"
+              <DateField
                 name="dayKey"
                 required
                 defaultValue={task.block?.dayKey ?? task.todayKey}
@@ -362,12 +378,15 @@ export default function TaskDetail({
                   const [h, m] = e.target.value.split(":");
                   const form = e.target.form;
                   if (!form) return;
-                  (form.elements.namedItem("hour") as HTMLInputElement).value = h;
-                  (form.elements.namedItem("minute") as HTMLInputElement).value = m;
+                  (form.elements.namedItem("hour") as HTMLInputElement).value =
+                    h;
+                  (
+                    form.elements.namedItem("minute") as HTMLInputElement
+                  ).value = m;
                 }}
                 className={FIELD}
               >
-                {TIMES.map((t) => (
+                {blockTimes(timeFormat).map((t) => (
                   <option key={t.label} value={`${t.hour}:${t.minute}`}>
                     {t.label}
                   </option>
@@ -408,10 +427,19 @@ export default function TaskDetail({
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="submit" variant="primary" size="sm" disabled={pending}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={pending}
+            >
               {pending ? "Saving…" : task.block ? "Move it" : "Schedule it"}
             </Button>
-            <Button type="button" size="sm" onClick={() => setScheduling(false)}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setScheduling(false)}
+            >
               Cancel
             </Button>
           </div>
@@ -426,7 +454,11 @@ export default function TaskDetail({
             onClick={() => {
               const data = new FormData();
               data.set("id", task.id);
-              run(toggleTask, data);
+              run(
+                toggleTask,
+                data,
+                task.done ? "Put back on your list." : "Nice — that’s done.",
+              );
             }}
           >
             {task.done ? "Not done after all" : "Complete"}
@@ -444,7 +476,7 @@ export default function TaskDetail({
               onClick={() => {
                 const data = new FormData();
                 data.set("blockId", task.block!.id);
-                run(clearSchedule, data);
+                run(clearSchedule, data, "Taken off your plan.");
               }}
             >
               Unschedule
@@ -463,7 +495,9 @@ export default function TaskDetail({
                 onClick={() => {
                   const data = new FormData();
                   data.set("id", task.id);
-                  run(deleteTask, data, () => setConfirmingDelete(false));
+                  run(deleteTask, data, "Task deleted.", () =>
+                    setConfirmingDelete(false),
+                  );
                 }}
                 className="cursor-pointer rounded-[9px] border border-bad bg-bad px-[13px] py-[7px] text-[12px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-45"
               >

@@ -29,8 +29,15 @@ GRANT USAGE ON SCHEMA public TO krama_admin;
 
 -- 3. Metadata about accounts. Note what is absent: passwordHash, and the
 --    avatar bytes.
-GRANT SELECT ("id", "email", "name", "emailVerified", "createdAt")
-  ON users TO krama_admin;
+--
+--    Keep this list in step with what lib/admin/queries.ts selects. A
+--    column the code reads and the grant omits fails as "permission
+--    denied for table users", which reads as though the whole table were
+--    barred rather than one column.
+GRANT SELECT (
+  "id", "email", "name", "emailVerified", "createdAt",
+  "suspendedAt", "suspendedReason"
+) ON users TO krama_admin;
 
 -- 4. Enough of a profile to say where someone is, and how they have things
 --    configured. No content.
@@ -58,6 +65,19 @@ GRANT SELECT ON auth_attempts TO krama_admin;
 GRANT SELECT ON admin_roles   TO krama_admin;
 GRANT SELECT ON admin_invites TO krama_admin;
 GRANT SELECT ON audit_log     TO krama_admin;
+
+-- 7b. Feedback — the one exception to "no content".
+--
+--     Every other grant above names id/userId/timestamp columns and stops,
+--     because notes and tasks were written for the person who wrote them.
+--     Feedback was written TO an administrator, and a message nobody may
+--     read is not feedback. So this table is granted whole, including the
+--     message and the sender, and it is the only place that is true.
+--
+--     Still SELECT only: replies are written by the application's own
+--     connection, after the portal's guard has run and an audit entry has
+--     been made.
+GRANT SELECT ON feedback TO krama_admin;
 
 -- 8. Nothing may be written through this role, ever. Audit entries are written
 --    by the application's connection, into a table that rejects UPDATE and
@@ -88,6 +108,62 @@ SELECT "body" FROM notes LIMIT 1;  -- must fail: permission denied for column bo
 
 If the second one returns a row, the grant is wrong and the portal's promise is
 not being kept. Fix the grant; do not work around it in the query.
+
+## The support role
+
+Reading what somebody wrote needs a **third** role, separate again. The admin
+role above has no grant on content and never will. This one has content and
+nothing else — no `users` table at all, so it can read a note by owner id and
+still cannot say whose it is.
+
+One code path uses it: `lib/admin/support.ts`, which refuses unless a live,
+approved, unexpired, unrevoked consent record names both the account and the
+exact scope being read. Splitting it this way is the point — if unsealing were
+a flag on the admin connection, every admin query would be one bug away from
+returning content.
+
+```sql
+CREATE ROLE krama_support WITH LOGIN PASSWORD 'replace-me';
+GRANT USAGE ON SCHEMA public TO krama_support;
+
+-- Content, and only the columns the viewer renders.
+GRANT SELECT ("id", "userId", "body",  "createdAt") ON notes  TO krama_support;
+GRANT SELECT ("id", "userId", "title", "createdAt") ON tasks  TO krama_support;
+GRANT SELECT ("id", "userId", "title", "startsAt")  ON events TO krama_support;
+GRANT SELECT ("id", "userId", "url",   "savedAt")   ON links  TO krama_support;
+
+-- Deliberately absent: users, sessions, profiles, the ledger, the audit log.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public
+  FROM krama_support;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE ALL ON TABLES FROM krama_support;
+```
+
+Then set `SUPPORT_DATABASE_URL` alongside the others. Without it the viewer
+refuses rather than falling back to a connection that would work.
+
+### Checking it worked
+
+From `psql` as `krama_support`:
+
+```sql
+SELECT "body" FROM notes LIMIT 1;      -- works: this role is the exception
+SELECT "email" FROM users LIMIT 1;     -- must fail: identities are not its business
+UPDATE notes SET "body" = 'x';         -- must fail: read-only, always
+```
+
+And as `krama_admin`, `SELECT "body" FROM notes` must **still** fail. If it
+succeeds, the seal has been widened by accident and the consent flow is
+decorative.
+
+## Order of operations
+
+Run the migrations first, then create the role. Migrations that need a grant
+carry their own, wrapped in a check for the role existing — so on a fresh
+environment they are a no-op, and the block above is what does the work. Create
+the role first and those grants land; create it afterwards and the block above
+covers the same ground. Either order works, but not half of each: if you add a
+migration that grants something, add it here too.
 
 ## Adding a table later
 

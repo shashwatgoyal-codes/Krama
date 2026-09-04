@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { adminDbConfigured } from "@/lib/admin/db";
 import { LEVEL_LABEL } from "@/lib/admin/levels";
 import { pageTitle } from "@/lib/env";
+import LockButton from "./LockButton";
 
 export const metadata: Metadata = {
   title: pageTitle("Admin"),
@@ -14,30 +15,31 @@ export const metadata: Metadata = {
 const NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/admins", label: "Admins" },
+  { href: "/admin/feedback", label: "Feedback" },
+  { href: "/admin/flags", label: "Flags" },
+  { href: "/admin/audit", label: "Audit log" },
 ];
 
 /**
- * Every admin screen sits inside this, and the gate is here rather than
- * on each page — one place to get right, and a new page added later is
+ * Every gated admin screen sits inside this, and the gate is here rather
+ * than on each page — one place to get right, and a page added later is
  * protected by existing rather than by someone remembering.
+ *
+ * The (portal) route group exists so /admin/unlock can sit outside it.
+ * requireAdmin sends anyone without a live step-up to that page; if it
+ * rendered inside this layout, reaching it would require the very thing
+ * it exists to obtain, and the redirect would bounce forever.
  */
-export default async function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const actor = await requireAdmin();
 
   return (
     <div className="min-h-screen bg-paper">
-      {/* Not decoration. Nothing else in this app is striped, so a
-          screenshot of this page is unambiguous, and so is glancing at
-          the wrong tab. */}
-      <div
-        aria-hidden="true"
-        className="h-1 w-full"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(45deg, var(--warn) 0 10px, transparent 10px 20px)",
-        }}
-      />
-
       <header className="flex-none border-b border-ln bg-surf">
         <div className="flex h-12 items-center gap-3.5 px-4">
           <span className="font-display text-[14.5px] font-semibold tracking-[-0.015em]">
@@ -63,6 +65,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <span title={actor.email}>
               {actor.email} · {LEVEL_LABEL[actor.level]}
             </span>
+            <LockButton />
             <Link
               href="/app"
               className="rounded-md border border-ln2 px-2 py-1 font-medium transition-colors hover:bg-surf2 hover:text-ink"

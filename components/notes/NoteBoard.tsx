@@ -18,6 +18,7 @@ import {
   removeNote,
   noteToTask,
 } from "@/app/app/notes/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Notes: a list of what you have written, and the one you are reading.
@@ -47,6 +48,7 @@ export default function NoteBoard({
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const editor = useRef<HTMLTextAreaElement>(null);
 
   const shown = useMemo(() => {
@@ -62,8 +64,7 @@ export default function NoteBoard({
    * something rather than on nothing, and falling back here means the
    * list is never briefly pointing at a note that is not in it.
    */
-  const selected =
-    shown.find((n) => n.id === selectedId) ?? shown[0] ?? null;
+  const selected = shown.find((n) => n.id === selectedId) ?? shown[0] ?? null;
 
   function act(
     action: (data: FormData) => Promise<{ ok: boolean; error?: string }>,
@@ -103,6 +104,7 @@ export default function NoteBoard({
       if (result.data) setSelectedId(result.data);
       setQuery("");
       setTimeout(() => editor.current?.focus(), 60);
+      toast.success("Note added.");
     });
   }
 
@@ -116,17 +118,15 @@ export default function NoteBoard({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search notes"
             aria-label="Search notes"
-            className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-2.5 py-1.5 text-[12.5px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+            className="field min-w-0 flex-1"
           />
           <button
             type="button"
             onClick={newNote}
             disabled={pending}
-            title="New note"
-            aria-label="New note"
-            className="flex-none cursor-pointer rounded-[9px] border border-ink bg-ink px-2.5 py-1.5 text-[13px] font-semibold leading-none text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:opacity-50"
+            className="flex-none cursor-pointer whitespace-nowrap rounded-[9px] border border-ink bg-ink px-3 py-1.5 text-[12.5px] font-semibold leading-none text-paper transition-colors hover:border-ink2 hover:bg-ink2 disabled:opacity-50"
           >
-            +
+            New note
           </button>
         </div>
 
@@ -134,7 +134,7 @@ export default function NoteBoard({
           {shown.length === 0 ? (
             <p className="px-3 py-8 text-center text-[12px] leading-relaxed text-mut">
               {notes.length === 0
-                ? "No notes yet. Press + and start writing."
+                ? "No notes yet. Press New note and start writing."
                 : "Nothing matches that."}
             </p>
           ) : (
@@ -160,7 +160,9 @@ export default function NoteBoard({
                         <span
                           className={
                             "min-w-0 flex-1 truncate text-[12.5px] " +
-                            (on ? "font-semibold text-acc" : "font-semibold text-ink")
+                            (on
+                              ? "font-semibold text-acc"
+                              : "font-semibold text-ink")
                           }
                         >
                           {noteTitle(note.body)}
@@ -187,7 +189,7 @@ export default function NoteBoard({
       <section className="flex min-h-0 flex-col">
         {!selected ? (
           <p className="mx-auto mt-20 max-w-[34ch] px-4 text-center text-[12.5px] leading-relaxed text-mut">
-            Nothing selected. Press + to write something down.
+            Nothing selected. Press New note to write something down.
           </p>
         ) : (
           <form
@@ -215,7 +217,7 @@ export default function NoteBoard({
               <select
                 name="areaId"
                 defaultValue={selected.areaId ?? ""}
-                className="rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none"
+                className="field field-sm"
               >
                 <option value="">Unfiled</option>
                 {areas.map((a) => (
@@ -240,7 +242,9 @@ export default function NoteBoard({
                     }
                     className={
                       `size-4 rounded-full border ${NOTE_TINT[c]} cursor-pointer ` +
-                      (selected.colour === c ? "ring-2 ring-ink" : "opacity-70 hover:opacity-100")
+                      (selected.colour === c
+                        ? "ring-2 ring-ink"
+                        : "opacity-70 hover:opacity-100")
                     }
                   />
                 ))}

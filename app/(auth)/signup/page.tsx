@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { pageTitle } from "@/lib/env";
+import { flagOnGlobally } from "@/lib/repositories/flags";
 import AuthShell from "@/components/auth/AuthShell";
 import AuthForm from "@/components/auth/AuthForm";
 import Field from "@/components/auth/Field";
@@ -26,6 +27,12 @@ const PROMISES = [
 
 export default async function SignUpPage() {
   await redirectIfSignedIn();
+
+  // The flag is a real gate, not a label. With it off the form is not
+  // rendered at all — a hidden sign-up form is still a POST endpoint,
+  // and the action refuses too.
+  const open = await flagOnGlobally("open_registration");
+  if (!open) return <ClosedRegistration />;
 
   return (
     <AuthShell
@@ -94,5 +101,34 @@ export default async function SignUpPage() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+/**
+ * What a stranger sees when sign-ups are closed.
+ *
+ * It says the door is shut rather than pretending nothing is here — a
+ * page that 404s would have people retrying the link, and this is a
+ * state you turn on deliberately and turn off again.
+ */
+function ClosedRegistration() {
+  return (
+    <main className="grid min-h-screen place-items-center px-6">
+      <div className="w-full max-w-[380px] text-center">
+        <h1 className="font-display text-[19px] font-semibold tracking-[-0.02em]">
+          Krama is invite-only right now
+        </h1>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-mut">
+          New accounts are closed for the moment. If you already have one, you
+          can still sign in.
+        </p>
+        <Link
+          href="/login"
+          className="mt-6 inline-block rounded-md bg-ink px-3 py-1.5 text-[12.5px] font-semibold text-paper"
+        >
+          Sign in
+        </Link>
+      </div>
+    </main>
   );
 }

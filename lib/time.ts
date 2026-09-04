@@ -19,6 +19,25 @@
  * rules, which reach argon2 — a native module that cannot be bundled for
  * the browser. Neither tsc nor eslint catches that; the build does.
  */
+/**
+ * Half-hour steps across a plausible day, labelled in the reader's clock.
+ *
+ * Built per render rather than once at module load, because the labels
+ * depend on a setting. As a constant it was always 24-hour, so someone on
+ * a 12-hour clock picked "13:30" from this list and then saw "01:30 pm"
+ * on the calendar for the very same block.
+ */
+export function blockTimes(format: TimeFormat = "24") {
+  return Array.from({ length: 36 }, (_, i) => {
+    const minutes = 6 * 60 + i * 30;
+    return {
+      hour: Math.floor(minutes / 60),
+      minute: minutes % 60,
+      label: clockLabel(minutes, format),
+    };
+  });
+}
+
 export const BLOCK_MINUTES = [15, 30, 45, 60, 90, 120, 180, 240] as const;
 
 /** How far the zone is from UTC at a given instant, in milliseconds. */
@@ -107,6 +126,39 @@ export function formatClock(
   }).format(at);
 }
 
+export type TimeFormat = "12" | "24";
+
+/**
+ * A clock label from minutes past midnight, in the reader's format.
+ *
+ * The counterpart to formatClock for the many places that hold a time as
+ * a number rather than a Date: the hour gutter, a routine's start, the
+ * options in a time dropdown. Those were all writing "13:30" by hand, so
+ * someone who had asked for a 12-hour clock got one on their scheduled
+ * blocks and a 24-hour one everywhere else — the same time, printed two
+ * ways, on one screen.
+ *
+ * Built through Intl on a fixed UTC date so it agrees, character for
+ * character, with what formatClock produces for the same moment.
+ */
+export function clockLabel(minutes: number, format: TimeFormat = "24"): string {
+  const safe = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  const at = new Date(Date.UTC(2026, 0, 1, Math.floor(safe / 60), safe % 60));
+  return formatClock(at, "UTC", format);
+}
+
+/** "08:00 – 09:30", or "08:00 am – 09:30 am". */
+export function clockSpan(
+  startMinute: number,
+  minutes: number,
+  format: TimeFormat = "24",
+): string {
+  return `${clockLabel(startMinute, format)} – ${clockLabel(
+    startMinute + minutes,
+    format,
+  )}`;
+}
+
 /** Wall-clock hour in the zone, for positioning a block on a grid. */
 export function hourIn(at: Date, timeZone: string): number {
   return Number(formatClock(at, timeZone).slice(0, 2));
@@ -184,7 +236,10 @@ export function nextFreeSlot(
   // a block someone asked for should always appear somewhere.
   if (cursor.getTime() + durationMinutes * 60_000 > closeAt.getTime()) {
     cursor = new Date(
-      Math.max(closeAt.getTime() - durationMinutes * 60_000, openFrom.getTime()),
+      Math.max(
+        closeAt.getTime() - durationMinutes * 60_000,
+        openFrom.getTime(),
+      ),
     );
   }
 

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { TINT_PRESETS, tintPreset } from "@/lib/notes";
+import { normaliseHex, isHexTint } from "@/lib/tint-colour";
 
 /**
  * The five sticky tints, each swappable for a preset.
@@ -46,7 +47,9 @@ export default function TintPicker({ chosen }: { chosen: string[] }) {
                 aria-expanded={open === slot}
                 className={
                   "block size-[22px] cursor-pointer rounded-[5px] border transition-transform hover:scale-110 " +
-                  (open === slot ? "ring-2 ring-ink ring-offset-1 ring-offset-surf" : "")
+                  (open === slot
+                    ? "ring-2 ring-ink ring-offset-1 ring-offset-surf"
+                    : "")
                 }
                 style={{
                   backgroundColor: `var(--n${slot + 1})`,
@@ -55,7 +58,7 @@ export default function TintPicker({ chosen }: { chosen: string[] }) {
               />
 
               {open === slot && (
-                <div className="absolute right-0 top-[30px] z-20 w-[152px] rounded-lg border border-ln2 bg-surf p-2 shadow-[0_8px_26px_rgba(0,0,0,0.25)]">
+                <div className="glass absolute right-0 top-[30px] z-20 w-[152px] rounded-[10px] p-2">
                   <div className="grid grid-cols-4 gap-1.5">
                     {TINT_PRESETS.map((p) => (
                       <button
@@ -74,6 +77,40 @@ export default function TintPicker({ chosen }: { chosen: string[] }) {
                         }}
                       />
                     ))}
+                  </div>
+
+                  {/* Your own colour.
+                      Pick the paper you want in daylight; the edge and
+                      both night-time values are derived from it. Asking
+                      for four would be asking somebody to do colour
+                      theory to choose a yellow. */}
+                  <div className="mt-2 border-t border-ln pt-2">
+                    <label className="label-xs mb-1 block text-mut">
+                      Or your own
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="color"
+                        aria-label="Pick a colour"
+                        value={normaliseHex(value) ?? preset.light[0]}
+                        onChange={(e) => pick(slot, e.target.value)}
+                        className="size-[26px] flex-none cursor-pointer rounded-[5px] border border-ln2 bg-surf p-0"
+                      />
+                      <input
+                        type="text"
+                        spellCheck={false}
+                        aria-label="Colour code"
+                        placeholder="#FDF0DC"
+                        defaultValue={isHexTint(value) ? value : ""}
+                        onChange={(e) => {
+                          // Only once it is a real colour — typing "#F"
+                          // should not repaint the note grey.
+                          const hex = normaliseHex(e.target.value);
+                          if (hex) pick(slot, hex);
+                        }}
+                        className="w-full min-w-0 rounded border border-ln2 bg-surf px-1.5 py-1 font-mono text-[10.5px] uppercase focus:border-acc focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

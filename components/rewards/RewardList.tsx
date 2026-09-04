@@ -2,8 +2,13 @@
 
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
-import { addReward, removeReward, claimReward } from "@/app/app/rewards/actions";
+import {
+  addReward,
+  removeReward,
+  claimReward,
+} from "@/app/app/rewards/actions";
 import type { RewardView } from "@/lib/rewards";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * The rewards themselves.
@@ -15,19 +20,23 @@ import type { RewardView } from "@/lib/rewards";
  */
 export default function RewardList({ rewards }: { rewards: RewardView[] }) {
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [adding, setAdding] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function run(
     action: (data: FormData) => Promise<{ ok: boolean; error?: string }>,
     data: FormData,
+    done: string,
     onOk?: () => void,
   ) {
     setError(null);
     startTransition(async () => {
       const result = await action(data);
-      if (result.ok) onOk?.();
-      else setError(result.error ?? "That didn't work.");
+      if (result.ok) {
+        onOk?.();
+        toast.success(done);
+      } else setError(result.error ?? "That didn't work.");
     });
   }
 
@@ -46,7 +55,9 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
 
       {adding && (
         <form
-          action={(data) => run(addReward, data, () => setAdding(false))}
+          action={(data) =>
+            run(addReward, data, "Reward added.", () => setAdding(false))
+          }
           className="mt-3 rounded-lg border border-ln bg-surf2 p-3"
         >
           <div className="flex flex-wrap gap-2">
@@ -57,7 +68,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
               maxLength={60}
               placeholder="A film, a day off, that thing you keep not buying"
               aria-label="Reward name"
-              className="min-w-0 flex-1 rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+              className="field field-sm min-w-0 flex-1"
             />
             <input
               type="number"
@@ -66,11 +77,16 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
               min={1}
               defaultValue={200}
               aria-label="Cost in points"
-              className="tabular w-[92px] rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft"
+              className="field field-sm tabular w-[92px]"
             />
           </div>
           <div className="mt-2 flex gap-2">
-            <Button type="submit" variant="primary" size="sm" disabled={pending}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={pending}
+            >
               {pending ? "Adding…" : "Add it"}
             </Button>
             <Button type="button" size="sm" onClick={() => setAdding(false)}>
@@ -82,8 +98,8 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
 
       {rewards.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-ln2 px-5 py-8 text-center text-[12.5px] leading-relaxed text-mut">
-          Nothing to claim yet. Name something you actually want and price
-          it — the points only mean something once they buy you something.
+          Nothing to claim yet. Name something you actually want and price it —
+          the points only mean something once they buy you something.
         </p>
       ) : (
         <ul className="mt-3 divide-y divide-ln border-y border-ln">
@@ -117,7 +133,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
                   onClick={() => {
                     const data = new FormData();
                     data.set("id", reward.id);
-                    run(claimReward, data);
+                    run(claimReward, data, "Claimed. Enjoy it.");
                   }}
                 >
                   {reward.affordable ? "Claim it" : "Not yet"}
@@ -129,7 +145,7 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
                   onClick={() => {
                     const data = new FormData();
                     data.set("id", reward.id);
-                    run(removeReward, data);
+                    run(removeReward, data, "Reward removed.");
                   }}
                   className="cursor-pointer rounded-md border border-ln2 px-2 py-1 text-[11px] text-mut transition-colors hover:border-bad hover:text-bad disabled:cursor-not-allowed"
                 >
@@ -151,9 +167,9 @@ export default function RewardList({ rewards }: { rewards: RewardView[] }) {
       )}
 
       <p className="mt-3 text-[11px] text-fai">
-        Claiming spends your balance. It never changes your level — the
-        level is what you have done, and that does not un-happen because
-        you took something for it.
+        Claiming spends your balance. It never changes your level — the level is
+        what you have done, and that does not un-happen because you took
+        something for it.
       </p>
     </div>
   );

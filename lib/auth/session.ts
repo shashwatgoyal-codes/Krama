@@ -54,7 +54,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     select: {
       id: true,
       expiresAt: true,
-      user: { select: { id: true, email: true, name: true } },
+      user: {
+        select: { id: true, email: true, name: true, suspendedAt: true },
+      },
     },
   });
 
@@ -62,6 +64,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   if (session.expiresAt.getTime() <= Date.now()) {
     await db.session.delete({ where: { id: session.id } }).catch(() => {});
+    return null;
+  }
+
+  // Suspending deletes the account's sessions, so this should never fire
+  // — it is here for the race where one was created a moment before, and
+  // because a suspension enforced in only one place is a suspension with
+  // a way around it.
+  if (session.user.suspendedAt) {
+    await db.session.deleteMany({ where: { userId: session.user.id } }).catch(() => {});
     return null;
   }
 
@@ -77,8 +88,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   // set cookies on every /app request.
   if (shouldRefresh(session.expiresAt)) {
     const expiresAt = sessionExpiry();
+    // lastSeenAt rides along with the refresh rather than being its own
+    // write. Touching a row on every request would turn a read-mostly
+    // table into a write-heavy one for a column nobody needs to the
+    // second — "active 2 hours ago" is the honest resolution here.
     await db.session
-      .update({ where: { id: session.id }, data: { expiresAt } })
+      .update({
+        where: { id: session.id },
+        data: { expiresAt, lastSeenAt: new Date() },
+      })
       .catch(() => {});
     try {
       jar.set(SESSION_COOKIE, token, {
@@ -108,4 +126,22 @@ export async function destroySession(): Promise<void> {
 /** Signs out everywhere — used after a password change or reset. */
 export async function destroyAllSessions(userId: string): Promise<void> {
   await db.session.deleteMany({ where: { userId } });
+}
+
+/**
+ * Which session row the current cookie belongs to.
+ *
+ * Only the devices screen needs this, and it needs it for one reason:
+ * to mark the row you are reading from, so "sign out" on the wrong line
+ * cannot end the session you are using.
+ */
+export async function currentSessionId(): Promise<string | null> {
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const row = await db.session.findUnique({
+    where: { tokenHash: hashSessionToken(token) },
+    select: { id: true },
+  });
+  return row?.id ?? null;
 }

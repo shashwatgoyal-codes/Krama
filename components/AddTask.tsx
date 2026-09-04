@@ -1,10 +1,13 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import TimeField from "@/components/ui/TimeField";
+import type { TimeFormat } from "@/lib/time";
 import { createTask } from "@/app/app/actions";
 import UntilField from "@/components/tasks/UntilField";
 import { BLOCK_MINUTES } from "@/lib/time";
 import WeekdayPicker from "@/components/tasks/WeekdayPicker";
+import { useToast } from "@/components/ui/Toast";
 
 const REPEATS = [
   { value: "none", label: "Once" },
@@ -17,13 +20,16 @@ const REPEATS = [
 export default function AddTask({
   autoFocus = false,
   today,
+  timeFormat = "24",
 }: {
   autoFocus?: boolean;
   /** Today in the user's zone, so "end of this month" resolves right. */
   today?: string;
+  timeFormat?: TimeFormat;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [repeat, setRepeat] = useState<string>("none");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,6 +54,9 @@ export default function AddTask({
         inputRef.current.focus();
       }
       setRepeat("none");
+      // The field empties itself so you can add another, which leaves
+      // nothing on screen to say the first one landed.
+      toast.success("Task added.");
     });
   }
 
@@ -65,7 +74,7 @@ export default function AddTask({
           disabled={pending}
           placeholder="What needs doing?"
           aria-label="New task"
-          className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-[11px] py-2 text-[13px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+          className="field-lg min-w-0 flex-1"
         />
         <button
           type="submit"
@@ -108,7 +117,7 @@ export default function AddTask({
           defaultValue={20}
           disabled={pending}
           aria-label="Points this task is worth"
-          className="tabular w-[58px] rounded-md border border-ln2 bg-surf px-1.5 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+          className="field-sm tabular w-[58px]"
         />
       </div>
 
@@ -116,7 +125,10 @@ export default function AddTask({
         <div className="mt-2">
           <span className="label-xs">On</span>
           <div className="mt-1">
-            <WeekdayPicker selected={[new Date().getDay()]} disabled={pending} />
+            <WeekdayPicker
+              selected={[new Date().getDay()]}
+              disabled={pending}
+            />
           </div>
         </div>
       )}
@@ -127,21 +139,22 @@ export default function AddTask({
           {/* Pre-filled rather than blank. A routine with no time never
               reaches the calendar, and "why isn't it showing" is a worse
               first experience than a time you have to correct. */}
-          <input
-            type="time"
-            name="routineTime"
-            defaultValue="09:00"
-            disabled={pending}
-            aria-label="What time the routine happens"
-            className="rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
-          />
+          <div className="w-[104px]">
+            <TimeField
+              name="routineTime"
+              defaultValue="09:00"
+              timeFormat={timeFormat}
+              disabled={pending}
+              className="field field-sm"
+            />
+          </div>
           <span className="text-[11px] text-mut">for</span>
           <select
             name="routineMinutes"
             defaultValue={60}
             disabled={pending}
             aria-label="How long the routine lasts"
-            className="rounded-md border border-ln2 bg-surf px-2 py-1 text-[11.5px] text-ink focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+            className="field-sm"
           >
             {BLOCK_MINUTES.map((m) => (
               <option key={m} value={m}>

@@ -61,7 +61,7 @@ export async function scheduleAt(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
   const task = await getTask(user.id, parsed.data.id);
-  if (!task) return { ok: false, error: "That task no longer exists." };
+  if (!task) return { ok: false, error: "That task is gone." };
 
   const settings = await getSettings(user.id);
   const start = zonedTimeToInstant(
@@ -227,7 +227,7 @@ export async function saveDetails(formData: FormData): Promise<ActionResult> {
         ? (parsed.data.recurrenceValue ?? null)
         : null,
   });
-  if (!updated) return { ok: false, error: "That task no longer exists." };
+  if (!updated) return { ok: false, error: "That task is gone." };
 
   // After the row is proven to be this user's, so a crafted post can
   // neither borrow someone else's tag nor label someone else's task.

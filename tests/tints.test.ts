@@ -92,10 +92,33 @@ describe("appearanceSchema and tints", () => {
     }
   });
 
-  it("rejects a colour that isn't a preset", () => {
+  it("accepts a hand-picked colour alongside the presets", () => {
+    // Changed deliberately: a slot may now hold a colour of your own,
+    // not only one of the eight names.
     expect(appearanceSchema.safeParse({
       ...base, noteTints: ["#ff0000", "sky", "rose", "violet", "slate"],
-    }).success).toBe(false);
+    }).success).toBe(true);
+  });
+
+  it("accepts the short form and mixed case, as CSS does", () => {
+    for (const hex of ["#abc", "#ABC", "#AaBbCc"]) {
+      expect(appearanceSchema.safeParse({
+        ...base, noteTints: [hex, "sky", "rose", "violet", "slate"],
+      }).success).toBe(true);
+    }
+  });
+
+  it("still rejects anything that is neither a preset nor a colour", () => {
+    // This value ends up in a stylesheet, so "close enough" is not a
+    // standard it gets held to.
+    for (const bad of ["chartreuse", "red", "#12345", "rgb(1,2,3)", "", "#GGG"]) {
+      expect(
+        appearanceSchema.safeParse({
+          ...base, noteTints: [bad, "sky", "rose", "violet", "slate"],
+        }).success,
+        `${JSON.stringify(bad)} should be refused`,
+      ).toBe(false);
+    }
   });
 });
 

@@ -4,6 +4,7 @@ import { pageTitle } from "@/lib/env";
 import { requireUser } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/repositories/profile";
+import type { TimeFormat } from "@/lib/time";
 import {
   listTasks,
   countTasks,
@@ -52,7 +53,11 @@ export default async function TasksPage({
     "all") as TaskFilter;
 
   const settings = await getSettings(user.id);
-  const todayKey = dayKeyFor(new Date(), settings.timezone, settings.dayEndsAtHour);
+  const todayKey = dayKeyFor(
+    new Date(),
+    settings.timezone,
+    settings.dayEndsAtHour,
+  );
 
   const [tasks, counts, areas, allTags] = await Promise.all([
     listTasks(user.id, filter, todayKey),
@@ -87,6 +92,10 @@ export default async function TasksPage({
     recurrence: panel.recurrence,
     recurrenceValue: panel.recurrenceValue,
     recurrenceDays: panel.recurrenceDays,
+    // Deliberately 24-hour, whatever the reader's setting says: this is
+    // the value of an <input type="time">, and HTML defines that as
+    // "HH:MM". The browser localises what it *shows* on its own. Passing
+    // a 12-hour string here empties the field instead.
     routineTime:
       panel.routineStartMinute === null
         ? ""
@@ -98,12 +107,21 @@ export default async function TasksPage({
     block: panel.block && {
       id: panel.block.id,
       dayKey: dayKeyFor(panel.block.startsAt, settings.timezone, 0),
-      hour: Number(formatClock(panel.block.startsAt, settings.timezone).slice(0, 2)),
-      minute: Number(formatClock(panel.block.startsAt, settings.timezone).slice(3, 5)),
+      hour: Number(
+        formatClock(panel.block.startsAt, settings.timezone).slice(0, 2),
+      ),
+      minute: Number(
+        formatClock(panel.block.startsAt, settings.timezone).slice(3, 5),
+      ),
       durationMinutes: minutesBetween(panel.block.startsAt, panel.block.endsAt),
-      label: `${formatClock(panel.block.startsAt, settings.timezone)} – ${formatClock(
+      label: `${formatClock(
+        panel.block.startsAt,
+        settings.timezone,
+        settings.timeFormat as TimeFormat,
+      )} – ${formatClock(
         panel.block.endsAt,
         settings.timezone,
+        settings.timeFormat as TimeFormat,
       )}`,
     },
     fromNote: panel.fromNote,
@@ -122,7 +140,9 @@ export default async function TasksPage({
   ].filter((g) => g.items.length > 0);
 
   const href = (id: string) =>
-    filter === "all" ? `/app/tasks?id=${id}` : `/app/tasks?filter=${filter}&id=${id}`;
+    filter === "all"
+      ? `/app/tasks?id=${id}`
+      : `/app/tasks?filter=${filter}&id=${id}`;
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[1.45fr_1fr]">
@@ -133,7 +153,9 @@ export default async function TasksPage({
             return (
               <Link
                 key={f.key}
-                href={f.key === "all" ? "/app/tasks" : `/app/tasks?filter=${f.key}`}
+                href={
+                  f.key === "all" ? "/app/tasks" : `/app/tasks?filter=${f.key}`
+                }
                 aria-current={active ? "page" : undefined}
                 className={
                   "rounded-md border px-2.5 py-1 text-[11.5px] font-semibold transition-colors " +
@@ -143,7 +165,9 @@ export default async function TasksPage({
                 }
               >
                 {f.label}
-                <span className="tabular ml-1.5 opacity-60">{counts[f.key]}</span>
+                <span className="tabular ml-1.5 opacity-60">
+                  {counts[f.key]}
+                </span>
               </Link>
             );
           })}
@@ -213,7 +237,16 @@ export default async function TasksPage({
                         }
                       >
                         {t.status === "done" && (
-                          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="var(--paper)" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="10"
+                            height="10"
+                            fill="none"
+                            stroke="var(--paper)"
+                            strokeWidth="3.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <path d="M20 6 9 17l-5-5" />
                           </svg>
                         )}
@@ -262,22 +295,26 @@ export default async function TasksPage({
         )}
 
         <div className="mt-4">
-          <AddTask today={todayKey} />
+          <AddTask
+            today={todayKey}
+            timeFormat={settings.timeFormat as TimeFormat}
+          />
         </div>
       </section>
 
       <aside className="min-w-0 bg-surf2 p-4">
         {view ? (
           <TaskDetail
-              key={view.id}
-              task={view}
-              areas={areas}
-              allTags={allTags}
-            />
+            key={view.id}
+            task={view}
+            areas={areas}
+            allTags={allTags}
+            timeFormat={settings.timeFormat as TimeFormat}
+          />
         ) : (
           <p className="rounded-lg border border-dashed border-ln2 px-3 py-5 text-center text-[11.5px] leading-relaxed text-mut">
-            Pick a task to see its detail — due date, when it&rsquo;s
-            scheduled, and whether it repeats.
+            Pick a task to see its detail — due date, when it&rsquo;s scheduled,
+            and whether it repeats.
           </p>
         )}
       </aside>

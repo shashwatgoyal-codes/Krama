@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 import TopBar from "@/components/TopBar";
+import { signOut } from "@/app/(auth)/actions";
+import { currentAdmin } from "@/lib/admin/guard";
+import AccessBanner from "@/components/AccessBanner";
+import QuickCapture from "@/components/QuickCapture";
+import { db as database } from "@/lib/db";
+import { canOpenPortal } from "@/lib/admin/levels";
 import { appEnv } from "@/lib/env";
 import { getSessionUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -20,6 +26,31 @@ export default async function AppLayout({
   // that redirects would fight them. This only decides whose initial
   // sits in the corner.
   const user = await getSessionUser();
+  // Cheap for the overwhelming majority: the superadmin check is a string
+  // comparison against an environment variable, and the grant lookup is a
+  // unique-index hit that only runs for a signed-in visitor.
+  const admin = await currentAdmin();
+
+  // Two counts, one query each, only for a signed-in visitor. Worth the
+  // cost on every page: a banner that appears a page late is a banner
+  // that let somebody read something without you knowing.
+  const now = new Date();
+  const [liveAccess, waitingAccess] = user
+    ? await Promise.all([
+        database.supportAccess.count({
+          where: {
+            userId: user.id, approvedAt: { not: null }, revokedAt: null,
+            accessUntil: { gt: now },
+          },
+        }),
+        database.supportAccess.count({
+          where: {
+            userId: user.id, approvedAt: null, declinedAt: null,
+            requestExpiresAt: { gt: now },
+          },
+        }),
+      ])
+    : [0, 0];
 
   const account = user
     ? await db.user.findUnique({
@@ -83,8 +114,11 @@ export default async function AppLayout({
       {/* Read on the server: APP_ENV isn't NEXT_PUBLIC_, so it never
           reaches the browser except as this one resolved value. */}
       <TopBar
+        isAdmin={admin !== null && canOpenPortal(admin.level)}
         env={appEnv()}
         name={user?.name ?? "You"}
+        email={user?.email ?? ""}
+        signOut={signOut}
         avatar={
           user && account?.avatarAt
             ? `/api/avatar/${user.id}?v=${account.avatarAt.getTime()}`
@@ -92,6 +126,8 @@ export default async function AppLayout({
         }
       />
       {user && !account?.emailVerified && <VerifyBanner email={user.email} />}
+      <AccessBanner count={liveAccess} waiting={waitingAccess} />
+      <QuickCapture />
       {children}
     </div>
   );
