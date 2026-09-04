@@ -21,6 +21,7 @@ export default function Today({
   blocks,
   committed,
   waiting,
+  done,
   notes,
   saved,
   stats,
@@ -34,6 +35,8 @@ export default function Today({
   blocks: PlanBlockView[];
   committed: string;
   waiting: (TaskItem & { chip?: string })[];
+  /** Finished today — the half of the day the screen never showed. */
+  done: { id: string; title: string; points: number }[];
   notes: NotePreview[];
   saved: SavedPreview[];
   stats: TodayStats;
@@ -84,9 +87,9 @@ export default function Today({
           <>
             {blocks.length === 0 && (
               <p className="rounded-[9px] border border-dashed border-ln2 px-4 py-5 text-center text-[12.5px] leading-relaxed text-mut">
-                Nothing has a time yet. Drag something across from the right,
-                or press <span className="font-semibold text-ink">Plan</span> on
-                it — deciding when is most of the work.
+                Nothing has a time yet. Drag something across from the right, or
+                press <span className="font-semibold text-ink">Plan</span> on it
+                — deciding when is most of the work.
               </p>
             )}
 
@@ -123,7 +126,9 @@ export default function Today({
                     title={
                       stats.streakAtRisk
                         ? `${stats.dailyFloor} ${
-                            stats.dailyFloor === 1 ? "thing keeps" : "things keep"
+                            stats.dailyFloor === 1
+                              ? "thing keeps"
+                              : "things keep"
                           } it going — today still counts.`
                         : "Days you've cleared the floor. Rest days don't break it."
                     }
@@ -134,6 +139,49 @@ export default function Today({
               </div>
             )}
           </>
+        )}
+
+        {/*
+          What you already did today.
+          
+          Finishing something used to remove it from every list here and
+          move a number on the pace bar, so the screen built around what
+          you do said nothing about what you had done — and on a day with
+          nothing scheduled this column stood empty below the pace row.
+        */}
+        {done.length > 0 && (
+          <div className="mt-5 border-t border-ln pt-3.5">
+            <div className="mb-2.5 flex items-baseline justify-between gap-2.5">
+              <span className="font-display text-[13px] font-semibold tracking-[-0.02em]">
+                Done today
+              </span>
+              <span className="label-xs tabular">{done.length}</span>
+            </div>
+
+            <ul className="flex flex-col gap-1">
+              {done.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-baseline gap-2.5 rounded-[9px] border border-ln bg-surf2 px-3 py-2"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="text-[11px] leading-none text-ok"
+                  >
+                    &#10003;
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-mut line-through decoration-ln2">
+                    {t.title}
+                  </span>
+                  {showScoring && (
+                    <span className="label-xs tabular flex-none text-fai">
+                      {t.points}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
 
