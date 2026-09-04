@@ -1,4 +1,5 @@
 import AddTask from "./AddTask";
+import type { TimeFormat } from "@/lib/time";
 import Plan, { type PlanBlockView } from "./plan/Plan";
 import WaitingItem from "./plan/WaitingItem";
 import type { TaskItem } from "./TaskRow";
@@ -26,6 +27,7 @@ export default function Today({
   saved,
   stats,
   showScoring,
+  timeFormat = "24",
 }: {
   reminder: string | null;
   name: string;
@@ -41,6 +43,7 @@ export default function Today({
   saved: SavedPreview[];
   stats: TodayStats;
   showScoring: boolean;
+  timeFormat?: TimeFormat;
 }) {
   const firstName = name.split(" ")[0];
   const nothingAtAll = blocks.length === 0 && waiting.length === 0;
@@ -80,7 +83,7 @@ export default function Today({
                 : `${stats.dailyFloor} of them clears the day.`}
             </p>
             <div className="mx-auto mt-5 max-w-[340px]">
-              <AddTask autoFocus today={todayKey} />
+              <AddTask autoFocus today={todayKey} timeFormat={timeFormat} />
             </div>
           </div>
         ) : (
@@ -205,7 +208,7 @@ export default function Today({
         )}
 
         <div className="mt-3">
-          <AddTask today={todayKey} />
+          <AddTask today={todayKey} timeFormat={timeFormat} />
         </div>
 
         {notes.length > 0 && (

@@ -295,7 +295,10 @@ export default async function TasksPage({
         )}
 
         <div className="mt-4">
-          <AddTask today={todayKey} />
+          <AddTask
+            today={todayKey}
+            timeFormat={settings.timeFormat as TimeFormat}
+          />
         </div>
       </section>
 

@@ -8,6 +8,7 @@ import { dayKeyFor } from "@/lib/day";
 import { materialiseRecurring } from "@/lib/repositories/recurring";
 import { runDayMaintenance, reminderDue } from "@/lib/repositories/maintenance";
 import { formatDay } from "@/lib/format";
+import type { TimeFormat } from "@/lib/time";
 import {
   formatClock,
   formatDuration,
@@ -133,6 +134,7 @@ export default async function TodayPage() {
       blocks={view}
       committed={totalCommitted(blocks)}
       waiting={waiting}
+      timeFormat={settings.timeFormat as TimeFormat}
       done={doneToday.map((t) => ({
         id: t.id,
         title: t.title,

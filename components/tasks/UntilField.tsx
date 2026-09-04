@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { UNTIL_PRESETS, presetFor, type UntilPreset } from "@/lib/until";
+import DateField from "@/components/ui/DateField";
 
 /**
  * How long a routine runs for.
@@ -68,15 +69,15 @@ export default function UntilField({
       </div>
 
       {preset === "date" && (
-        <input
-          type="date"
-          name={`${name}Date`}
-          value={date}
-          disabled={disabled}
-          min={today}
-          onChange={(e) => setDate(e.target.value)}
-          className="field field-sm mt-2 w-full"
-        />
+        <div className="mt-2">
+          <DateField
+            name={`${name}Date`}
+            value={date}
+            disabled={disabled}
+            min={today}
+            onChange={setDate}
+          />
+        </div>
       )}
 
       {preset !== "never" && (

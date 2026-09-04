@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import TimeField from "@/components/ui/TimeField";
+import type { TimeFormat } from "@/lib/time";
 import { createTask } from "@/app/app/actions";
 import UntilField from "@/components/tasks/UntilField";
 import { BLOCK_MINUTES } from "@/lib/time";
@@ -18,10 +20,12 @@ const REPEATS = [
 export default function AddTask({
   autoFocus = false,
   today,
+  timeFormat = "24",
 }: {
   autoFocus?: boolean;
   /** Today in the user's zone, so "end of this month" resolves right. */
   today?: string;
+  timeFormat?: TimeFormat;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -135,14 +139,15 @@ export default function AddTask({
           {/* Pre-filled rather than blank. A routine with no time never
               reaches the calendar, and "why isn't it showing" is a worse
               first experience than a time you have to correct. */}
-          <input
-            type="time"
-            name="routineTime"
-            defaultValue="09:00"
-            disabled={pending}
-            aria-label="What time the routine happens"
-            className="field-sm"
-          />
+          <div className="w-[104px]">
+            <TimeField
+              name="routineTime"
+              defaultValue="09:00"
+              timeFormat={timeFormat}
+              disabled={pending}
+              className="field field-sm"
+            />
+          </div>
           <span className="text-[11px] text-mut">for</span>
           <select
             name="routineMinutes"

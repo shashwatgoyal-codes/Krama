@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
+import DateField from "@/components/ui/DateField";
+import TimeField from "@/components/ui/TimeField";
 import { toggleTask, deleteTask } from "@/app/app/actions";
 import {
   scheduleAt,
@@ -178,8 +180,7 @@ export default function TaskDetail({
           </Field>
 
           <Field label="Due">
-            <input
-              type="date"
+            <DateField
               name="dueOn"
               defaultValue={task.dueOn}
               className={FIELD}
@@ -254,13 +255,15 @@ export default function TaskDetail({
                 At
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="time"
-                  name="routineTime"
-                  defaultValue={task.routineTime}
-                  disabled={pending}
-                  className={`${FIELD} max-w-[110px]`}
-                />
+                <div className="w-[110px]">
+                  <TimeField
+                    name="routineTime"
+                    defaultValue={task.routineTime}
+                    timeFormat={timeFormat}
+                    disabled={pending}
+                    className={FIELD}
+                  />
+                </div>
                 <span className="text-[11.5px] text-mut">for</span>
                 <select
                   name="routineMinutes"
@@ -359,8 +362,7 @@ export default function TaskDetail({
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="Date">
-              <input
-                type="date"
+              <DateField
                 name="dayKey"
                 required
                 defaultValue={task.block?.dayKey ?? task.todayKey}
