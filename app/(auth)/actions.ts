@@ -4,7 +4,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { DEFAULT_AREAS } from "@/lib/seed";
-import { hashPassword, verifyPassword, checkPassword } from "@/lib/auth/password";
+import {
+  hashPassword,
+  verifyPassword,
+  checkPassword,
+} from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
 import {
   checkRateLimit,
@@ -32,7 +36,9 @@ const BAD_CREDENTIALS = "That email or password is wrong.";
 async function requestKey(email: string): Promise<string> {
   const h = await headers();
   const ip =
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? "local";
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    h.get("x-real-ip") ??
+    "local";
   // Keyed on both, so one attacker can't lock out a specific person by
   // hammering their address, and can't dodge the limit by rotating email.
   return `${ip}:${email}`;
@@ -54,16 +60,31 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
 
   const { name, email, password } = parsed.data;
 
+  // Throttled like sign-in. Creating accounts was the one unauthenticated
+  // action with nothing in front of it: the flag above closes it while
+  // registration is shut, but the moment it opens this becomes an
+  // endpoint that mints rows — and it is also the oracle below.
+  const key = await requestKey(`signup:${email}`);
+  const limit = await checkRateLimit(key);
+  if (!limit.allowed) {
+    return { ok: false, error: retryMessage(limit.retryAfterMs) };
+  }
+
   const strength = checkPassword(password);
-  if (!strength.ok) return { ok: false, error: strength.reason, field: "password" };
+  if (!strength.ok)
+    return { ok: false, error: strength.reason, field: "password" };
 
   const existing = await db.user.findUnique({
     where: { email },
     select: { id: true },
   });
   if (existing) {
-    // Same wording as a weak password so this form can't be used to
-    // discover which addresses already have accounts.
+    // This does tell someone the address is taken, and a sign-up form has
+    // to: it must say why it refused. The comment here used to claim the
+    // wording hid that, which was never true of the message beneath it —
+    // and a comment asserting a protection that does not exist is worse
+    // than no comment. What actually limits enumeration is the throttle.
+    await recordFailure(key);
     return {
       ok: false,
       error: "You already have an account with that email. Sign in instead.",
@@ -81,6 +102,8 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
     },
     select: { id: true },
   });
+
+  await clearAttempts(key);
 
   const h = await headers();
   await createSession(user.id, h.get("user-agent") ?? undefined);
