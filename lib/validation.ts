@@ -290,8 +290,15 @@ export const feedbackIdSchema = z.object({ id: z.string().cuid() });
  * to discover that someone posted 1 and lost the year.
  */
 export const retentionSchema = z.object({
-  keepFinishedDays: z.coerce
-    .number()
-    .int()
-    .refine((n) => [0, 90, 180, 365].includes(n), "Pick one of the options."),
+  // Blank must not coerce. z.coerce.number() reads "" and " " as 0, and
+  // 0 here means "keep forever" — so a form that posted nothing at all
+  // would look like a deliberate choice. It lands on the safe side, but
+  // a setting that deletes things should never be set by absence.
+  keepFinishedDays: z
+    .union([z.number(), z.string().trim().min(1)])
+    .transform((v) => (typeof v === "number" ? v : Number(v)))
+    .refine(
+      (n) => Number.isInteger(n) && [0, 90, 180, 365].includes(n),
+      "Pick one of the options.",
+    ),
 });
