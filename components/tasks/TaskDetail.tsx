@@ -8,14 +8,13 @@ import {
   clearSchedule,
   saveDetails,
 } from "@/app/app/tasks/actions";
-import { BLOCK_MINUTES } from "@/lib/time";
 import TagField from "@/components/tags/TagField";
 import UntilField from "@/components/tasks/UntilField";
 import WeekdayPicker from "@/components/tasks/WeekdayPicker";
 import type { TagChip } from "@/lib/tags";
 import { useToast } from "@/components/ui/Toast";
 
-import { clockLabel, type TimeFormat } from "@/lib/time";
+import { BLOCK_MINUTES, blockTimes, type TimeFormat } from "@/lib/time";
 /**
  * The detail panel from the design: what the task is, when it's due,
  * when it's scheduled, whether it repeats, and where it came from.
@@ -66,25 +65,6 @@ const REPEATS = [
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
 ];
-
-/**
- * Half-hour steps across a plausible day, labelled in the reader's clock.
- *
- * Built per render rather than once at module load, because the labels
- * depend on a setting. As a constant it was always 24-hour, so someone on
- * a 12-hour clock picked "13:30" from this list and then saw "01:30 pm"
- * on the calendar for the very same block.
- */
-function timesFor(format: TimeFormat) {
-  return Array.from({ length: 36 }, (_, i) => {
-    const minutes = 6 * 60 + i * 30;
-    return {
-      hour: Math.floor(minutes / 60),
-      minute: minutes % 60,
-      label: clockLabel(minutes, format),
-    };
-  });
-}
 
 // The side panel is narrow, so it takes the compact variant of the one
 // shared field style rather than a second definition of it.
@@ -389,7 +369,7 @@ export default function TaskDetail({
                 }}
                 className={FIELD}
               >
-                {timesFor(timeFormat).map((t) => (
+                {blockTimes(timeFormat).map((t) => (
                   <option key={t.label} value={`${t.hour}:${t.minute}`}>
                     {t.label}
                   </option>

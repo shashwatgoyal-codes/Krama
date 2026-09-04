@@ -19,6 +19,25 @@
  * rules, which reach argon2 — a native module that cannot be bundled for
  * the browser. Neither tsc nor eslint catches that; the build does.
  */
+/**
+ * Half-hour steps across a plausible day, labelled in the reader's clock.
+ *
+ * Built per render rather than once at module load, because the labels
+ * depend on a setting. As a constant it was always 24-hour, so someone on
+ * a 12-hour clock picked "13:30" from this list and then saw "01:30 pm"
+ * on the calendar for the very same block.
+ */
+export function blockTimes(format: TimeFormat = "24") {
+  return Array.from({ length: 36 }, (_, i) => {
+    const minutes = 6 * 60 + i * 30;
+    return {
+      hour: Math.floor(minutes / 60),
+      minute: minutes % 60,
+      label: clockLabel(minutes, format),
+    };
+  });
+}
+
 export const BLOCK_MINUTES = [15, 30, 45, 60, 90, 120, 180, 240] as const;
 
 /** How far the zone is from UTC at a given instant, in milliseconds. */

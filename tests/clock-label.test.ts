@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clockLabel, clockSpan, formatClock } from "@/lib/time";
+import { clockLabel, clockSpan, formatClock, blockTimes } from "@/lib/time";
 import { minuteLabel, spanLabel } from "@/lib/projection";
 
 /**
@@ -73,5 +73,57 @@ describe("the calendar's own labels", () => {
   it("follow the reader when given a format", () => {
     expect(minuteLabel(13 * 60 + 30, "12")).toBe("01:30 pm");
     expect(spanLabel(8 * 60, 90, "12")).toBe("08:00 am – 09:30 am");
+  });
+});
+
+/**
+ * The Schedule panel's Start list.
+ *
+ * This is the dropdown the setting was reported broken on. It only
+ * renders after pressing Schedule, so it never appears in the page's
+ * first HTML and cannot be checked with a request — which is exactly why
+ * it went wrong unnoticed. Checked here instead, at the source the
+ * component renders from.
+ */
+describe("the Start-time list", () => {
+  it("labels every option in 24-hour by default", () => {
+    const times = blockTimes();
+    expect(times[0].label).toBe("06:00");
+    expect(times[1].label).toBe("06:30");
+    expect(times.at(-1)!.label).toBe("23:30");
+  });
+
+  it("labels every option in 12-hour when asked", () => {
+    const times = blockTimes("12");
+    expect(times[0].label).toBe("06:00 am");
+    expect(times.find((t) => t.hour === 13 && t.minute === 30)!.label).toBe(
+      "01:30 pm",
+    );
+    expect(times.find((t) => t.hour === 12 && t.minute === 0)!.label).toBe(
+      "12:00 pm",
+    );
+    expect(times.at(-1)!.label).toBe("11:30 pm");
+  });
+
+  /**
+   * The label is what someone reads; hour and minute are what gets
+   * posted. Changing the clock must move the first and never the second,
+   * or picking a time in the afternoon would save it in the morning.
+   */
+  it("keeps the posted values identical whatever the clock says", () => {
+    const a = blockTimes("24");
+    const b = blockTimes("12");
+    expect(a.map((t) => [t.hour, t.minute])).toEqual(
+      b.map((t) => [t.hour, t.minute]),
+    );
+    expect(a.map((t) => t.label)).not.toEqual(b.map((t) => t.label));
+  });
+
+  it("covers a plausible day in half hours, and no more", () => {
+    const times = blockTimes();
+    expect(times).toHaveLength(36);
+    expect(times.every((t) => t.minute === 0 || t.minute === 30)).toBe(true);
+    expect(Math.min(...times.map((t) => t.hour))).toBe(6);
+    expect(Math.max(...times.map((t) => t.hour))).toBe(23);
   });
 });
