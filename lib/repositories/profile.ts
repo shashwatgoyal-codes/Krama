@@ -17,6 +17,7 @@ export type ProfileSettings = {
   defaultAreaId: string | null;
   rolloverUnfinished: boolean;
   catchUpRoutines: boolean;
+  keepFinishedDays: number;
   morningReminder: string | null;
   eveningReminder: string | null;
   totalPoints: number;
@@ -46,6 +47,7 @@ export async function getSettings(userId: string): Promise<ProfileSettings> {
       defaultAreaId: true,
       rolloverUnfinished: true,
       catchUpRoutines: true,
+      keepFinishedDays: true,
       morningReminder: true,
       eveningReminder: true,
       totalPoints: true,
@@ -127,6 +129,7 @@ export type ProfileOverview = {
   backdateLimitDays: number;
   rolloverUnfinished: boolean;
   catchUpRoutines: boolean;
+  keepFinishedDays: number;
   density: string;
   reduceMotion: boolean;
   interfaceFont: string;
@@ -172,6 +175,7 @@ export async function getProfileOverview(
             backdateLimitDays: true,
             rolloverUnfinished: true,
             catchUpRoutines: true,
+            keepFinishedDays: true,
             density: true,
             reduceMotion: true,
             interfaceFont: true,
@@ -231,6 +235,7 @@ export async function updateProfileSettings(
     backdateLimitDays?: number;
     rolloverUnfinished?: boolean;
     catchUpRoutines?: boolean;
+    keepFinishedDays?: number;
     density?: string;
     reduceMotion?: boolean;
     interfaceFont?: string;
@@ -349,7 +354,6 @@ export async function getTodayStats(userId: string): Promise<TodayStats> {
     floorCleared: streak.clearedToday,
   };
 }
-
 
 export type ContentCounts = {
   tasksDone: number;

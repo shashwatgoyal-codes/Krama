@@ -131,7 +131,7 @@ export default function TagField({
             setChosen((c) => c.slice(0, -1));
           }
         }}
-        className="w-full rounded-md border border-ln2 bg-surf px-2 py-1.5 text-[12.5px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+        className="field field-sm w-full"
       />
 
       {offerable.length > 0 && (

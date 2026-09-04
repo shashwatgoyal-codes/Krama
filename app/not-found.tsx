@@ -1,6 +1,9 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { pageTitle } from "@/lib/env";
+import StatusPage, {
+  PrimaryLink,
+  QuietLink,
+} from "@/components/status/StatusPage";
 
 export const metadata: Metadata = {
   title: pageTitle("Not found"),
@@ -17,31 +20,27 @@ export const metadata: Metadata = {
  */
 export default function NotFound() {
   return (
-    <main className="grid min-h-screen place-items-center px-6">
-      <div className="w-full max-w-[380px] text-center">
-        <h1 className="font-display text-[19px] font-semibold tracking-[-0.02em]">
-          There&rsquo;s nothing here
-        </h1>
-        <p className="mt-2 text-[12.5px] leading-relaxed text-mut">
-          This page doesn&rsquo;t exist, or whatever used to be at this address has
-          since been deleted.
-        </p>
-
-        <div className="mt-6 flex items-center justify-center gap-2.5 text-[12.5px]">
-          <Link
-            href="/app"
-            className="rounded-md bg-ink px-3 py-1.5 font-semibold text-paper transition-opacity hover:opacity-90"
-          >
-            Go to Today
-          </Link>
-          <Link
-            href="/app/search"
-            className="rounded-md border border-ln2 px-3 py-1.5 font-medium text-mut transition-colors hover:bg-surf2 hover:text-ink"
-          >
-            Search
-          </Link>
-        </div>
-      </div>
-    </main>
+    <StatusPage
+      code="404"
+      title="There's nothing at this address"
+      body={
+        <>
+          <p>
+            Either the address is wrong, or whatever used to be here has since
+            been deleted.
+          </p>
+          <p className="mt-2">
+            Nothing is broken and nothing has been lost — this page simply
+            doesn&rsquo;t exist.
+          </p>
+        </>
+      }
+      actions={
+        <>
+          <PrimaryLink href="/app">Go to Today</PrimaryLink>
+          <QuietLink href="/app/search">Search everything</QuietLink>
+        </>
+      }
+    />
   );
 }

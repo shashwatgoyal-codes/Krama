@@ -25,6 +25,26 @@ export type IssueResult =
  * codes would mean an older one still works after the user has asked for
  * a replacement, which is exactly the window someone would want.
  */
+/**
+ * Is there a code already out there that would still work?
+ *
+ * Used to decide whether arriving on the verification page should send
+ * one. Asking the database rather than reading a query parameter means
+ * the answer is the same however you got here — from sign-up, from the
+ * banner, or by refreshing — which is the whole point.
+ */
+export async function hasLiveCode(
+  userId: string,
+  purpose: CodePurpose,
+  now = new Date(),
+): Promise<boolean> {
+  const live = await db.verificationCode.findFirst({
+    where: { userId, purpose, consumedAt: null, expiresAt: { gt: now } },
+    select: { id: true },
+  });
+  return live !== null;
+}
+
 export async function issueCode(
   userId: string,
   purpose: CodePurpose,

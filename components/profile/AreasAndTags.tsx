@@ -15,7 +15,12 @@ const CHIP: Record<string, string> = {
   bad: "border-bad bg-bad-soft text-bad",
 };
 import { addArea, editArea, removeArea } from "@/app/app/profile/areas-actions";
-import { addTag, removeTag, setDefaultArea } from "@/app/app/profile/tags-actions";
+import {
+  addTag,
+  removeTag,
+  setDefaultArea,
+} from "@/app/app/profile/tags-actions";
+import { useToast } from "@/components/ui/Toast";
 
 export type AreaRow = {
   id: string;
@@ -31,6 +36,8 @@ export type TagView = {
   name: string;
   colour: string;
   stale: boolean;
+  /** How many things carry it. Stated before one is removed. */
+  uses: number;
 };
 
 /**
@@ -59,19 +66,23 @@ export default function AreasAndTags({
   const [confirming, setConfirming] = useState<string | null>(null);
   const [showStale, setShowStale] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const tagForm = useRef<HTMLFormElement>(null);
 
   function run(
     action: (d: FormData) => Promise<{ ok: boolean; error?: string }>,
     data: FormData,
+    done: string,
     onOk?: () => void,
   ) {
     setError(null);
     startTransition(async () => {
       const result = await action(data);
-      if (result.ok) onOk?.();
-      else if (result.error) setError(result.error);
+      if (result.ok) {
+        onOk?.();
+        toast.success(done);
+      } else if (result.error) setError(result.error);
     });
   }
 
@@ -121,7 +132,9 @@ export default function AreasAndTags({
 
           {editing === area.id && (
             <form
-              action={(d) => run(editArea, d, () => setEditing(null))}
+              action={(d) =>
+                run(editArea, d, "Area renamed.", () => setEditing(null))
+              }
               className="mb-2.5 flex flex-wrap items-end gap-3 rounded-lg border border-ln bg-surf2 p-3"
             >
               <input type="hidden" name="id" value={area.id} />
@@ -136,7 +149,12 @@ export default function AreasAndTags({
                 />
               </div>
               <Colours defaultValue={area.colour} />
-              <Button type="submit" variant="primary" size="sm" disabled={pending}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={pending}
+              >
                 Save
               </Button>
 
@@ -151,7 +169,7 @@ export default function AreasAndTags({
                     onClick={() => {
                       const d = new FormData();
                       d.set("id", area.id);
-                      run(removeArea, d, () => {
+                      run(removeArea, d, "Area removed.", () => {
                         setConfirming(null);
                         setEditing(null);
                       });
@@ -184,7 +202,9 @@ export default function AreasAndTags({
 
       {addingArea ? (
         <form
-          action={(d) => run(addArea, d, () => setAddingArea(false))}
+          action={(d) =>
+            run(addArea, d, "Area added.", () => setAddingArea(false))
+          }
           className="mt-2.5 flex flex-wrap items-end gap-3 rounded-lg border border-ln bg-surf2 p-3"
         >
           <div className="min-w-[140px] flex-1">
@@ -225,10 +245,10 @@ export default function AreasAndTags({
       {/* ----------------------------------------------------- tags */}
       <Heading label="Tags" count={`${tags.length} used`} top />
 
-      {/* Chips exactly as drawn: mono, small, uppercase, and quiet.
-          They are labels, not controls — which is why there is no x on
-          them. Removing one happens under Review, where tidying is
-          what you came to do. */}
+      {/* Chips are quiet labels, but every one can now be removed. The ×
+          used to appear only under Review, which meant a tag in use could
+          never be deleted at all: you had to stop using it, wait for it
+          to go stale, then come back. */}
       <div className="flex flex-wrap items-center gap-1.5 py-2">
         {shown.length === 0 ? (
           <span className="text-[11.5px] text-mut">
@@ -243,29 +263,58 @@ export default function AreasAndTags({
               className={`inline-flex items-center gap-1 rounded-[4px] border px-[7px] py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] ${CHIP[tag.colour] ?? CHIP.mut}`}
             >
               {tag.name}
-              {showStale && (
-                <button
-                  type="button"
-                  disabled={pending}
-                  aria-label={`Remove ${tag.name}`}
-                  onClick={() => {
-                    const d = new FormData();
-                    d.set("id", tag.id);
-                    run(removeTag, d);
-                  }}
-                  className="cursor-pointer text-fai hover:text-bad"
-                >
-                  ×
-                </button>
-              )}
+              <button
+                type="button"
+                disabled={pending}
+                aria-label={`Remove the tag ${tag.name}`}
+                title={
+                  tag.uses > 0
+                    ? `On ${tag.uses} thing${tag.uses === 1 ? "" : "s"}`
+                    : "Remove"
+                }
+                onClick={() => {
+                  // A tag nothing uses goes without ceremony. One that is
+                  // in use says so first — "delete this tag" and "take it
+                  // off forty things" are different decisions.
+                  if (tag.uses > 0 && confirming !== tag.id) {
+                    setConfirming(tag.id);
+                    return;
+                  }
+                  const d = new FormData();
+                  d.set("id", tag.id);
+                  run(removeTag, d, "Tag removed.", () => setConfirming(null));
+                }}
+                className="cursor-pointer text-fai hover:text-bad"
+              >
+                ×
+              </button>
             </span>
           ))
+        )}
+
+        {confirming && shown.some((t) => t.id === confirming) && (
+          <span className="w-full pt-1 text-[11.5px] text-mut">
+            <strong>{shown.find((t) => t.id === confirming)!.name}</strong> is
+            on {shown.find((t) => t.id === confirming)!.uses} thing
+            {shown.find((t) => t.id === confirming)!.uses === 1 ? "" : "s"}.
+            Click × again to take it off all of them — the things themselves
+            stay.{" "}
+            <button
+              type="button"
+              onClick={() => setConfirming(null)}
+              className="font-semibold text-acc"
+            >
+              Cancel
+            </button>
+          </span>
         )}
 
         {addingTag ? (
           <form
             ref={tagForm}
-            action={(d) => run(addTag, d, () => tagForm.current?.reset())}
+            action={(d) =>
+              run(addTag, d, "Tag added.", () => tagForm.current?.reset())
+            }
             className="flex items-center gap-1.5"
           >
             <input
@@ -314,7 +363,10 @@ export default function AreasAndTags({
           help="Anything created without an area — a note turned into a task, a saved link made into one — is filed here instead of sitting unfiled forever."
           htmlFor="defaultAreaId"
         >
-          <form action={(d) => run(setDefaultArea, d)} className="flex gap-2">
+          <form
+            action={(d) => run(setDefaultArea, d, "Default area set.")}
+            className="flex gap-2"
+          >
             <select
               id="defaultAreaId"
               name="defaultAreaId"
@@ -339,7 +391,11 @@ export default function AreasAndTags({
             label="Tidy up unused tags"
             description={`${staleCount} ${staleCount === 1 ? "tag hasn't" : "tags haven't"} been used in 90 days.`}
           >
-            <Button type="button" size="sm" onClick={() => setShowStale((v) => !v)}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setShowStale((v) => !v)}
+            >
               {showStale ? "Show all" : "Review"}
             </Button>
           </SettingRow>
@@ -381,7 +437,6 @@ function Heading({
     </div>
   );
 }
-
 
 function Colours({ defaultValue }: { defaultValue: string }) {
   return (

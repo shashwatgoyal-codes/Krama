@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import { uploadAvatar, removeAvatar } from "@/app/app/profile/avatar-actions";
 import { resizeAvatar, AVATAR_EDGE } from "@/lib/resize";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * The identity block: picture, name, email, and the button that changes
@@ -26,6 +27,7 @@ export default function AvatarField({
   version: number | null;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const input = useRef<HTMLInputElement>(null);
 
@@ -50,6 +52,7 @@ export default function AvatarField({
       data.set("avatar", sized.file);
       const result = await uploadAvatar(data);
       if (!result.ok) setError(result.error);
+      else toast.success("Photo updated.");
       if (input.current) input.current.value = "";
     });
   }

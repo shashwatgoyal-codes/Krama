@@ -126,6 +126,15 @@ The full rules, including what to do when `--ff-only` refuses, are in
 Each environment should get its own Neon branch, so a bad migration in dev can
 never reach production data.
 
+## What is kept
+
+Krama clears out rows that only record an absence — a routine day you skipped,
+an expired session, a spent one-time code — and keeps what someone actually
+did. Finished tasks are kept forever unless a person chooses otherwise, and the
+point ledger and audit log cannot be deleted at all: both are append-only at the
+database level. The rules, and the one property that makes deleting a task safe
+for the score attached to it, are in [`docs/RETENTION.md`](docs/RETENTION.md).
+
 ## Layout
 
 ```

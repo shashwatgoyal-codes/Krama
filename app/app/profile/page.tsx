@@ -11,7 +11,14 @@ import AreasAndTags from "@/components/profile/AreasAndTags";
 import AvatarField from "@/components/profile/AvatarField";
 import Toggle from "@/components/profile/Toggle";
 import DataPanel from "@/components/profile/DataPanel";
-import { listTags, staleTags, areaStats } from "@/lib/repositories/tags";
+import RetentionPanel from "@/components/profile/RetentionPanel";
+import { sweepPreview } from "@/lib/repositories/retention";
+import {
+  listTags,
+  staleTags,
+  areaStats,
+  tagUsage,
+} from "@/lib/repositories/tags";
 import { weekDays } from "@/lib/week";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
 import { getContentCounts } from "@/lib/repositories/profile";
@@ -28,7 +35,10 @@ import SettingRow from "@/components/profile/SettingRow";
 import TimeZoneField from "@/components/profile/TimeZoneField";
 import ChangePasswordRow from "@/components/profile/ChangePasswordRow";
 import SaveForm from "@/components/profile/SaveForm";
+import { listMyFeedback } from "@/lib/repositories/feedback";
+import type { TimeFormat } from "@/lib/time";
 import DangerZone from "@/components/profile/DangerZone";
+import FeedbackPanel from "@/components/profile/FeedbackPanel";
 import ThemePicker from "@/components/profile/ThemePicker";
 import {
   signOutEverywhere,
@@ -73,17 +83,27 @@ export default async function ProfilePage({
   const user = await requireUser();
   const params = await searchParams;
   const section: SectionKey = isSectionKey(params.s) ? params.s : "profile";
-  const [p, areas, stats, tags, stale, counts] = await Promise.all([
-    getProfileOverview(user.id),
-    listAreasWithCounts(user.id),
-    areaStats(
-      user.id,
-      dayKeyToDate(weekDays(dayKeyFor(new Date(), "UTC", 0))[0]),
-    ),
-    listTags(user.id),
-    staleTags(user.id),
-    getContentCounts(user.id),
-  ]);
+  const [p, areas, stats, tags, stale, counts, usage, myFeedback] =
+    await Promise.all([
+      getProfileOverview(user.id),
+      listAreasWithCounts(user.id),
+      areaStats(
+        user.id,
+        dayKeyToDate(weekDays(dayKeyFor(new Date(), "UTC", 0))[0]),
+      ),
+      listTags(user.id),
+      staleTags(user.id),
+      getContentCounts(user.id),
+      // How many things carry each tag, so removing one can say what
+      // it is about to come off before it comes off.
+      tagUsage(user.id),
+      listMyFeedback(user.id),
+    ]);
+
+  const wouldRemove = await sweepPreview(user.id, p.keepFinishedDays);
+  // Every clock label on this page reads the way the reader asked for.
+  const clock = p.timeFormat as TimeFormat;
+
   const staleIds = new Set(stale.map((t) => t.id));
 
   const zones = zoneGroups(p.timezone);
@@ -143,6 +163,7 @@ export default async function ProfilePage({
                     min={0}
                     max={12}
                     format="hour"
+                    timeFormat={clock}
                   />
                 </SettingRow>
 
@@ -194,6 +215,12 @@ export default async function ProfilePage({
                         : `You're signed in on ${p.otherSessions + 1} devices.`
                     }
                   >
+                    <a
+                      href="/app/devices"
+                      className="mb-2 inline-block rounded-md border border-ln2 px-2.5 py-1 text-[12px] font-semibold text-mut transition-colors hover:bg-surf2 hover:text-ink"
+                    >
+                      See your devices
+                    </a>
                     <form action={signOutEverywhere}>
                       <button
                         type="submit"
@@ -345,6 +372,7 @@ export default async function ProfilePage({
                     id="morningReminder"
                     name="morningReminder"
                     value={p.morningReminder}
+                    timeFormat={clock}
                   />
                 </SettingRow>
 
@@ -357,6 +385,7 @@ export default async function ProfilePage({
                     id="eveningReminder"
                     name="eveningReminder"
                     value={p.eveningReminder}
+                    timeFormat={clock}
                   />
                 </SettingRow>
 
@@ -418,6 +447,7 @@ export default async function ProfilePage({
                   name: t.name,
                   colour: t.colour,
                   stale: staleIds.has(t.id),
+                  uses: usage[t.id] ?? 0,
                 }))}
                 defaultAreaId={p.defaultAreaId}
                 staleCount={stale.length}
@@ -524,6 +554,16 @@ export default async function ProfilePage({
               </Section>
 
               <Section
+                title="What Krama keeps"
+                description="What is cleared out on its own, and what is never touched."
+              >
+                <RetentionPanel
+                  keepFinishedDays={p.keepFinishedDays}
+                  wouldRemove={wouldRemove}
+                />
+              </Section>
+
+              <Section
                 title="Delete my account"
                 description="Removes your account and everything in it, permanently."
                 danger
@@ -537,6 +577,15 @@ export default async function ProfilePage({
                 />
               </Section>
             </>
+          )}
+
+          {section === "feedback" && (
+            <Section
+              title="Tell us something"
+              description="An idea, a problem, or something you like. It goes straight to whoever runs Krama."
+            >
+              <FeedbackPanel mine={myFeedback} />
+            </Section>
           )}
         </div>
       </div>

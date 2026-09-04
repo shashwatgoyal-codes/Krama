@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { Task, TaskStatus, Recurrence } from "@prisma/client";
 import { dayKeyFor, dayKeyToDate } from "@/lib/day";
+import { dayWindow } from "@/lib/time";
 import type { TagChip } from "@/lib/tags";
 
 /**
@@ -424,3 +425,36 @@ export async function syncRoutineTimeFromBlock(
   });
   return count > 0;
 }
+
+/**
+ * What was finished on a given day.
+ *
+ * Keyed on completedAt rather than createdForDate, because the question
+ * is "what did I get done today", and something carried over from last
+ * week and finished this morning is part of that answer.
+ *
+ * Nothing showed this before. Finishing a task removed it from every list
+ * on the Today screen and left only a number moving on the pace bar — so
+ * the one screen built around what you do said nothing about what you had
+ * done, and the whole left column stood empty on a day with nothing
+ * scheduled.
+ */
+export async function listDoneOnDay(
+  userId: string,
+  dayKey: string,
+  timeZone: string,
+  dayEndsAtHour: number,
+): Promise<TaskSummary[]> {
+  const { start, end } = dayWindow(dayKey, timeZone, dayEndsAtHour);
+  return db.task.findMany({
+    where: {
+      userId,
+      status: "done",
+      completedAt: { gte: start, lt: end },
+      ...NOT_A_TEMPLATE,
+    },
+    select: SUMMARY,
+    orderBy: { completedAt: "desc" },
+  });
+}
+

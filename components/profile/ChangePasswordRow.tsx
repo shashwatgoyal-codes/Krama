@@ -4,7 +4,9 @@ import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import SettingRow from "./SettingRow";
 import { inputClass } from "./Row";
+import PasswordInput from "@/components/ui/PasswordInput";
 import { changePassword } from "@/app/app/profile/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * A row that says when the password last changed, and a button that
@@ -22,6 +24,7 @@ export default function ChangePasswordRow({
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [done, setDone] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -32,6 +35,7 @@ export default function ChangePasswordRow({
       if (result.ok) {
         setOpen(false);
         setDone(true);
+        toast.success("Password changed.");
         setTimeout(() => setDone(false), 3000);
       } else {
         setError(result.error);
@@ -77,10 +81,9 @@ export default function ChangePasswordRow({
               <label htmlFor="currentPassword" className="label-xs mb-1 block">
                 Current password
               </label>
-              <input
+              <PasswordInput
                 id="currentPassword"
                 name="currentPassword"
-                type="password"
                 required
                 autoComplete="current-password"
                 className={inputClass}
@@ -91,10 +94,9 @@ export default function ChangePasswordRow({
               <label htmlFor="newPassword" className="label-xs mb-1 block">
                 New password
               </label>
-              <input
+              <PasswordInput
                 id="newPassword"
                 name="newPassword"
-                type="password"
                 required
                 minLength={10}
                 autoComplete="new-password"

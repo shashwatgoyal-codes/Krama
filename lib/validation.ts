@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth/password";
 import { BLOCK_MINUTES } from "./time";
 import { ACCENT_VALUES, DENSITIES } from "./appearance";
+import { isHexTint } from "./tint-colour";
 import { TINT_PRESETS } from "./notes";
 
 /**
@@ -15,7 +16,7 @@ export const emailSchema = z
   .trim()
   .toLowerCase()
   .min(3, "Enter your email address.")
-  .max(254, "That email address is too long.")
+  .max(254, "That email is too long.")
   .email("That doesn't look like an email address.");
 
 export const passwordSchema = z
@@ -45,7 +46,7 @@ export const createTaskSchema = z.object({
     .string()
     .trim()
     .min(1, "Give the task a name.")
-    .max(200, "Keep the title under 200 characters."),
+    .max(200, "That title is too long. Keep it under 200 letters."),
   notes: z.string().trim().max(2000).optional(),
   areaId: z.string().cuid().optional(),
   points: z.number().int().min(1).max(30).optional(),
@@ -89,7 +90,7 @@ export const scheduleAtSchema = z.object({
     .int()
     .refine(
       (m) => (BLOCK_MINUTES as readonly number[]).includes(m),
-      "Pick one of the offered lengths.",
+      "Pick one of the choices shown.",
     ),
 });
 
@@ -113,7 +114,7 @@ export const nameSchema = z.object({
 
 const restDaysSchema = z
   .array(z.coerce.number().int().min(0).max(6))
-  .max(6, "Leave at least one day that counts — otherwise nothing does.")
+  .max(6, "Pick at least one day.")
   // A duplicate day in the form post shouldn't become a duplicate row.
   .transform((days) => [...new Set(days)].sort((a, b) => a - b));
 
@@ -127,12 +128,15 @@ export const profileTabSchema = z.object({
   timezone: z
     .string()
     .trim()
-    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+    .refine(isValidTimeZone, "We don't know that time zone."),
   // Capped at noon: a "day" that ends in the evening isn't a late night,
   // it's a different day, and allowing it would quietly corrupt every
   // date the scoring engine derives.
   dayEndsAtHour: z.coerce.number().int().min(0).max(12),
-  weekStartsOn: z.coerce.number().int().refine((d) => d === 0 || d === 1),
+  weekStartsOn: z.coerce
+    .number()
+    .int()
+    .refine((d) => d === 0 || d === 1),
   timeFormat: z.enum(["12", "24"]),
 });
 
@@ -140,7 +144,7 @@ export const dayScheduleSchema = z.object({
   timezone: z
     .string()
     .trim()
-    .refine(isValidTimeZone, "That isn't a time zone we recognise."),
+    .refine(isValidTimeZone, "We don't know that time zone."),
   restDays: restDaysSchema,
   // Capped at noon: a "day" that ends in the evening isn't a late night,
   // it's a different day, and allowing it would quietly corrupt every
@@ -148,8 +152,8 @@ export const dayScheduleSchema = z.object({
   dayEndsAtHour: z.coerce
     .number()
     .int()
-    .min(0, "Pick an hour between midnight and noon.")
-    .max(12, "Pick an hour between midnight and noon."),
+    .min(0, "Pick an hour between 12am and 12pm.")
+    .max(12, "Pick an hour between 12am and 12pm."),
 });
 
 /** "HH:MM" in the user's own zone, or empty for no nudge. */
@@ -167,13 +171,13 @@ export const rhythmSchema = z.object({
   dailyFloor: z.coerce
     .number()
     .int()
-    .min(1, "The floor needs to be at least one action.")
-    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+    .min(1, "Pick at least 1 thing a day.")
+    .max(20, "Pick 20 or fewer things a day."),
   dailyTargetPoints: z.coerce
     .number()
     .int()
-    .min(1, "A day's work has to be worth at least a point.")
-    .max(500, "Above 500 a day, pace stops telling you anything."),
+    .min(1, "This has to be at least 1 point.")
+    .max(500, "Set this to 500 or less."),
   restDays: restDaysSchema,
   morningReminder: reminderSchema,
   eveningReminder: reminderSchema,
@@ -188,12 +192,20 @@ export const rhythmSchema = z.object({
 export const appearanceSchema = z.object({
   accent: z.enum(ACCENT_VALUES),
   interfaceFont: z.enum(["krama", "system"]),
-  // Exactly five, each a known preset. A short list would leave a note
-  // colour undefined; a long one would silently ignore the extras.
-  noteTints: z.array(z.string()).length(5).refine(
-    (t) => t.every((v) => TINT_PRESETS.some((p) => p.value === v)),
-    "That isn't one of the tints.",
-  ),
+  // Exactly five. A short list would leave a note colour undefined; a
+  // long one would silently ignore the extras.
+  //
+  // Each slot is either a named preset or a hand-picked colour. The hex
+  // is validated rather than trusted: it lands in a stylesheet, so
+  // anything that is not six hex digits has no business reaching it.
+  noteTints: z
+    .array(z.string())
+    .length(5)
+    .refine(
+      (t) =>
+        t.every((v) => TINT_PRESETS.some((p) => p.value === v) || isHexTint(v)),
+      "That isn't a colour we can use.",
+    ),
   density: z.enum(DENSITIES),
   reduceMotion: z.coerce.boolean(),
   showPointsOnTasks: z.coerce.boolean(),
@@ -203,30 +215,30 @@ export const scoringSchema = z.object({
   dailyFloor: z.coerce
     .number()
     .int()
-    .min(1, "The floor needs to be at least one action.")
-    .max(20, "More than 20 actions a day isn't a floor, it's a wall."),
+    .min(1, "Pick at least 1 thing a day.")
+    .max(20, "Pick 20 or fewer things a day."),
   dailyTargetPoints: z.coerce
     .number()
     .int()
-    .min(1, "A day's work has to be worth at least a point.")
-    .max(500, "Above 500 a day, pace stops telling you anything."),
+    .min(1, "This has to be at least 1 point.")
+    .max(500, "Set this to 500 or less."),
   dailyCap: z.coerce
     .number()
     .int()
-    .min(20, "A cap under 20 would slow you down almost immediately.")
+    .min(20, "Set this to 20 or more.")
     .max(1000, "Keep the cap under 1000."),
   scoringVisibility: z.enum(["hidden", "normal", "everywhere"]),
 });
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Enter your current password."),
+  currentPassword: z.string().min(1, "Type your password."),
   newPassword: passwordSchema,
 });
 
 export const deleteAccountSchema = z.object({
-  password: z.string().min(1, "Enter your password to confirm."),
+  password: z.string().min(1, "Type your password to make sure it's you."),
   confirm: z.literal("DELETE", {
-    error: "Type DELETE exactly to confirm.",
+    error: "Type DELETE to make sure.",
   }),
 });
 
@@ -236,8 +248,7 @@ export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
 /** Shape every server action returns, so forms can render errors uniformly. */
 export type ActionResult<T = undefined> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string; field?: string };
+  { ok: true; data?: T } | { ok: false; error: string; field?: string };
 
 /** Turns a Zod failure into the first message a person should see. */
 export function firstIssue(error: z.ZodError): {
@@ -250,3 +261,44 @@ export function firstIssue(error: z.ZodError): {
     field: issue?.path[0]?.toString(),
   };
 }
+
+/**
+ * A message to whoever runs Krama.
+ *
+ * The floor is four characters because "hi" is not a report and the
+ * person deserves to be told so at the form rather than after a round
+ * trip. The ceiling is generous: someone describing a bug properly should
+ * never be cut off mid-sentence.
+ */
+export const feedbackSchema = z.object({
+  kind: z.enum(["idea", "problem", "praise", "other"]),
+  message: z
+    .string()
+    .trim()
+    .min(4, "Please write a little more so we can act on it.")
+    .max(2000, "That is longer than we can store. Please shorten it."),
+  fromPath: z.string().optional(),
+});
+
+export const feedbackIdSchema = z.object({ id: z.string().cuid() });
+
+/**
+ * How long finished tasks are kept.
+ *
+ * Only the offered options are accepted rather than any number: this
+ * setting deletes things, and a hand-edited form field is not the place
+ * to discover that someone posted 1 and lost the year.
+ */
+export const retentionSchema = z.object({
+  // Blank must not coerce. z.coerce.number() reads "" and " " as 0, and
+  // 0 here means "keep forever" — so a form that posted nothing at all
+  // would look like a deliberate choice. It lands on the safe side, but
+  // a setting that deletes things should never be set by absence.
+  keepFinishedDays: z
+    .union([z.number(), z.string().trim().min(1)])
+    .transform((v) => (typeof v === "number" ? v : Number(v)))
+    .refine(
+      (n) => Number.isInteger(n) && [0, 90, 180, 365].includes(n),
+      "Pick one of the options.",
+    ),
+});

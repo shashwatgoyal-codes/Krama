@@ -214,14 +214,14 @@ export async function changePassword(
   if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
 
   const stored = await getPasswordHash(user.id);
-  if (!stored) return { ok: false, error: "Something went wrong. Sign in again." };
+  if (!stored) return { ok: false, error: "Something went wrong. Please sign in again." };
 
   const correct = await verifyPassword(stored, parsed.data.currentPassword);
   if (!correct) {
     return {
       ok: false,
       field: "currentPassword",
-      error: "That isn't your current password.",
+      error: "That password is wrong.",
     };
   }
 
@@ -234,7 +234,7 @@ export async function changePassword(
     return {
       ok: false,
       field: "newPassword",
-      error: "That's the password you already have.",
+      error: "That's the same password you have now. Pick a different one.",
     };
   }
 

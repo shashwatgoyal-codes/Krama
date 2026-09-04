@@ -1,5 +1,6 @@
 import { occursOn } from "./recurrence";
 import type { Recurrence } from "@prisma/client";
+import { clockLabel, clockSpan, type TimeFormat } from "@/lib/time";
 
 /**
  * Drawing routines onto the calendar without writing rows for them.
@@ -109,22 +110,22 @@ export function projectRoutines(
   }
 
   return out.sort(
-    (a, b) =>
-      a.dayKey.localeCompare(b.dayKey) || a.startMinute - b.startMinute,
+    (a, b) => a.dayKey.localeCompare(b.dayKey) || a.startMinute - b.startMinute,
   );
 }
 
 /** "08:00" from minutes past midnight. */
-export function minuteLabel(minute: number): string {
-  const safe = ((minute % 1440) + 1440) % 1440;
-  const h = Math.floor(safe / 60);
-  const m = safe % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+export function minuteLabel(minute: number, format: TimeFormat = "24"): string {
+  return clockLabel(minute, format);
 }
 
 /** "08:00 – 09:30", the way a block reads on the grid. */
-export function spanLabel(startMinute: number, minutes: number): string {
-  return `${minuteLabel(startMinute)} – ${minuteLabel(startMinute + minutes)}`;
+export function spanLabel(
+  startMinute: number,
+  minutes: number,
+  format: TimeFormat = "24",
+): string {
+  return clockSpan(startMinute, minutes, format);
 }
 
 /** Minutes past midnight from "08:00". Null when it isn't a time. */

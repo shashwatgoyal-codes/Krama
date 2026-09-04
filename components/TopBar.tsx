@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import ProfileMenu from "./ProfileMenu";
 import {
   ENV_LABEL,
   ENV_STYLE,
@@ -18,17 +19,35 @@ const NAV = [
   { href: "/app/calendar", label: "Calendar" },
   { href: "/app/explore", label: "Explore" },
   { href: "/app/rewards", label: "Rewards" },
+  { href: "/app/inbox", label: "Inbox" },
 ];
 
 export default function TopBar({
   env,
   name,
+  email,
   avatar,
+  isAdmin = false,
+  signOut,
 }: {
   env: AppEnv;
   name: string;
+  email: string;
   /** Src for the uploaded picture, or null for the initial. */
   avatar: string | null;
+  /**
+   * Whether to show the way into the admin portal.
+   *
+   * Invisible to everyone who isn't, obvious to everyone who is. A
+   * greyed-out link or a "no access" page would tell a stranger the
+   * portal exists, which is an invitation to find out more about it —
+   * while an admin with no link has to remember a URL, which is how an
+   * invited admin ends up unable to reach the thing they were invited
+   * to.
+   */
+  isAdmin?: boolean;
+  /** Passed down so the menu can end this session without a page of its own. */
+  signOut: () => Promise<void>;
 }) {
   const pathname = usePathname();
 
@@ -95,34 +114,21 @@ export default function TopBar({
         >
           Search
         </Link>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="rounded-md border border-warn bg-warn-soft px-2 py-1 text-[11.5px] font-semibold text-warn transition-opacity hover:opacity-80"
+          >
+            Admin
+          </Link>
+        )}
         <ThemeToggle />
-        <Link
-          href="/app/profile"
-          aria-label={`Profile — signed in as ${name}`}
-          aria-current={pathname === "/app/profile" ? "page" : undefined}
-          title={name}
-          className={
-            "grid size-[26px] flex-none place-items-center rounded-full bg-acc " +
-            "text-[11px] font-bold text-on-acc transition-shadow hover:ring-2 " +
-            "hover:ring-acc-soft " +
-            (pathname === "/app/profile"
-              ? "ring-2 ring-acc ring-offset-2 ring-offset-surf"
-              : "")
-          }
-        >
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatar}
-              alt=""
-              width={26}
-              height={26}
-              className="size-full rounded-full object-cover"
-            />
-          ) : (
-            name.charAt(0).toUpperCase()
-          )}
-        </Link>
+        <ProfileMenu
+          name={name}
+          email={email}
+          avatar={avatar}
+          signOut={signOut}
+        />
       </div>
       </div>
 

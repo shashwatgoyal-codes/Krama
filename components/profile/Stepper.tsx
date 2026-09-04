@@ -1,4 +1,5 @@
 "use client";
+import { clockLabel, type TimeFormat } from "@/lib/time";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -12,8 +13,12 @@ import { useEffect, useRef, useState } from "react";
  */
 export type StepperFormat = "plain" | "hour" | "days";
 
-function render(value: number, format: StepperFormat): string {
-  if (format === "hour") return `${String(value).padStart(2, "0")}:00`;
+function render(
+  value: number,
+  format: StepperFormat,
+  clock: TimeFormat = "24",
+): string {
+  if (format === "hour") return clockLabel(value * 60, clock);
   if (format === "days") return `${value} ${value === 1 ? "day" : "days"}`;
   return String(value);
 }
@@ -25,9 +30,11 @@ export default function Stepper({
   max,
   step = 1,
   format = "plain",
+  timeFormat = "24",
   disabled,
 }: {
   name: string;
+  timeFormat?: TimeFormat;
   defaultValue: number;
   min: number;
   max: number;
@@ -60,7 +67,7 @@ export default function Stepper({
   }, [value]);
 
   const clamp = (next: number) => Math.min(max, Math.max(min, next));
-  const shown = render(value, format);
+  const shown = render(value, format, timeFormat);
 
   return (
     <div className="flex items-center gap-2">

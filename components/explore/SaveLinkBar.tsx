@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import { saveLink } from "@/app/app/explore/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Paste a link, it's saved. The fetch happens on the server and can take
@@ -10,6 +11,7 @@ import { saveLink } from "@/app/app/explore/actions";
  */
 export default function SaveLinkBar() {
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const form = useRef<HTMLFormElement>(null);
 
@@ -17,8 +19,10 @@ export default function SaveLinkBar() {
     setError(null);
     startTransition(async () => {
       const result = await saveLink(data);
-      if (result.ok) form.current?.reset();
-      else setError(result.error);
+      if (result.ok) {
+        form.current?.reset();
+        toast.success("Saved to Explore.");
+      } else setError(result.error);
     });
   }
 
@@ -35,7 +39,7 @@ export default function SaveLinkBar() {
           spellCheck={false}
           placeholder="Paste a link to save it…"
           aria-label="Link to save"
-          className="min-w-0 flex-1 rounded-[9px] border border-ln2 bg-surf px-[11px] py-1.5 text-[13px] text-ink placeholder:text-fai focus:border-acc focus:outline-none focus:ring-[3px] focus:ring-acc-soft disabled:opacity-60"
+          className="field field-lg min-w-0 flex-1"
         />
         <button
           type="submit"

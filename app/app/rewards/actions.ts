@@ -20,12 +20,12 @@ const newRewardSchema = z.object({
     .string()
     .trim()
     .min(1, "Give the reward a name.")
-    .max(REWARD_NAME_MAX, "Keep the name short enough to read at a glance."),
+    .max(REWARD_NAME_MAX, "That name is too long. Make it shorter."),
   cost: z.coerce
     .number()
-    .int("Points come in whole numbers.")
+    .int("Use a whole number, like 10.")
     .min(REWARD_COST_MIN, "It has to cost something.")
-    .max(REWARD_COST_MAX, "That is more than a year of good days."),
+    .max(REWARD_COST_MAX, "That number is too big. Try a smaller one."),
   notes: z.string().trim().max(200).optional(),
 });
 
@@ -52,7 +52,7 @@ export async function removeReward(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Unknown reward." };
 
   const archived = await archiveReward(user.id, parsed.data.id);
-  if (!archived) return { ok: false, error: "That reward is already gone." };
+  if (!archived) return { ok: false, error: "Someone already took that reward." };
 
   revalidatePath("/app/rewards");
   return { ok: true };
@@ -71,8 +71,8 @@ export async function claimReward(formData: FormData): Promise<ActionResult> {
       ok: false,
       error:
         result.reason === "missing"
-          ? "That reward no longer exists."
-          : "Not enough points for that yet.",
+          ? "That reward is gone."
+          : "You don't have enough points yet.",
     };
   }
 

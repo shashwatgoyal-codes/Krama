@@ -7,6 +7,7 @@ import Section from "@/components/profile/Section";
 import VerifyEmailForm from "@/components/auth/VerifyEmailForm";
 import { emailConfigured } from "@/lib/email/send";
 import { sendVerification } from "./actions";
+import { hasLiveCode } from "@/lib/repositories/verification";
 
 export const metadata: Metadata = {
   title: pageTitle("Confirm your email"),
@@ -38,29 +39,37 @@ async function newestMailFor(email: string): Promise<string | null> {
   }
 }
 
-export default async function VerifyEmailPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ sent?: string }>;
-}) {
+export default async function VerifyEmailPage() {
   const user = await requireUser();
-  const params = await searchParams;
 
   const record = await db.user.findUnique({
     where: { id: user.id },
     select: { emailVerified: true },
   });
 
-  // Arriving straight from sign-up sends the first code without making
-  // anyone press a button for it.
   const latestMail = emailConfigured()
     ? null
     : await newestMailFor(user.email);
 
+  /*
+   * Send one on arrival if nothing usable is already outstanding.
+   *
+   * This used to key off a ?sent=1 parameter that sign-up added, which
+   * was wrong in both directions: reaching this page from the banner
+   * sent nothing at all, so people waited for an email that was never
+   * coming — and refreshing a URL that still carried the parameter tried
+   * to send another every time.
+   *
+   * Asking whether a live code exists makes the answer the same however
+   * you got here, and makes a refresh a no-op rather than a resend.
+   */
   let autoSent = false;
-  if (!record?.emailVerified && params.sent === "1") {
-    const result = await sendVerification();
-    autoSent = result.ok;
+  if (!record?.emailVerified) {
+    const alreadyWaiting = await hasLiveCode(user.id, "email_verify");
+    if (!alreadyWaiting) {
+      const result = await sendVerification();
+      autoSent = result.ok;
+    }
   }
 
   return (

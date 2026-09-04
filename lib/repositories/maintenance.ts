@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { dayKeyToDate, shiftDayKey } from "@/lib/day";
 import { materialiseRecurring } from "./recurring";
+import { sweep, type Swept } from "./retention";
 
 /**
  * The day-boundary work: rolling unfinished tasks forward, and catching
@@ -22,12 +23,18 @@ export type MaintenanceResult = {
   routinesMissed: number;
   rolledForward: number;
   routinesCaughtUp: number;
+  /** What the retention sweep removed on this pass. */
+  swept: Swept;
 };
 
 export async function runDayMaintenance(
   userId: string,
   todayKey: string,
-  settings: { rolloverUnfinished: boolean; catchUpRoutines: boolean },
+  settings: {
+    rolloverUnfinished: boolean;
+    catchUpRoutines: boolean;
+    keepFinishedDays: number;
+  },
 ): Promise<MaintenanceResult> {
   let rolledForward = 0;
   let routinesCaughtUp = 0;
@@ -82,7 +89,12 @@ export async function runDayMaintenance(
     }
   }
 
-  return { rolledForward, routinesCaughtUp, routinesMissed };
+  // Last, so it never removes something an earlier step was about to
+  // read — and after the drop pass, so a routine day missed today is
+  // marked before anything considers sweeping old ones.
+  const swept = await sweep(userId, settings.keepFinishedDays);
+
+  return { rolledForward, routinesCaughtUp, routinesMissed, swept };
 }
 
 /**
@@ -93,10 +105,7 @@ export async function runDayMaintenance(
  * does nothing is worse than one that does something modest. The nudge
  * appears when you next open Krama after the time you chose.
  */
-export function reminderDue(
-  reminder: string | null,
-  nowHHMM: string,
-): boolean {
+export function reminderDue(reminder: string | null, nowHHMM: string): boolean {
   if (!reminder) return false;
   return nowHHMM >= reminder;
 }

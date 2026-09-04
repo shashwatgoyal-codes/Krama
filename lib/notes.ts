@@ -78,6 +78,8 @@ export const NOTE_TINT: Record<string, string> = {
  * choice. Every preset here is desaturated on purpose, so a board full
  * of them doesn't fight the interface.
  */
+import { deriveTint } from "./tint-colour";
+
 export type TintPreset = {
   value: string;
   label: string;
@@ -100,7 +102,23 @@ export const TINT_PRESETS: TintPreset[] = [
 export const DEFAULT_TINTS = ["amber", "sky", "rose", "violet", "slate"];
 
 export function tintPreset(value: string): TintPreset {
-  return TINT_PRESETS.find((t) => t.value === value) ?? TINT_PRESETS[0];
+  const named = TINT_PRESETS.find((t) => t.value === value);
+  if (named) return named;
+
+  // A slot can also hold a hand-picked colour. Deriving the other three
+  // values from it means somebody chooses the yellow they want rather
+  // than doing colour theory to describe a sticky note.
+  const derived = deriveTint(value);
+  if (derived) {
+    return {
+      value,
+      label: value.toUpperCase(),
+      light: derived.light,
+      dark: derived.dark,
+    };
+  }
+
+  return TINT_PRESETS[0];
 }
 
 /** Five chosen presets as the --n1..--n5 overrides, light and dark. */

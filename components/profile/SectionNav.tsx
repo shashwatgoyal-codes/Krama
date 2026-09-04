@@ -16,6 +16,7 @@ export const SECTIONS = [
   { key: "areas", label: "Areas & tags" },
   { key: "appearance", label: "Appearance" },
   { key: "data", label: "Data" },
+  { key: "feedback", label: "Feedback" },
 ] as const;
 
 export type SectionKey = (typeof SECTIONS)[number]["key"];

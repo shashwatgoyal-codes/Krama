@@ -33,7 +33,12 @@ export async function sendVerification(): Promise<ActionResult> {
       const seconds = Math.ceil(sent.retryAfterMs / 1000);
       return { ok: false, error: `A code was just sent. Try again in ${seconds}s.` };
     }
-    return { ok: false, error: "Couldn't send the email just now. Try again shortly." };
+    // Not "try again shortly": when this fires it is usually because the
+    // sending domain is not set up, and retrying can never fix that.
+    return {
+      ok: false,
+      error: "We couldn't send that email. Please tell whoever runs Krama.",
+    };
   }
 
   return { ok: true };
@@ -49,9 +54,9 @@ export async function verifyEmail(formData: FormData): Promise<ActionResult> {
   if (!result.ok) {
     const message: Record<typeof result.reason, string> = {
       malformed: "The code is six digits.",
-      none: "No code is waiting. Send yourself a new one.",
-      expired: "That code has expired. Send yourself a new one.",
-      locked: "Too many wrong guesses. Send yourself a new one.",
+      none: "You don't have a code right now. Ask for a new one.",
+      expired: "That code is too old. Ask for a new one.",
+      locked: "Too many wrong tries. Ask for a new code.",
       wrong: "That code isn't right.",
     };
     return { ok: false, field: "code", error: message[result.reason] };

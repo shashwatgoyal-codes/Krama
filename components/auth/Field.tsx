@@ -37,11 +37,7 @@ export default function Field({
           id={name}
           name={name}
           className={
-            "w-full rounded-lg border border-ln2 bg-surf px-[11px] py-[9px] text-[13px] " +
-            "text-ink placeholder:text-fai focus:border-acc focus:outline-none " +
-            "focus:ring-[3px] focus:ring-acc-soft " +
-            (trailing ? "pr-[38px] " : "") +
-            className
+            "field field-lg " + (trailing ? "pr-[38px] " : "") + className
           }
           {...rest}
         />
@@ -52,7 +48,9 @@ export default function Field({
         )}
       </div>
 
-      {hint && <p className="mt-1.5 text-[11.5px] leading-snug text-fai">{hint}</p>}
+      {hint && (
+        <p className="mt-1.5 text-[11.5px] leading-snug text-fai">{hint}</p>
+      )}
     </div>
   );
 }
