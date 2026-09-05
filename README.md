@@ -9,6 +9,11 @@
 A personal planner: notes, tasks, a calendar and saved links, joined end to end,
 with points for the effort rather than the outcome.
 
+**[krama.shashwatgoyal.dev](https://krama.shashwatgoyal.dev)** &nbsp;·&nbsp;
+Next.js 16 &nbsp;·&nbsp; Postgres &nbsp;·&nbsp; no auth library, no component library
+
+<sub>Invite-only while it is just me using it.</sub>
+
 </div>
 
 ---
@@ -36,6 +41,48 @@ more than the others you start optimising for the score instead of the work. The
 is no "you broke your streak" screen anywhere in the product, and a `Minimal`
 setting hides points and levels entirely, turning it back into a plain tracker.
 
+## The part worth reading the code for
+
+An admin portal that can read everyone's private notes is the normal outcome, and
+it is normal because the restraint usually lives in the UI: the page simply does
+not ask. That is not a boundary. It is a decision that survives exactly until
+somebody writes a new query.
+
+So the boundary here is the database. The portal connects as a **different
+Postgres role** with `SELECT` granted column by column — ids, counts, timestamps,
+status, and nothing else:
+
+```
+notes.body          permission denied
+tasks.title         permission denied
+links.url           permission denied
+users.passwordHash  permission denied
+any write at all    permission denied
+```
+
+A query that reaches for a note body does not return empty. It is refused by
+Postgres, and the screen fails loudly rather than leaking quietly. There is a
+third role for support access, the mirror image — it can read what someone wrote
+but is refused on their email, so the person reading the words cannot tell you
+whose they are.
+
+Three more things follow the same principle, that a rule you can edit is not a
+rule:
+
+- **The point ledger and the audit log are append-only**, enforced by database
+  triggers. The application cannot rewrite its own history, including when the
+  application is wrong.
+- **Support access needs consent.** An admin requests a named scope; the account
+  holder approves, refuses, or revokes later; it expires on its own; and every
+  view is recorded back to the person whose data it was.
+- **The super admin is an environment variable, not a row.** Everything below it
+  is granted by invitation, but reaching the top requires deploy access rather
+  than a `SQL UPDATE`. A role table that can mint its own root is not a boundary
+  either.
+
+All of it is tested by *attempting the leak* rather than by asserting the
+intention — see `tests/integration/`.
+
 ## Stack
 
 | | |
@@ -46,7 +93,7 @@ setting hides points and levels entirely, turning it back into a plain tracker.
 | Auth | Own session cookies — no auth library |
 | Mutations | Server Actions, validated with Zod at every boundary |
 | Mail | Resend, with a file-backed fallback in development |
-| Tests | Vitest — 2763 unit, 49 integration |
+| Tests | Vitest — two projects, 73 files, ~12.7k lines |
 
 No component library, no animation library, no drag library. Dragging notes and
 calendar blocks is pointer events and stored coordinates.
